@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>킹샷 배치 시뮬레이터</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map-editor">
+  <div id="topbar">
+    <div class="button-row">
+      <button class="btn-main" id="save-img-btn">이미지 저장</button>
+      <button class="btn-main admin-only" id="save-data-btn">데이터 저장</button>
+      <button class="btn-main admin-only" id="load-data-btn">불러오기</button>
+      <button class="btn-main" id="fullscreen-btn">전체화면</button>
+      <button class="btn-accent" id="drawer-btn">지도 데이터 ▸</button>
+      <span class="view-only badge">읽기 전용</span>
+      <span class="admin-only badge admin-badge">관리자</span>
+      <input accept=".json,application/json" id="data-input" type="file" hidden>
+    </div>
+    <div class="input-unit">
+      <span class="label-text">거리기준 :</span>
+      <select id="trap-selector"><option value="none">없음</option></select>
+    </div>
+    <div class="input-unit">
+      <span class="label-text">버프율 :</span>
+      <input id="buff-rate" type="number" value="0">
+      <span class="label-text">%</span>
+    </div>
+    <div class="input-unit bulk admin-only">
+      <span class="label-text">일괄 수정 :</span>
+      <select id="bulk-type">
+        <option value="Player">Player</option>
+        <option value="깃발 1">깃발 1</option>
+        <option value="깃발 2">깃발 2</option>
+      </select>
+      <input id="bulk-nickname" placeholder="변경할 이름" type="text">
+      <button class="btn-main" id="bulk-apply">적용</button>
+    </div>
+    <div id="banner-list" class="admin-only">
+      <div class="banner-item" draggable="true" data-name="Player">Player <span class="count-text">(0)</span></div>
+      <div class="banner-item" draggable="true" data-name="곰덫">곰덫 <span class="count-text">(0)</span></div>
+      <div class="banner-item" draggable="true" data-name="깃발 1">깃발 1 <span class="count-text">(0)</span></div>
+      <div class="banner-item" draggable="true" data-name="깃발 2">깃발 2 <span class="count-text">(0)</span></div>
+      <div class="banner-item" draggable="true" data-name="본부 1">본부 1</div>
+      <div class="banner-item" draggable="true" data-name="본부 2">본부 2</div>
+      <div class="banner-item" draggable="true" data-name="연맹자원">연맹자원</div>
+      <button class="btn-red" id="delete-btn">삭제</button>
+    </div>
+    <div id="right-controls">
+      <div id="search-box">
+        <span class="go-label">좌표</span>
+        <input id="target-x" type="text" inputmode="numeric" placeholder="X">
+        <input id="target-y" type="text" inputmode="numeric" placeholder="Y">
+        <button class="btn-main" id="move-btn">찾기</button>
+        <button class="btn-trap" id="find-btn">곰덫 찾기</button>
+      </div>
+      <label class="check"><input checked id="show-coords" type="checkbox">좌표 표시</label>
+      <div id="coord-info">Zoom : 80% / X : 0 Y : 0</div>
+    </div>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="mapCanvas"></canvas>
+    <input id="inline-input" type="text">
+    <div id="toast" role="status"></div>
+    <div id="placing-hint"></div>
+
+    <aside id="drawer" hidden>
+      <div class="drawer-head">
+        <b>지도 데이터</b>
+        <button id="drawer-close" aria-label="닫기">✕</button>
+      </div>
+
+      <section>
+        <h3>레이어</h3>
+        <div id="map-status" class="muted">지도 데이터 불러오는 중…</div>
+        <label class="check"><input type="checkbox" data-layer="terrain" checked><i class="sw" style="background:#656872"></i>산 <i class="sw" style="background:#286096"></i>호수 (장애물)</label>
+        <label class="check"><input type="checkbox" data-layer="nodes" checked>연맹 자원지
+          <i class="sw" style="background:#ffb300"></i>빵 <i class="sw" style="background:#66bb6a"></i>나무 <i class="sw" style="background:#b0bec5"></i>석재 <i class="sw" style="background:#42a5f5"></i>철</label>
+        <label class="check"><input type="checkbox" data-layer="structs" checked>요새 · 성소 · 전초기지 · 왕성</label>
+        <label class="check"><input type="checkbox" data-layer="fzones" checked><i class="sw dashed"></i>건설 금지구역</label>
+        <label class="check"><input type="checkbox" data-layer="free" checked><i class="sw free"></i>빈 자리 (Free) — <b id="free-count">-</b></label>
+        <label class="check"><input type="checkbox" data-layer="rings">자원 구역 링 (황무지/평원/비옥지/유적)</label>
+        <label class="check admin-only"><input type="checkbox" id="block-toggle" checked>장애물 위 배치 막기</label>
+      </section>
+
+      <section class="admin-only">
+        <h3>게시본과 비교 <span class="muted">(옮긴 기물 되돌리기)</span></h3>
+        <div class="row">
+          <button class="btn-main" id="diff-btn">변경 내역 보기</button>
+          <button class="btn-sub" id="undo-btn">되돌리기 (Ctrl+Z)</button>
+          <button class="btn-accent" id="publish-btn">게시하기 (모두에게 반영)</button>
+        </div>
+        <div id="diff-result" class="result"></div>
+      </section>
+
+      <section>
+        <h3>영토 안 연맹 자원지 <span class="muted">(75% 이상 덮인 것)</span></h3>
+        <table id="coverage-table">
+          <thead><tr><th></th><th>빵</th><th>나무</th><th>석재</th><th>철</th><th>합계</th></tr></thead>
+          <tbody>
+            <tr data-team="1"><th class="team1">깃발/본부 1</th><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+            <tr data-team="2"><th class="team2">깃발/본부 2</th><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h3>주변 조회</h3>
+        <div class="row">
+          <input id="near-x" type="text" inputmode="numeric" placeholder="X">
+          <input id="near-y" type="text" inputmode="numeric" placeholder="Y">
+          <span class="label-text">반경</span>
+          <input id="near-r" type="number" value="30" min="1" max="200">
+        </div>
+        <div class="row">
+          <button class="btn-main" id="near-btn">조회</button>
+          <button class="btn-sub" id="near-center-btn">화면 중심 좌표</button>
+          <button class="btn-sub" id="near-clear-btn">지우기</button>
+        </div>
+        <div id="near-result" class="result"></div>
+      </section>
+
+      <section id="live-section">
+        <h3>실시간 왕국 데이터 <span class="muted">(성 위치)</span></h3>
+        <div class="row">
+          <input id="kid-input" type="text" inputmode="numeric" placeholder="왕국 번호">
+          <button class="btn-main" id="kid-btn">불러오기</button>
+        </div>
+        <div id="live-status" class="muted"></div>
+        <details id="paste-box">
+          <summary>직접 붙여넣기 (서버 없이 열었을 때)</summary>
+          <p class="muted"><a id="raw-link" href="#" target="_blank" rel="noopener">데이터 페이지</a>를 열어 전체 복사한 뒤 아래에 붙여넣으세요.</p>
+          <textarea id="paste-input" rows="3" placeholder='{"kid":…,"cities":[…]}'></textarea>
+          <button class="btn-sub" id="paste-btn">적용</button>
+        </details>
+        <div id="live-controls" hidden>
+          <label class="check"><input type="checkbox" id="live-show" checked>플레이어 표시</label>
+          <div class="row">
+            <span class="label-text">연맹</span>
+            <select id="live-filter"></select>
+          </div>
+          <div class="row">
+            <button class="btn-main admin-only" id="live-import-btn">선택 연맹 → Player 기물</button>
+            <button class="btn-sub" id="live-find-btn">위치로 이동</button>
+            <button class="btn-red" id="live-clear-btn">지우기</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="credits muted">
+        지도 데이터: <a href="https://ksmapper.pages.dev/" target="_blank" rel="noopener">ksmapper</a> 커뮤니티 데이터셋
+        (<a href="https://github.com/Bleezy-D/Alliance-Layout-Planner" target="_blank" rel="noopener">Alliance-Layout-Planner</a>, MIT).
+        서버마다 일부 지형이 다를 수 있습니다.
+      </section>
+    </aside>
+  </div>
+  <div id="login" hidden>
+    <form id="login-form">
+      <b>관리자 로그인</b>
+      <input id="login-id" type="text" placeholder="아이디" autocomplete="username">
+      <input id="login-pw" type="password" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn-main" type="submit">로그인</button>
+      <div id="login-error" class="muted"></div>
+      <a href="./" class="muted">읽기 전용 배치도로 가기</a>
+    </form>
+  </div>
+</div>
+<script src="mapdata.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

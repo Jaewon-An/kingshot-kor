@@ -1,0 +1,12 @@
+{
+  "name": "kingshot-placement-simulator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "킹샷 배치 시뮬레이터 — 실제 지형/연맹 자원지/구조물 데이터와 실시간 왕국 성 위치 포함",
+  "scripts": {
+    "start": "node server.js",
+    "update-mapdata": "node tools/extract-mapdata.mjs",
+    "build": "node tools/build-dist.mjs"
+  },
+  "engines": { "node": ">=18" }
+}

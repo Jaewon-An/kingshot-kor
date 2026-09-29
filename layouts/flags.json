@@ -1,0 +1,812 @@
+{
+ "alliance": "KOR",
+ "kingdom": 2382,
+ "updated": "2026-09-27",
+ "survey": {
+  "source": "게임 스크린샷 14장 (2026-09-22 ~ 09-23)",
+  "scope": "왕국 전체에서 찾아봤지만 확인된 깃발은 본진(X 505~545, Y 765~810)의 22개뿐입니다. 성소·거점으로 이어지는 본진 밖 깃발은 아직 확인하지 못했습니다.",
+  "searched": "왕국 전체 데이터를 제공하는 kingshotstats, MightPulse, kingshot.net, kingshotguide를 확인했습니다. 네 곳 모두 성 위치와 고정 구조물만 있고 연맹 깃발 위치는 없습니다. 본진 밖 깃발은 게임에서 좌표를 확인해 추가해야 합니다."
+ },
+ "flags": [
+  {
+   "name": "깃발 1",
+   "x": 511,
+   "y": 777,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 2",
+   "x": 513,
+   "y": 781,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 3",
+   "x": 514,
+   "y": 771,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 4",
+   "x": 515,
+   "y": 775,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 5",
+   "x": 519,
+   "y": 786,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 6",
+   "x": 520,
+   "y": 779,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 7",
+   "x": 520,
+   "y": 780,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 8",
+   "x": 520,
+   "y": 792,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 9",
+   "x": 521,
+   "y": 771,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 10",
+   "x": 521,
+   "y": 778,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 11",
+   "x": 522,
+   "y": 778,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 12",
+   "x": 523,
+   "y": 778,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 13",
+   "x": 526,
+   "y": 785,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 14",
+   "x": 527,
+   "y": 786,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 15",
+   "x": 527,
+   "y": 788,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 16",
+   "x": 527,
+   "y": 795,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 17",
+   "x": 528,
+   "y": 771,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 18",
+   "x": 530,
+   "y": 776,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 19",
+   "x": 530,
+   "y": 780,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 20",
+   "x": 534,
+   "y": 788,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 21",
+   "x": 536,
+   "y": 775,
+   "area": "본진",
+   "src": "스크린샷 09-22"
+  },
+  {
+   "name": "깃발 22",
+   "x": 537,
+   "y": 782,
+   "area": "본진",
+   "src": "스크린샷 09-23"
+  }
+ ],
+ "buildings": [
+  {
+   "type": "곰덫",
+   "name": "사냥 함정 1",
+   "x": 531,
+   "y": 779
+  },
+  {
+   "type": "곰덫",
+   "name": "사냥 함정 2",
+   "x": 521,
+   "y": 779
+  },
+  {
+   "type": "연맹자원",
+   "name": "연맹 제철소",
+   "x": 527,
+   "y": 773
+  },
+  {
+   "type": "연맹자원",
+   "name": "연맹 제철소",
+   "x": 510,
+   "y": 775
+  },
+  {
+   "type": "연맹자원",
+   "name": "연맹 목재장",
+   "x": 518,
+   "y": 787
+  }
+ ],
+ "plan": {
+  "title": "최적화안: 중복 깃발 2개 → 자원지 쪽으로 이동 (자원지 4 → 7곳)",
+  "remove": [
+   {
+    "name": "깃발 6",
+    "alt": "깃발 7"
+   },
+   {
+    "name": "깃발 10",
+    "alt": "깃발 11"
+   }
+  ],
+  "add": [
+   {
+    "name": "신규 1",
+    "x": 526,
+    "y": 801,
+    "note": "빵 +1"
+   },
+   {
+    "name": "신규 2",
+    "x": 531,
+    "y": 808,
+    "note": "빵 +1 · 석재 +1 · 신규 1 다음에 설치"
+   }
+  ]
+ },
+ "korCities": {
+  "source": "kingshotstats.com",
+  "date": "2026-09-15",
+  "list": [
+   {
+    "nick_name": "카라의진",
+    "x": 534,
+    "y": 780,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "스톤매니아",
+    "x": 439,
+    "y": 746,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "도토리",
+    "x": 514,
+    "y": 774,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "onetwo",
+    "x": 534,
+    "y": 776,
+    "tc": 22,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Santi47",
+    "x": 514,
+    "y": 778,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "敦寧殿下",
+    "x": 529,
+    "y": 772,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Eaa",
+    "x": 513,
+    "y": 768,
+    "tc": 21,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "한국인",
+    "x": 524,
+    "y": 774,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "LordNané30",
+    "x": 932,
+    "y": 1126,
+    "tc": 21,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "샹크스",
+    "x": 522,
+    "y": 782,
+    "tc": 26,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Vyra",
+    "x": 524,
+    "y": 784,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Katomy",
+    "x": 522,
+    "y": 770,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "원당역딸기코",
+    "x": 516,
+    "y": 780,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "깡이야",
+    "x": 522,
+    "y": 774,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "bluesnow",
+    "x": 516,
+    "y": 782,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "시아엄마",
+    "x": 534,
+    "y": 778,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "ʚ CIAOᴷᴼᴿ ɞ",
+    "x": 530,
+    "y": 777,
+    "tc": 22,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "ky590111",
+    "x": 514,
+    "y": 772,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "몰라알고싶지않아",
+    "x": 524,
+    "y": 772,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Sasuke",
+    "x": 522,
+    "y": 786,
+    "tc": 22,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Privateer",
+    "x": 528,
+    "y": 784,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Sbdlt09",
+    "x": 512,
+    "y": 776,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Maurice432",
+    "x": 530,
+    "y": 770,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "tang",
+    "x": 526,
+    "y": 778,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Sweetvine",
+    "x": 522,
+    "y": 399,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "CIAOメᴷᴼᴿ",
+    "x": 518,
+    "y": 778,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "TimeTraveller",
+    "x": 516,
+    "y": 772,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "TxkTx",
+    "x": 512,
+    "y": 782,
+    "tc": 21,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "요기용",
+    "x": 522,
+    "y": 784,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "슈퍼마리오",
+    "x": 532,
+    "y": 776,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "무명자",
+    "x": 524,
+    "y": 782,
+    "tc": 26,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "지냐엘",
+    "x": 520,
+    "y": 784,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "lord385233638",
+    "x": 1001,
+    "y": 644,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "oldfuture",
+    "x": 516,
+    "y": 774,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "KRATOS",
+    "x": 268,
+    "y": 1050,
+    "tc": 21,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "lss",
+    "x": 217,
+    "y": 1024,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "쾌걸임형",
+    "x": 329,
+    "y": 195,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "marcin kisiel",
+    "x": 896,
+    "y": 992,
+    "tc": 22,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Anthony salon",
+    "x": 524,
+    "y": 776,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "kklazee",
+    "x": 528,
+    "y": 778,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "무학산",
+    "x": 522,
+    "y": 788,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "citrusshine",
+    "x": 520,
+    "y": 774,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Rhi",
+    "x": 544,
+    "y": 291,
+    "tc": 22,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "SSIPOS",
+    "x": 512,
+    "y": 774,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Bb P77",
+    "x": 530,
+    "y": 782,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "울랄라라",
+    "x": 520,
+    "y": 786,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "삼성라이온즈",
+    "x": 516,
+    "y": 776,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "TeriyakiChkn",
+    "x": 1006,
+    "y": 139,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Ssaul2Aby",
+    "x": 522,
+    "y": 772,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Heevie",
+    "x": 512,
+    "y": 778,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "max 0605",
+    "x": 514,
+    "y": 786,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "redskull",
+    "x": 518,
+    "y": 784,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Sayden Ironside",
+    "x": 532,
+    "y": 785,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "아이쿵",
+    "x": 520,
+    "y": 782,
+    "tc": 26,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "ICE",
+    "x": 524,
+    "y": 778,
+    "tc": 26,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "khk1228",
+    "x": 516,
+    "y": 778,
+    "tc": 26,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "BIBi",
+    "x": 520,
+    "y": 776,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "털푸가이",
+    "x": 528,
+    "y": 786,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "SparkDon",
+    "x": 546,
+    "y": 400,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Mercury",
+    "x": 526,
+    "y": 780,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Utan0716",
+    "x": 691,
+    "y": 1012,
+    "tc": 21,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "몽키D루피",
+    "x": 526,
+    "y": 776,
+    "tc": 22,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "K몽실님",
+    "x": 534,
+    "y": 782,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Barion Alaric",
+    "x": 518,
+    "y": 774,
+    "tc": 21,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "ZaBKoR",
+    "x": 526,
+    "y": 783,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "juanncuokkkk",
+    "x": 530,
+    "y": 784,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Haaland",
+    "x": 518,
+    "y": 780,
+    "tc": 28,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "ISR",
+    "x": 530,
+    "y": 786,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "rhunter1",
+    "x": 630,
+    "y": 1030,
+    "tc": 22,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "하늘깨기",
+    "x": 520,
+    "y": 772,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "KIM1228",
+    "x": 532,
+    "y": 782,
+    "tc": 20,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "KingJo",
+    "x": 528,
+    "y": 776,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Paulao",
+    "x": 523,
+    "y": 757,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "DABO",
+    "x": 524,
+    "y": 786,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "RayCizm",
+    "x": 68,
+    "y": 1052,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "kinashot888",
+    "x": 518,
+    "y": 772,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "임꺽정",
+    "x": 522,
+    "y": 776,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "ZERO",
+    "x": 524,
+    "y": 780,
+    "tc": 26,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Rudy",
+    "x": 516,
+    "y": 784,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "설악산",
+    "x": 518,
+    "y": 782,
+    "tc": 26,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "산군76",
+    "x": 514,
+    "y": 780,
+    "tc": 25,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "CHIU",
+    "x": 530,
+    "y": 774,
+    "tc": 23,
+    "alliance_abbr": "KOR"
+   },
+   {
+    "nick_name": "Pixiemaniac",
+    "x": 516,
+    "y": 786,
+    "tc": 24,
+    "alliance_abbr": "KOR"
+   }
+  ]
+ }
+}

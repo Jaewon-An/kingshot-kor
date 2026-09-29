@@ -1,0 +1,18 @@
+# 관리자 계정·비밀값·API 토큰 (절대 커밋 금지)
+.admin-secret
+admin.txt
+api-token.txt
+
+# 로컬 서버가 만드는 직전 게시본 백업
+layouts/current.previous.json
+
+# 빌드 결과물 (npm run build 로 다시 만듦)
+dist/
+
+# Wrangler 로컬 캐시
+.wrangler/
+
+# 게임 스크린샷 원본
+screenshot/
+
+node_modules/
