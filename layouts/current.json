@@ -1058,5 +1058,15 @@
   "tx": 418,
   "ty": 670,
   "nickname": "개척자"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 418,
+  "ty": 662,
+  "nickname": "ishwor2"
  }
 ]
