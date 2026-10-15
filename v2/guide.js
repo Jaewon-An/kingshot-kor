@@ -152,8 +152,10 @@
       $('reallist').innerHTML = areas.map(a => `<li class="grp">${esc(a || '기타')}</li>` +
         real.filter(f => f.area === a).map(f => `<li><button type="button" class="lnk" data-f="${f.id}">${esc(f.n)}</button> <span class="mono">${f.x},${f.y}</span></li>`).join('')).join('');
       $('realnote').textContent = survey && survey.survey ? survey.survey.scope || '' : '';
-      $('real').hidden = false; $('realbtn').hidden = false; $('reallegend').hidden = false;
+      $('real').hidden = false; $('todolegend').hidden = false; $('terrname').textContent = '연맹 영토 (지금 깃발 기준)';
     }
+    // 신규 배치 깃발 중 게임에 이미 서 있는 것 (지금 깃발 데이터가 없으면 모두 서 있는 것으로 그림)
+    banners.forEach(b => { b.built = !real.length || realAt.has(b.y * G + b.x); });
 
     // ---------- 깃발 작업 순서: 지금 깃발 → 이 배치의 깃발 ----------
     const FP = window.KSFlagPlan;
@@ -195,28 +197,12 @@
   let C = {};
   const readColors = () => {
     const cs = getComputedStyle(document.documentElement);
-    for (const k of ['m-void', 'm-ground', 'm-fertile', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'm-foreign', 'm-grid', 'm-edge', 'c-hq', 'c-t2', 'c-t1', 'c-banner', 'c-city2', 'c-city1', 'c-res', 'c-spare', 'c-terr', 'c-real', 'c-pick', 'on-obj', 'bad'])
+    for (const k of ['m-void', 'm-ground', 'm-fertile', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'm-foreign', 'm-grid', 'm-edge', 'c-hq', 'c-t2', 'c-t1', 'c-banner', 'c-city2', 'c-city1', 'c-res', 'c-spare', 'c-terr', 'c-pick', 'on-obj', 'bad'])
       C[k] = cs.getPropertyValue('--' + k).trim();
   };
   const rgb = h => { const m = /^#?([0-9a-f]{6})$/i.exec(h); const n = m ? parseInt(m[1], 16) : 0x808080; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
-  let terrImg = null, ovImg = null, edges = null, realEdges = null;
-  // 영토 칸 집합의 바깥 경계선 (게임 좌표 Path2D)
-  function outline(cover) {
-    const set = new Uint8Array(CW * CH);
-    cover((x, y, s, c) => { for (let yy = y - c; yy < y + s + c; yy++) for (let xx = x - c; xx < x + s + c; xx++) { const lx = xx - CX, ly = yy - CY; if (lx >= 0 && ly >= 0 && lx < CW && ly < CH) set[ly * CW + lx] = 1; } });
-    const path = new Path2D();
-    for (let r = 0; r < CH; r++) for (let x = 0; x < CW; x++) {
-      if (!set[r * CW + x]) continue;
-      const wx = CX + x, wy = CY + r;
-      if (x === 0 || !set[r * CW + x - 1]) { path.moveTo(wx, wy); path.lineTo(wx, wy + 1); }
-      if (x === CW - 1 || !set[r * CW + x + 1]) { path.moveTo(wx + 1, wy); path.lineTo(wx + 1, wy + 1); }
-      if (r === 0 || !set[(r - 1) * CW + x]) { path.moveTo(wx, wy); path.lineTo(wx + 1, wy); }
-      if (r === CH - 1 || !set[(r + 1) * CW + x]) { path.moveTo(wx, wy + 1); path.lineTo(wx + 1, wy + 1); }
-    }
-    return path;
-  }
+  let terrImg = null, ovImg = null, edges = null;
   function buildImages() {
-    realEdges = outline(cov => { cov(HQ.x, HQ.y, 3, K.HQ_COV); real.forEach(f => cov(f.x, f.y, 1, K.BN_COV)); });
     const mk = () => { const c = document.createElement('canvas'); c.width = CW; c.height = CH; return c; };
     const a = mk(), ga = a.getContext('2d'), ia = ga.createImageData(CW, CH), da = ia.data;
     const col = [rgb(C['m-ground']), rgb(C['m-mount']), rgb(C['m-lake']), rgb(C['m-node']), rgb(C['m-struct'])], fo = rgb(C['m-foreign']), fe = rgb(C['m-fertile']);
@@ -226,10 +212,10 @@
       da[p] = c3[0]; da[p + 1] = c3[1]; da[p + 2] = c3[2]; da[p + 3] = 255;
     }
     ga.putImageData(ia, 0, 0); terrImg = a;
-    // 영토 (본부 15×15, 깃발 7×7)
+    // 연맹 영토 (본부 15×15, 깃발 7×7): 게임에 지금 서 있는 깃발 기준. 지금 깃발 데이터가 없으면(/v2/map) 신규 배치 깃발 기준
     const set = new Uint8Array(CW * CH);
     const cov = (x, y, s, c) => { for (let yy = y - c; yy < y + s + c; yy++) for (let xx = x - c; xx < x + s + c; xx++) { const lx = xx - CX, ly = yy - CY; if (lx >= 0 && ly >= 0 && lx < CW && ly < CH) set[ly * CW + lx] = 1; } };
-    cov(HQ.x, HQ.y, 3, K.HQ_COV); banners.forEach(b => cov(b.x, b.y, 1, K.BN_COV));
+    cov(HQ.x, HQ.y, 3, K.HQ_COV); (real.length ? real : banners).forEach(b => cov(b.x, b.y, 1, K.BN_COV));
     const b = mk(), gb = b.getContext('2d'), ib = gb.createImageData(CW, CH), db = ib.data, t = rgb(C['c-terr']);
     edges = new Path2D();
     for (let r = 0; r < CH; r++) for (let x = 0; x < CW; x++) {
@@ -245,7 +231,7 @@
   }
 
   // ---------- 보기 ----------
-  const view = { cx: 0, cy: 0, s: 14, rot: true, names: true, terr: true, real: true, pick: null, cur: null, flag: null };
+  const view = { cx: 0, cy: 0, s: 14, rot: true, names: true, terr: true, pick: null, cur: null, flag: null };
   const realAt = new Map();
   const SQ = Math.SQRT1_2;
   function mat(w, h) {
@@ -303,15 +289,14 @@
     members.forEach(mm => box(mm, 2, mm.g === 1 ? C['c-city1'] : C['c-city2'], 0.08));
     spare.forEach(sp => { gx.strokeStyle = C['c-spare']; gx.lineWidth = 1.6 / s; gx.setLineDash([3 / s, 2.5 / s]); gx.strokeRect(sp.x + 0.15, sp.y + 0.15, 1.7, 1.7); gx.setLineDash([]); });
     res.forEach(r => box(r, 2, C['c-res'], 0.08));
-    banners.forEach(b => box(b, 1, C['c-banner'], 0.06));
+    // 깃발: 게임에 서 있는 깃발은 채운 칸, 신규 배치에서 아직 안 지은 깃발은 빈 칸 (번호 = 설치 순서)
+    real.forEach(f => box(f, 1, C['c-banner'], 0.06));
+    banners.forEach(b => {
+      if (b.built) box(b, 1, C['c-banner'], 0.06);
+      else { gx.strokeStyle = C['c-banner']; gx.lineWidth = 2.2 / s; gx.strokeRect(b.x + 0.12, b.y + 0.12, 0.76, 0.76); }
+    });
     box(HQ, 3, C['c-hq'], 0.05); box(T2, 3, C['c-t2'], 0.05); box(T1, 3, C['c-t1'], 0.05);
-    if (view.real && real.length) { // 지금 게임에 설치된 깃발: 영토 경계 점선 + 깃발 칸 표시
-      gx.strokeStyle = C['c-real']; gx.lineWidth = 2.2 / s; gx.setLineDash([5 / s, 3 / s]); gx.stroke(realEdges); gx.setLineDash([]);
-      for (const f of real) {
-        gx.fillStyle = C['c-real']; gx.globalAlpha = 0.35; gx.fillRect(f.x - 0.35, f.y - 0.35, 1.7, 1.7); gx.globalAlpha = 1;
-        gx.lineWidth = 2.4 / s; gx.strokeRect(f.x - 0.35, f.y - 0.35, 1.7, 1.7);
-      }
-      // 작업 순서에서 철거할 지금 깃발
+    if (toTake.size) { // 작업 순서에서 꼭 철거할 지금 깃발 (빨간 X)
       gx.strokeStyle = C['bad']; gx.lineWidth = 3 / s; gx.beginPath();
       for (const f of real) {
         if (!toTake.has(`${f.x},${f.y}`)) continue;
@@ -319,8 +304,8 @@
       }
       gx.stroke();
     }
-    if (view.flag) { // 마우스가 올라간 깃발의 영토 (계획 깃발은 파랑, 지금 게임 깃발은 청록)
-      const f = view.flag, c = view.flag.real ? C['c-real'] : C['c-banner'], r = K.BN_COV;
+    if (view.flag) { // 마우스가 올라간 깃발의 영토
+      const f = view.flag, c = C['c-banner'], r = K.BN_COV;
       gx.fillStyle = c; gx.globalAlpha = 0.22; gx.fillRect(f.x - r, f.y - r, 2 * r + 1, 2 * r + 1); gx.globalAlpha = 1;
       gx.strokeStyle = c; gx.lineWidth = 3 / s; gx.strokeRect(f.x - r, f.y - r, 2 * r + 1, 2 * r + 1);
       gx.lineWidth = 2.5 / s; gx.strokeRect(f.x - 0.25, f.y - 0.25, 1.5, 1.5);
@@ -346,7 +331,7 @@
       members.forEach(mm => label(mm, 2, mm.named ? mm.n : String(mm.no), px, C['on-obj'], cellW));
       spare.forEach(sp => label(sp, 2, SHARE ? String(sp.no) : '빈', px, C['c-spare']));
     }
-    if (s >= 10 && !SHARE) banners.forEach((b, i) => label(b, 1, String(i + 1), Math.min(11, s * 0.55), C['on-obj']));
+    if (s >= 10 && !SHARE) banners.forEach((b, i) => label(b, 1, String(i + 1), Math.min(11, s * 0.55), b.built ? C['on-obj'] : C['c-banner']));
     const big = Math.min(15, Math.max(10, s * 0.75));
     label(T2, 3, '덫2', big, C['on-obj']); label(T1, 3, '덫1', big, C['on-obj']); label(HQ, 3, '본부', big, C['on-obj']);
   }
@@ -448,7 +433,7 @@
       const extra = o.kind === 'city' || (SHARE && o.kind === 'spare') ? ` ${xy(o)} · ${trapName(o.g)} ${o.l}줄${o.kind === 'spare' ? ' · 빈자리' : ''}` : o.kind === 'spare' ? ` ${xy(o)} · 곰덫2 ${o.l}줄` : ` ${xy(o)}`;
       info = (o.kind === 'city' || o.kind === 'spare' ? seatName(o) : SHARE && o.kind === 'banner' ? '깃발' : o.n) + extra + (info ? ' · ' + info : '');
     }
-    const rf = view.real && realAt.get(y * G + x);
+    const rf = realAt.get(y * G + x);
     if (rf) info = `현재 깃발 ${rf.n} (게임에 설치됨)` + (info ? ' · ' + info : '');
     // 깃발 칸 위: 그 깃발의 영토(7×7)를 지도에 강조
     const fl = o && o.kind === 'banner' ? { x: o.x, y: o.y, real: false } : rf ? { x: rf.x, y: rf.y, real: true } : null;
@@ -465,12 +450,11 @@
     return o;
   }
   const toggle = (id, key, after) => $(id)?.addEventListener('click', () => { view[key] = !view[key]; $(id).setAttribute('aria-pressed', String(view[key])); after ? after() : draw(); });
-  toggle('rot', 'rot', fit); toggle('lbl', 'names'); toggle('ter', 'terr'); toggle('realbtn', 'real');
+  toggle('rot', 'rot', fit); toggle('lbl', 'names'); toggle('ter', 'terr');
   $('orderlist')?.addEventListener('click', e => {
     const btn = e.target.closest('button[data-x]');
     if (!btn) return;
     const x = +btn.dataset.x, y = +btn.dataset.y;
-    if (!view.real) $('realbtn').click();
     view.cx = x + 0.5; view.cy = y + 0.5; view.s = Math.max(view.s, 16); view.cur = { x, y };
     if (SHARE) markAt(x, y, objAt.get(y * G + x) && objAt.get(y * G + x).o, true);
     $('readout').textContent = `${btn.textContent.trim()} · X:${x} Y:${y}`;
@@ -481,7 +465,6 @@
     const btn = e.target.closest('button[data-f]');
     const f = btn && real.find(r => r.id === btn.dataset.f);
     if (!f) return;
-    if (!view.real) $('realbtn').click();
     view.cx = f.x + 0.5; view.cy = f.y + 0.5; view.s = Math.max(view.s, 16); view.cur = { x: f.x, y: f.y };
     $('readout').textContent = `현재 깃발 ${f.n} · X:${f.x} Y:${f.y}${f.src ? ' · ' + f.src : ''}`;
     if (matchMedia('(max-width: 900px)').matches) cv.scrollIntoView({ block: 'center', behavior: 'smooth' });

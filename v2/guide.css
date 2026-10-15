@@ -101,7 +101,8 @@ ol.ord li.grp { font-size: .74rem; font-weight: 600; color: var(--muted); margin
 ol.ord .lnk { font: inherit; background: none; border: 0; padding: 0; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 ol.ord .bd { color: var(--ok); } ol.ord .rm { color: var(--bad); }
 ol.ord .why { color: var(--muted); font-size: .74rem; }
-.legend i.real { background: color-mix(in srgb, var(--c-real) 35%, transparent); outline: 2px dashed var(--c-real); outline-offset: -2px; }
+.legend i.todo { background: transparent; outline: 2px solid var(--c-banner); outline-offset: -2px; }
+.legend i.terr { background: color-mix(in srgb, var(--c-terr) 25%, transparent); outline: 1.5px solid var(--c-terr); outline-offset: -1.5px; }
 .btn { font: inherit; font-weight: 600; border-radius: 4px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink); padding: 6px 10px; font-size: .82rem; }
 .btn:hover { border-color: var(--muted); }
 .btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }

@@ -55,7 +55,6 @@
         <button class="btn" id="rot" type="button" aria-pressed="true">게임 시점</button>
         <button class="btn" id="lbl" type="button" aria-pressed="true">이름·번호</button>
         <button class="btn" id="ter" type="button" aria-pressed="true">영토</button>
-        <button class="btn" id="realbtn" type="button" aria-pressed="true" hidden>현재 깃발</button>
         <button class="btn" id="fit" type="button">전체 보기</button>
         <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
         <button class="btn" id="zout" type="button" aria-label="축소">－</button>
@@ -68,8 +67,9 @@
         <span><i style="background:var(--c-city2)"></i>곰덫2 참여 (1~3줄은 모두)</span>
         <span><i style="background:var(--c-city1)"></i>곰덫1 참여</span>
         <span><i style="background:var(--c-spare)"></i>빈자리</span>
-        <span><i style="background:var(--c-banner)"></i>깃발 (설치 순서)</span>
-        <span id="reallegend" hidden><i class="real"></i>현재 설치된 깃발·영토 (게임)</span>
+        <span><i style="background:var(--c-banner)"></i>깃발</span>
+        <span id="todolegend" hidden><i class="todo"></i>설치할 깃발 (번호 = 설치 순서)</span>
+        <span><i class="terr"></i><span id="terrname">연맹 영토</span></span>
         <span id="takelegend" hidden><i style="background:var(--bad)"></i>꼭 철거할 지금 깃발 (빨간 X)</span>
         <span><i style="background:var(--c-res)"></i>연맹 자원</span>
         <span><i style="background:var(--c-hq)"></i>본부</span>
