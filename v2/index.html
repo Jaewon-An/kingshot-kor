@@ -15,7 +15,7 @@
     <div>
       <p class="eyebrow">KINGSHOT · 서버 2382 · KOR 곰 사냥 신규 자리</p>
       <h1>신규 자리 배치도</h1>
-      <p class="lede">곰덫을 옥토 안으로 옮긴 신규 배치입니다. 이전 배치도에서의 위치 관계를 최대한 그대로 유지했습니다. 닉네임을 검색하면 내 자리 좌표가 바로 나옵니다.</p>
+      <p class="lede">곰덫을 옥토 안으로 옮긴 신규 배치입니다. 이전 배치도에서의 위치 관계를 최대한 그대로 유지했습니다. 곰덫 1~2줄 자리는 닉네임, 3줄부터는 자리 번호로 표시합니다. 닉네임을 검색하면 내 자리 좌표가 바로 나옵니다.</p>
       <p class="stamp" id="stamp"></p>
     </div>
     <dl class="facts" id="facts"></dl>
@@ -27,8 +27,8 @@
     <aside class="panel">
       <div class="finder">
         <label for="q">내 자리 찾기</label>
-        <input id="q" type="search" placeholder="닉네임 입력 (일부만 입력해도 됨)" autocomplete="off" spellcheck="false">
-        <p class="hint">명단이나 지도에서 자리를 눌러도 됩니다.</p>
+        <input id="q" type="search" placeholder="닉네임 · 자리 번호 · 좌표 (예: 12, 520 723)" autocomplete="off" spellcheck="false">
+        <p class="hint" id="qhint">3줄부터는 닉네임 전체를 입력하세요 (1~2줄은 일부만 입력해도 됨). 명단이나 지도에서 자리를 눌러도 됩니다.</p>
       </div>
       <div class="card" id="card" hidden></div>
       <div class="tbl"><table id="list"></table></div>
@@ -53,7 +53,7 @@
     <section class="mapcol">
       <div class="mapbar">
         <button class="btn" id="rot" type="button" aria-pressed="true">게임 시점</button>
-        <button class="btn" id="lbl" type="button" aria-pressed="true">이름</button>
+        <button class="btn" id="lbl" type="button" aria-pressed="true">이름·번호</button>
         <button class="btn" id="ter" type="button" aria-pressed="true">영토</button>
         <button class="btn" id="realbtn" type="button" aria-pressed="true" hidden>현재 깃발</button>
         <button class="btn" id="fit" type="button">전체 보기</button>
@@ -85,7 +85,7 @@
   <footer>
     좌표는 건물이 차지하는 칸 중 X·Y가 가장 작은 칸 기준이며 <a href="/">기존 배치도</a>와 같습니다. 줄은 곰덫에 붙은 자리가 1줄, 그 바깥이 2줄입니다. 곰덫2 1~3줄은 모두 곰덫2 참여, 그 밖은 더 가까운 곰덫 참여로 색을 나눕니다.
     점선 사각형은 곰덫2의 1~3줄과 곰덫1의 1줄 경계입니다. "이전 자리"는 기존 배치도의 같은 닉네임 자리입니다.
-    이름 없이 자리 번호로 보는 공유용 지도: <a href="/v2/map">/v2/map</a>
+    이름 없이 자리 번호로 보는 공유용 지도: <a href="/v2/map">/v2/map</a> (자리 번호는 이 페이지와 같습니다)
   </footer>
 </div>
 <script src="/mapdata.js"></script>

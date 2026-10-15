@@ -1,6 +1,7 @@
 /* /v2 신규 자리 안내 — 원본: USB "code/x2/template.html" 스크립트.
  * 데이터는 게시본에서 매번 계산합니다: 신규 배치 /api/v2/layout, 이전 자리 /api/layout(기존 배치도).
  * 좌표는 게임 좌표(건물의 최소 X·Y 칸). 줄·거리·기준 곰덫 계산은 v2/plan.js(KSPlan)와 같습니다.
+ * /v2: 참여 곰덫 1~2줄(NAMED_LINES) 자리만 이름, 3줄부터는 자리 번호. 3줄부터의 닉네임은 닉네임 전체로 검색해야 찾음.
  * /v2/map (<html data-mode="share">): 공유용 — 자리 배치와 지도 위치만. 도시 자리는 이름 대신 번호(빈자리 포함),
  *   이름(기존 배치도)·지금 깃발·작업 순서 데이터는 불러오지 않음. ?s=자리번호 · ?at=X,Y 로 그 위치를 열고, 누른 위치가 주소에 남음. */
 (function () {
@@ -15,7 +16,10 @@
   const norm = s => String(s || '').replace(/ /g, ' ').trim().toLowerCase();
   const BLOCKS = KP.BLOCKS_DEFAULT;
   const SHARE = document.documentElement.dataset.mode === 'share';
-  const seatName = m => SHARE ? `자리 ${m.no}` : m.n;
+  const NAMED_LINES = 2;   // /v2: 참여 곰덫 이 줄 안 자리만 이름, 그 밖은 자리 번호
+  const QHINT = $('qhint') ? $('qhint').textContent : '';
+  // 목록·지도에 보이는 이름: 이름 표시 자리와 빈자리는 이름, 그 밖은 자리 번호
+  const seatName = m => SHARE || (m.kind === 'city' && !m.named) ? `자리 ${m.no}` : m.n;
   const [F0, F1] = K.FERTILE;
 
   // ---------- 불러오기 ----------
@@ -57,24 +61,26 @@
       // 이전 자리 비교는 기존 배치에서 가까웠던 곰덫(ref) 기준 (assign과 같음)
       const ref = o ? KP.refOf(o, O.t1, O.t2) : KP.refOf(m, T1, T2);
       const rt = ref === 1 ? T1 : T2, ot = o && (ref === 1 ? O.t1 : O.t2);
-      const g = partOf(m), t = g === 1 ? T1 : T2;
+      const g = partOf(m), t = g === 1 ? T1 : T2, l = KP.lineOf(m, t);
       return {
-        n: m.n, x: m.x, y: m.y, g, ref, l: KP.lineOf(m, t), d2: KP.dist(m, T2), d1: KP.dist(m, T1), id: 'm' + i, kind: 'city',
+        n: m.n, x: m.x, y: m.y, g, ref, l, d2: KP.dist(m, T2), d1: KP.dist(m, T1), id: 'm' + i, kind: 'city',
         old: o ? { x: o.x, y: o.y, l: KP.lineOf(o, ot) } : null, same: !!o && m.x - rt.x === o.x - ot.x && m.y - rt.y === o.y - ot.y,
+        named: !SHARE && l <= NAMED_LINES,
       };
     });
     spare = V.spare.map((s, i) => ({ x: s.x, y: s.y, l: KP.lineOf(s, T2), n: s.n && s.n !== 'Player' ? s.n : `빈자리 ${i + 1}`, id: 's' + i, kind: 'spare' }));
     res = V.res.map((r, i) => ({ x: r.x, y: r.y, n: r.n, id: 'r' + i, kind: 'res' }));
     banners = V.banners.map((b, i) => ({ x: b.x, y: b.y, n: `깃발 ${i + 1}번`, id: 'b' + i, kind: 'banner' }));
-    if (SHARE) { // 자리 번호 (빈자리 포함): ① 곰덫2 1~3줄 → ② 곰덫1 1~2줄 → ③ 나머지. 같은 단계에서는 줄 → 곰덫에 가까운 순
-      const seats = members.concat(spare);
-      for (const s of seats) {
-        s.g = partOf(s); const t = s.g === 1 ? T1 : T2;
-        s.l = KP.lineOf(s, t); s.sd = KP.dist(s, t); s.d2 = KP.dist(s, T2); s.d1 = KP.dist(s, T1);
-        s.tier = KP.lineOf(s, T2) <= 3 ? 0 : KP.lineOf(s, T1) <= 2 ? 1 : 2;
-      }
-      seats.sort((a, b) => a.tier - b.tier || b.g - a.g || a.l - b.l || a.sd - b.sd).forEach((s, i) => { s.no = i + 1; });
-    }
+    // 자리 번호 (빈자리 포함, /v2·/v2/map 같은 번호): ① 곰덫2 1~3줄 → ② 곰덫1 1~2줄 → ③ 나머지. 같은 단계에서는 줄 → 곰덫에 가까운 순
+    // 공유용은 빈자리도 참여 곰덫 기준 줄·거리로 표시 (/v2 빈자리는 곰덫2 기준 그대로)
+    const seats = members.concat(spare).map(s => {
+      const g = partOf(s), t = g === 1 ? T1 : T2;
+      return { s, g, l: KP.lineOf(s, t), sd: KP.dist(s, t), tier: KP.lineOf(s, T2) <= 3 ? 0 : KP.lineOf(s, T1) <= 2 ? 1 : 2 };
+    });
+    seats.sort((a, b) => a.tier - b.tier || b.g - a.g || a.l - b.l || a.sd - b.sd).forEach((e, i) => {
+      e.s.no = i + 1;
+      if (SHARE) Object.assign(e.s, { g: e.g, l: e.l, sd: e.sd, d2: KP.dist(e.s, T2), d1: KP.dist(e.s, T1), tier: e.tier });
+    });
 
     // 지형 잘라내기 (본부·곰덫·자리·본부 근처 현재 깃발 주변) — kind 0 땅 1 산 2 호수 3 자원지 4 구조물
     real = real.filter(f => Math.max(Math.abs(f.x - HQ.x), Math.abs(f.y - HQ.y)) <= 90);
@@ -126,12 +132,13 @@
       if (spare.length) groups.push({ title: '빈자리 (새 연맹원용)', rows: spare });
     }
     const oldCell = m => m.kind === 'spare' ? '' : m.old ? `X:${m.old.x} Y:${m.old.y}${m.same ? '' : ' <span class="mvd">조정</span>'}` : '<span class="nw">신규</span>';
+    // data-no·data-xy = 자리 번호·좌표 검색, data-k = 닉네임 검색, data-named = 이름이 보이는 자리 (일부만 같아도 찾음)
     if (SHARE) $('list').innerHTML = '<thead><tr><th>자리</th><th>좌표</th><th></th></tr></thead>' + groups.map((gr, gi) =>
       `<tbody data-g="${gi}"><tr class="grp"><td colspan="3">${esc(gr.title)} · ${gr.rows.length}</td></tr>` +
-      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-k="${m.no} ${m.x},${m.y}"><td class="nm mono"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${m.no}</td><td class="mono">${xy(m)}</td><td>${m.kind === 'spare' ? '<span class="nw">빈자리</span>' : ''}</td></tr>`).join('') + '</tbody>').join('');
-    else $('list').innerHTML = `<thead><tr><th>닉네임</th><th>신규 좌표</th>${migrated ? '' : '<th>이전 좌표</th>'}</tr></thead>` + groups.map((gr, gi) =>
+      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k=""><td class="nm mono"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${m.no}</td><td class="mono">${xy(m)}</td><td>${m.kind === 'spare' ? '<span class="nw">빈자리</span>' : ''}</td></tr>`).join('') + '</tbody>').join('');
+    else $('list').innerHTML = `<thead><tr><th>닉네임 · 자리</th><th>신규 좌표</th>${migrated ? '' : '<th>이전 좌표</th>'}</tr></thead>` + groups.map((gr, gi) =>
       `<tbody data-g="${gi}"><tr class="grp"><td colspan="3">${esc(gr.title)} · ${gr.rows.length}</td></tr>` +
-      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-k="${esc(norm(m.n))}"><td class="nm"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${esc(m.n)}</td><td class="mono">${xy(m)}</td>${migrated ? '' : `<td class="mono">${oldCell(m)}</td>`}</tr>`).join('') + '</tbody>').join('');
+      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k="${esc(norm(m.n))}"${m.kind === 'spare' || m.named ? ' data-named="1"' : ''}><td class="nm"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span><span class="who" data-d="${esc(seatName(m))}">${esc(seatName(m))}</span></td><td class="mono">${xy(m)}</td>${migrated ? '' : `<td class="mono">${oldCell(m)}</td>`}</tr>`).join('') + '</tbody>').join('');
     if ($('bn')) $('bn').innerHTML = banners.map(b => `<li>${b.x},${b.y}</li>`).join('');
     byId = new Map(members.concat(spare).map(m => [m.id, m]));
 
@@ -165,7 +172,8 @@
       for (const s of plan.steps) {
         if (s.phase !== ph) { ph = s.phase; html += `<li class="grp">${PH[ph]}</li>`; }
         const what = s.op === 'build' ? `<b class="bd">설치</b> 깃발 ${num.get(`${s.f.x},${s.f.y}`)}번` : `<b class="rm">철거</b> ${esc(s.f.name || '')}`;
-        const on = objAt.get(s.f.y * G + s.f.x), why = SHARE && s.op === 'remove' && on && on.o.no ? `새 자리 ${on.o.no} 위에 있음` : s.why;
+        const on = objAt.get(s.f.y * G + s.f.x), numbered = on && on.o.no && (SHARE || (on.o.kind === 'city' && !on.o.named));
+        const why = s.op === 'remove' && numbered ? `새 자리 ${on.o.no} 위에 있음` : s.why;
         html += `<li><button type="button" class="lnk" data-x="${s.f.x}" data-y="${s.f.y}">${what}</button> <span class="mono">${s.f.x},${s.f.y}</span> <span class="why">${esc(why)}</span></li>`;
       }
       if (plan.stuck) html += '<li class="grp">일부 작업은 지금 깃발과 이어지지 않아 순서를 정하지 못했습니다</li>';
@@ -334,7 +342,7 @@
     const cellW = 2 * s * (view.rot ? 1.25 : 0.95);
     if (view.names && s >= 13) {
       const px = Math.min(12, Math.max(8, s * 0.42));
-      members.forEach(mm => label(mm, 2, SHARE ? String(mm.no) : mm.n, px, C['on-obj'], cellW));
+      members.forEach(mm => label(mm, 2, mm.named ? mm.n : String(mm.no), px, C['on-obj'], cellW));
       spare.forEach(sp => label(sp, 2, SHARE ? String(sp.no) : '빈', px, C['c-spare']));
     }
     if (s >= 10 && !SHARE) banners.forEach((b, i) => label(b, 1, String(i + 1), Math.min(11, s * 0.55), C['on-obj']));
@@ -343,7 +351,8 @@
   }
 
   // ---------- 선택 ----------
-  function select(m, center) {
+  // found: /v2에서 닉네임 전체로 찾은 자리 (번호로 보이는 자리도 카드에 닉네임 표시)
+  function select(m, center, found) {
     view.pick = m;
     document.querySelectorAll('tr.row.on').forEach(r => r.classList.remove('on'));
     const row = document.querySelector(`tr.row[data-id="${m.id}"]`);
@@ -356,7 +365,7 @@
       const prev = migrated ? '' : m.old
         ? `<span class="meta">이전 자리 X:${m.old.x} Y:${m.old.y} (${trapName(m.ref)} 기준 ${m.old.l}줄) <span class="badge ${m.same ? 'same' : 'mv'}">${m.same ? '이전과 같은 위치 관계' : '조금 조정됨'}</span></span>`
         : '<span class="meta"><span class="badge new">기존 배치도에 없던 닉네임</span></span>';
-      card.innerHTML = `<span class="nm">${esc(m.n)}</span><span class="co">${xy(m)}</span>
+      card.innerHTML = `<span class="nm">${m.named || found ? `${esc(m.n)} · ` : ''}자리 ${m.no}</span><span class="co">${xy(m)}</span>
         <span class="meta">${trapName(m.g)} 기준 ${m.l}줄 · 곰덫2까지 ${f1(m.d2)}칸 · 곰덫1까지 ${f1(m.d1)}칸</span>${prev}`;
     }
     card.hidden = false;
@@ -367,24 +376,31 @@
   $('list').addEventListener('click', e => {
     const tr = e.target.closest('tr.row');
     if (!tr) return;
-    select(byId.get(tr.dataset.id), true);
+    select(byId.get(tr.dataset.id), true, !!tr.dataset.k && tr.dataset.k === norm($('q') && $('q').value));
     // 휴대폰에서는 명단이 지도 아래에 있으므로 카드·지도가 보이게 올림
     if (matchMedia('(max-width: 900px)').matches) $('card').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
   function search(pickFirst) {
-    let q = norm($('q').value);
-    if (SHARE) q = q.replace(/^자리\s*/, '').replace(/[^\d]+/g, ' ').trim().replace(/ /g, ',');   // "12" · "520 723" · "X:520 Y:723"
-    const hit = k => !q || (SHARE ? (/,/.test(q) ? k.split(' ')[1] === q : k.split(' ')[0] === q) : k.includes(q));
+    // "12"·"자리 12" = 자리 번호, "520 723"·"X:520 Y:723" = 좌표 (그런 닉네임이 있으면 닉네임 우선)
+    let q = norm($('q').value), hit;
+    const d = q.replace(/^자리\s*/, ''), nick = members.some(m => norm(m.n) === q);
+    if (!nick && /^\d+$/.test(d)) { q = d; hit = r => r.dataset.no === q; }
+    else if (!nick && /^(x\s*:?\s*)?\d+[\s,]+(y\s*:?\s*)?\d+$/.test(d)) { q = d.replace(/[^\d]+/g, ' ').trim().replace(/ /g, ','); hit = r => r.dataset.xy === q; }
+    // 닉네임: 이름이 보이는 자리(1~2줄·빈자리)는 일부만 같아도, 번호로 보이는 자리는 닉네임 전체가 같아야 찾음
+    else hit = r => !q || r.dataset.k === q || (!!r.dataset.named && r.dataset.k.includes(q));
     const hits = [];
     document.querySelectorAll('#list tbody').forEach(tb => {
       let any = false;
-      tb.querySelectorAll('tr.row').forEach(r => { const on = hit(r.dataset.k); r.hidden = !on; if (on) { any = true; hits.push(r); } });
+      tb.querySelectorAll('tr.row').forEach(r => { const on = hit(r); r.hidden = !on; if (on) { any = true; hits.push(r); } });
       tb.hidden = !any;
     });
     // 정확히 같은 닉네임이 있으면 그 자리, 결과가 하나뿐이어도 그 자리
     const exact = q && hits.find(r => r.dataset.k === q);
+    // 닉네임 전체로 찾은 자리만 명단에도 닉네임을 잠깐 보여 줌
+    document.querySelectorAll('#list tr.row:not([data-named]) .who').forEach(w => { const r = w.closest('tr'); w.textContent = r === exact ? byId.get(r.dataset.id).n : w.dataset.d; });
+    if ($('qhint')) $('qhint').textContent = q && !hits.length ? '찾는 자리가 없습니다. 3줄부터는 닉네임 전체를 정확히 입력해 주세요 (대소문자는 상관없음).' : QHINT;
     const pick = exact || (q && (hits.length === 1 || pickFirst) ? hits[0] : null);
-    if (pick) select(byId.get(pick.dataset.id), true);
+    if (pick) select(byId.get(pick.dataset.id), true, pick === exact);
   }
   $('q')?.addEventListener('input', () => search(false));
   $('q')?.addEventListener('keydown', e => { if (e.key === 'Enter') search(true); });
@@ -509,7 +525,7 @@
   // ---------- 복사 ----------
   function copyText() {
     const L = ['[신규 자리 배치] 서버 2382 KOR', `곰덫2(사냥 함정 2) ${xy(T2)} / 곰덫1(사냥 함정 1) ${xy(T1)}`, `깃발 ${banners.length}개 (순서대로): ` + banners.map((b, i) => `${i + 1})${b.x},${b.y}`).join(' ')];
-    for (const gr of groups) { if (!gr.rows.length || gr.rows[0].kind === 'spare') continue; L.push(`■ ${gr.title}`); L.push(gr.rows.map(m => `${m.n} ${m.x},${m.y}`).join(' / ')); }
+    for (const gr of groups) { if (!gr.rows.length || gr.rows[0].kind === 'spare') continue; L.push(`■ ${gr.title}`); L.push(gr.rows.map(m => `${seatName(m)} ${m.x},${m.y}`).join(' / ')); }
     L.push(`내 자리 찾기: ${location.origin}/v2/`);
     return L.join('\n');
   }
