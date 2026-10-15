@@ -152,7 +152,7 @@
       $('reallist').innerHTML = areas.map(a => `<li class="grp">${esc(a || '기타')}</li>` +
         real.filter(f => f.area === a).map(f => `<li><button type="button" class="lnk" data-f="${f.id}">${esc(f.n)}</button> <span class="mono">${f.x},${f.y}</span></li>`).join('')).join('');
       $('realnote').textContent = survey && survey.survey ? survey.survey.scope || '' : '';
-      $('real').hidden = false; $('todolegend').hidden = false; $('terrname').textContent = '연맹 영토 (지금 깃발 기준)';
+      $('real').hidden = false; $('todolegend').hidden = false; $('terrname').textContent = '연맹 영토 (지금 깃발 + 설치할 깃발)';
     }
     // 신규 배치 깃발 중 게임에 이미 서 있는 것 (지금 깃발 데이터가 없으면 모두 서 있는 것으로 그림)
     banners.forEach(b => { b.built = !real.length || realAt.has(b.y * G + b.x); });
@@ -212,10 +212,10 @@
       da[p] = c3[0]; da[p + 1] = c3[1]; da[p + 2] = c3[2]; da[p + 3] = 255;
     }
     ga.putImageData(ia, 0, 0); terrImg = a;
-    // 연맹 영토 (본부 15×15, 깃발 7×7): 게임에 지금 서 있는 깃발 기준. 지금 깃발 데이터가 없으면(/v2/map) 신규 배치 깃발 기준
+    // 연맹 영토 (본부 15×15, 깃발 7×7): 게임에 지금 서 있는 깃발 + 신규 배치 깃발(아직 안 지은 것 포함)을 같은 영토로
     const set = new Uint8Array(CW * CH);
     const cov = (x, y, s, c) => { for (let yy = y - c; yy < y + s + c; yy++) for (let xx = x - c; xx < x + s + c; xx++) { const lx = xx - CX, ly = yy - CY; if (lx >= 0 && ly >= 0 && lx < CW && ly < CH) set[ly * CW + lx] = 1; } };
-    cov(HQ.x, HQ.y, 3, K.HQ_COV); (real.length ? real : banners).forEach(b => cov(b.x, b.y, 1, K.BN_COV));
+    cov(HQ.x, HQ.y, 3, K.HQ_COV); real.concat(banners).forEach(b => cov(b.x, b.y, 1, K.BN_COV));
     const b = mk(), gb = b.getContext('2d'), ib = gb.createImageData(CW, CH), db = ib.data, t = rgb(C['c-terr']);
     edges = new Path2D();
     for (let r = 0; r < CH; r++) for (let x = 0; x < CW; x++) {
