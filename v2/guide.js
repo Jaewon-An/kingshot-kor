@@ -1,7 +1,7 @@
 /* /v2 신규 자리 안내 — 원본: USB "code/x2/template.html" 스크립트.
  * 데이터는 게시본에서 매번 계산합니다: 신규 배치 /api/v2/layout, 이전 자리 /api/layout(기존 배치도).
  * 좌표는 게임 좌표(건물의 최소 X·Y 칸). 줄·거리·기준 곰덫 계산은 v2/plan.js(KSPlan)와 같습니다.
- * /v2: 참여 곰덫 1~2줄(NAMED_LINES) 자리만 이름, 3줄부터는 자리 번호. 3줄부터의 닉네임은 닉네임 전체로 검색해야 찾음.
+ * /v2: 곰덫2 1~2줄·곰덫1 1줄(NAMED_LINES) 자리만 이름, 그 밖은 자리 번호. 번호 자리는 명단·내 자리 찾기에 나오지 않음.
  * /v2/map (<html data-mode="share">): 공유용 — 자리 배치와 지도 위치만. 도시 자리는 이름 대신 번호(빈자리 포함),
  *   이름(기존 배치도)·지금 깃발·작업 순서 데이터는 불러오지 않음. ?s=자리번호 · ?at=X,Y 로 그 위치를 열고, 누른 위치가 주소에 남음. */
 (function () {
@@ -16,7 +16,7 @@
   const norm = s => String(s || '').replace(/ /g, ' ').trim().toLowerCase();
   const BLOCKS = KP.BLOCKS_DEFAULT;
   const SHARE = document.documentElement.dataset.mode === 'share';
-  const NAMED_LINES = 2;   // /v2: 참여 곰덫 이 줄 안 자리만 이름, 그 밖은 자리 번호
+  const NAMED_LINES = { 2: 2, 1: 1 };   // /v2: 참여 곰덫별로 이 줄 안 자리만 이름, 그 밖은 자리 번호 (곰덫1 2줄은 일단 번호)
   const QHINT = $('qhint') ? $('qhint').textContent : '';
   // 목록·지도에 보이는 이름: 이름 표시 자리와 빈자리는 이름, 그 밖은 자리 번호
   const seatName = m => SHARE || (m.kind === 'city' && !m.named) ? `자리 ${m.no}` : m.n;
@@ -65,7 +65,7 @@
       return {
         n: m.n, x: m.x, y: m.y, g, ref, l, d2: KP.dist(m, T2), d1: KP.dist(m, T1), id: 'm' + i, kind: 'city',
         old: o ? { x: o.x, y: o.y, l: KP.lineOf(o, ot) } : null, same: !!o && m.x - rt.x === o.x - ot.x && m.y - rt.y === o.y - ot.y,
-        named: !SHARE && l <= NAMED_LINES,
+        named: !SHARE && l <= NAMED_LINES[g],
       };
     });
     spare = V.spare.map((s, i) => ({ x: s.x, y: s.y, l: KP.lineOf(s, T2), n: s.n && s.n !== 'Player' ? s.n : `빈자리 ${i + 1}`, id: 's' + i, kind: 'spare' }));
@@ -124,21 +124,22 @@
         const title = `${trapName(s.g)} ${s.l}줄${s.tier === 2 ? ' (나머지)' : ''}`, last = groups[groups.length - 1];
         if (last && last.title === title) last.rows.push(s); else groups.push({ title, rows: [s] });
       }
-    } else {
+    } else { // 이름이 보이는 자리만 (번호 자리는 명단·검색에 넣지 않음)
+      const shown = members.filter(m => m.named);
       for (const g of [2, 1]) {
-        const lines = [...new Set(members.filter(m => m.g === g).map(m => m.l))].sort((a, b) => a - b);
-        for (const l of lines) groups.push({ title: `${trapName(g)} 기준 ${l}줄`, rows: members.filter(m => m.g === g && m.l === l).sort((a, b) => (g === 2 ? a.d2 - b.d2 : a.d1 - b.d1)) });
+        const lines = [...new Set(shown.filter(m => m.g === g).map(m => m.l))].sort((a, b) => a - b);
+        for (const l of lines) groups.push({ title: `${trapName(g)} 기준 ${l}줄`, rows: shown.filter(m => m.g === g && m.l === l).sort((a, b) => (g === 2 ? a.d2 - b.d2 : a.d1 - b.d1)) });
       }
       if (spare.length) groups.push({ title: '빈자리 (새 연맹원용)', rows: spare });
     }
     const oldCell = m => m.kind === 'spare' ? '' : m.old ? `X:${m.old.x} Y:${m.old.y}${m.same ? '' : ' <span class="mvd">조정</span>'}` : '<span class="nw">신규</span>';
-    // data-no·data-xy = 자리 번호·좌표 검색, data-k = 닉네임 검색, data-named = 이름이 보이는 자리 (일부만 같아도 찾음)
+    // data-no·data-xy = 자리 번호·좌표 검색, data-k = 닉네임 검색
     if (SHARE) $('list').innerHTML = '<thead><tr><th>자리</th><th>좌표</th><th></th></tr></thead>' + groups.map((gr, gi) =>
       `<tbody data-g="${gi}"><tr class="grp"><td colspan="3">${esc(gr.title)} · ${gr.rows.length}</td></tr>` +
       gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k=""><td class="nm mono"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${m.no}</td><td class="mono">${xy(m)}</td><td>${m.kind === 'spare' ? '<span class="nw">빈자리</span>' : ''}</td></tr>`).join('') + '</tbody>').join('');
-    else $('list').innerHTML = `<thead><tr><th>닉네임 · 자리</th><th>신규 좌표</th>${migrated ? '' : '<th>이전 좌표</th>'}</tr></thead>` + groups.map((gr, gi) =>
+    else $('list').innerHTML = `<thead><tr><th>닉네임</th><th>신규 좌표</th>${migrated ? '' : '<th>이전 좌표</th>'}</tr></thead>` + groups.map((gr, gi) =>
       `<tbody data-g="${gi}"><tr class="grp"><td colspan="3">${esc(gr.title)} · ${gr.rows.length}</td></tr>` +
-      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k="${esc(norm(m.n))}"${m.kind === 'spare' || m.named ? ' data-named="1"' : ''}><td class="nm"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span><span class="who" data-d="${esc(seatName(m))}">${esc(seatName(m))}</span></td><td class="mono">${xy(m)}</td>${migrated ? '' : `<td class="mono">${oldCell(m)}</td>`}</tr>`).join('') + '</tbody>').join('');
+      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k="${esc(norm(m.n))}"><td class="nm"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${esc(m.n)}</td><td class="mono">${xy(m)}</td>${migrated ? '' : `<td class="mono">${oldCell(m)}</td>`}</tr>`).join('') + '</tbody>').join('');
     if ($('bn')) $('bn').innerHTML = banners.map(b => `<li>${b.x},${b.y}</li>`).join('');
     byId = new Map(members.concat(spare).map(m => [m.id, m]));
 
@@ -351,8 +352,7 @@
   }
 
   // ---------- 선택 ----------
-  // found: /v2에서 닉네임 전체로 찾은 자리 (번호로 보이는 자리도 카드에 닉네임 표시)
-  function select(m, center, found) {
+  function select(m, center) {
     view.pick = m;
     document.querySelectorAll('tr.row.on').forEach(r => r.classList.remove('on'));
     const row = document.querySelector(`tr.row[data-id="${m.id}"]`);
@@ -361,11 +361,13 @@
     if (SHARE) card.innerHTML = `<span class="nm">자리 ${m.no}${m.kind === 'spare' ? ' <span class="badge new">빈자리</span>' : ''}</span><span class="co">${xy(m)}</span>
         <span class="meta">${trapName(m.g)} 기준 ${m.l}줄 · 곰덫2까지 ${f1(m.d2)}칸 · 곰덫1까지 ${f1(m.d1)}칸</span>`;
     else if (m.kind === 'spare') card.innerHTML = `<span class="nm">${esc(m.n)}</span><span class="co">${xy(m)}</span><span class="meta">곰덫2 기준 ${m.l}줄 · 새로 들어오는 연맹원용 자리</span>`;
+    else if (!m.named) card.innerHTML = `<span class="nm">자리 ${m.no}</span><span class="co">${xy(m)}</span>
+        <span class="meta">${trapName(m.g)} 기준 ${m.l}줄 · 곰덫2까지 ${f1(m.d2)}칸 · 곰덫1까지 ${f1(m.d1)}칸</span>`;   // 번호 자리: 닉네임·이전 자리 없이
     else {
       const prev = migrated ? '' : m.old
         ? `<span class="meta">이전 자리 X:${m.old.x} Y:${m.old.y} (${trapName(m.ref)} 기준 ${m.old.l}줄) <span class="badge ${m.same ? 'same' : 'mv'}">${m.same ? '이전과 같은 위치 관계' : '조금 조정됨'}</span></span>`
         : '<span class="meta"><span class="badge new">기존 배치도에 없던 닉네임</span></span>';
-      card.innerHTML = `<span class="nm">${m.named || found ? `${esc(m.n)} · ` : ''}자리 ${m.no}</span><span class="co">${xy(m)}</span>
+      card.innerHTML = `<span class="nm">${esc(m.n)} · 자리 ${m.no}</span><span class="co">${xy(m)}</span>
         <span class="meta">${trapName(m.g)} 기준 ${m.l}줄 · 곰덫2까지 ${f1(m.d2)}칸 · 곰덫1까지 ${f1(m.d1)}칸</span>${prev}`;
     }
     card.hidden = false;
@@ -376,18 +378,18 @@
   $('list').addEventListener('click', e => {
     const tr = e.target.closest('tr.row');
     if (!tr) return;
-    select(byId.get(tr.dataset.id), true, !!tr.dataset.k && tr.dataset.k === norm($('q') && $('q').value));
+    select(byId.get(tr.dataset.id), true);
     // 휴대폰에서는 명단이 지도 아래에 있으므로 카드·지도가 보이게 올림
     if (matchMedia('(max-width: 900px)').matches) $('card').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
   function search(pickFirst) {
     // "12"·"자리 12" = 자리 번호, "520 723"·"X:520 Y:723" = 좌표 (그런 닉네임이 있으면 닉네임 우선)
     let q = norm($('q').value), hit;
-    const d = q.replace(/^자리\s*/, ''), nick = members.some(m => norm(m.n) === q);
+    // 명단에 있는 자리(이름이 보이는 자리·빈자리)만 찾음. 번호 자리는 명단에 없어서 찾지 않음
+    const d = q.replace(/^자리\s*/, ''), nick = members.some(m => m.named && norm(m.n) === q);
     if (!nick && /^\d+$/.test(d)) { q = d; hit = r => r.dataset.no === q; }
     else if (!nick && /^(x\s*:?\s*)?\d+[\s,]+(y\s*:?\s*)?\d+$/.test(d)) { q = d.replace(/[^\d]+/g, ' ').trim().replace(/ /g, ','); hit = r => r.dataset.xy === q; }
-    // 닉네임: 이름이 보이는 자리(1~2줄·빈자리)는 일부만 같아도, 번호로 보이는 자리는 닉네임 전체가 같아야 찾음
-    else hit = r => !q || r.dataset.k === q || (!!r.dataset.named && r.dataset.k.includes(q));
+    else hit = r => !q || r.dataset.k.includes(q);
     const hits = [];
     document.querySelectorAll('#list tbody').forEach(tb => {
       let any = false;
@@ -396,11 +398,9 @@
     });
     // 정확히 같은 닉네임이 있으면 그 자리, 결과가 하나뿐이어도 그 자리
     const exact = q && hits.find(r => r.dataset.k === q);
-    // 닉네임 전체로 찾은 자리만 명단에도 닉네임을 잠깐 보여 줌
-    document.querySelectorAll('#list tr.row:not([data-named]) .who').forEach(w => { const r = w.closest('tr'); w.textContent = r === exact ? byId.get(r.dataset.id).n : w.dataset.d; });
-    if ($('qhint')) $('qhint').textContent = q && !hits.length ? '찾는 자리가 없습니다. 3줄부터는 닉네임 전체를 정확히 입력해 주세요 (대소문자는 상관없음).' : QHINT;
+    if ($('qhint')) $('qhint').textContent = q && !hits.length ? '찾는 자리가 없습니다. 번호로 표시된 자리는 검색되지 않습니다.' : QHINT;
     const pick = exact || (q && (hits.length === 1 || pickFirst) ? hits[0] : null);
-    if (pick) select(byId.get(pick.dataset.id), true, pick === exact);
+    if (pick) select(byId.get(pick.dataset.id), true);
   }
   $('q')?.addEventListener('input', () => search(false));
   $('q')?.addEventListener('keydown', e => { if (e.key === 'Enter') search(true); });
