@@ -89,9 +89,9 @@ function analyse(flagObjs, buildings) {
     if (a >= 3) nodeCount[n.t]++;
   }
   const outside = buildings.filter(b => !tilesOf(b).every(k => cnt.has(k)));
-  // flags whose 7×7 areas overlap or share an edge belong to one territory group
-  const touch = (a, b) => a.tx <= b.tx + 7 && b.tx <= a.tx + 7 && a.ty <= b.ty + 7 && b.ty <= a.ty + 7 &&
-    !((a.tx === b.tx + 7 || b.tx === a.tx + 7) && (a.ty === b.ty + 7 || b.ty === a.ty + 7));
+  // flags whose 7×7 areas overlap or touch belong to one territory group — corners included:
+  // the 2026-10-15 screenshots show the fertile-land flags chained with only their territory corners touching
+  const touch = (a, b) => a.tx <= b.tx + 7 && b.tx <= a.tx + 7 && a.ty <= b.ty + 7 && b.ty <= a.ty + 7;
   const seen = new Set();
   let groups = 0;
   for (const f of flagObjs) {

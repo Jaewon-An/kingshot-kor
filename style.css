@@ -229,6 +229,7 @@ select, input[type=text], input[type=number], textarea {
 .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-left: 4px; }
 .sw.free { border: 1px dashed rgba(206, 170, 255, .95); background: rgba(177, 120, 255, .45); }
 .sw.dashed { border: 1px dashed rgba(255, 90, 90, .9); background: rgba(255, 90, 90, .15); }
+.sw.real { border: 1px dashed #3fd9c4; background: rgba(63, 217, 196, .45); }
 
 #coverage-table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 #coverage-table th, #coverage-table td { padding: 3px 4px; text-align: right; border-bottom: 1px solid #2a2a2a; }
@@ -255,6 +256,13 @@ select, input[type=text], input[type=number], textarea {
 /* read-only public view vs. admin editor */
 body:not(.admin) .admin-only { display: none !important; }
 body.admin .view-only { display: none !important; }
+/* /v2/admin: tools for the v2 (new seat) layout */
+body:not(.v2) .v2-only { display: none !important; }
+#drawer a.btn-link { color: #fff; background: #444; text-decoration: none; padding: 7px 12px; border-radius: 6px; font-weight: bold; font-size: 11px; }
+#drawer a.btn-link:hover { filter: brightness(1.15); }
+#drawer .note { margin: 0; font-size: 11px; line-height: 1.5; }
+.result .item.err span:first-child { color: #ff8a8a; }
+.result .item.ok span:first-child { color: #7fdc9a; }
 .badge {
   font-size: 11px;
   font-weight: bold;

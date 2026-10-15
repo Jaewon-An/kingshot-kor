@@ -1,6 +1,6 @@
 // Local server with the same API as _worker.js on Cloudflare:
-//   static files, /api/login, GET/PUT /api/layout
-// Locally the published layout is the file layouts/current.json.
+//   static files, /api/login, GET/PUT /api/layout, GET/PUT /api/v2/layout
+// Locally the published layouts are the files layouts/current.json and layouts/v2.json.
 // Usage: node server.js   (PORT env var, default 8080) — no dependencies.
 const http = require('node:http');
 const fs = require('node:fs');
@@ -9,7 +9,10 @@ const crypto = require('node:crypto');
 
 const PORT = Number(process.env.PORT) || 8080;
 const ROOT = __dirname;
-const LAYOUT_FILE = path.join(ROOT, 'layouts', 'current.json');
+const LAYOUT_FILES = {
+  '/api/layout': path.join(ROOT, 'layouts', 'current.json'),
+  '/api/v2/layout': path.join(ROOT, 'layouts', 'v2.json'),
+};
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 
 // ADMIN_HASH = "salt$sha256(salt:id:password)"; from .admin-secret (tools/set-admin.mjs) or derived from admin.txt
@@ -42,6 +45,8 @@ function checkToken(req) {
 const validLayout = list => Array.isArray(list) && list.length <= 5000 && list.every(o =>
   o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
   (o.nickname === undefined || (typeof o.nickname === 'string' && o.nickname.length <= 80)));
+// same transform as tools/build-dist.mjs uses for dist/v2/admin.html
+const v2AdminPage = html => html.replace('<head>', '<head>\n<base href="/">');
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -75,16 +80,21 @@ async function api(req, res, url) {
     if (!checkLogin(String(body.id || ''), String(body.pw || ''))) return send(res, 401, { error: '아이디 또는 비밀번호가 틀렸습니다' });
     return send(res, 200, { token: makeToken() });
   }
-  if (url.pathname === '/api/layout' && req.method === 'GET') {
-    return fs.readFile(LAYOUT_FILE, (err, data) => (err ? send(res, 404, { error: 'no layout' }) : send(res, 200, data)));
+  const layoutFile = LAYOUT_FILES[url.pathname];
+  if (layoutFile && req.method === 'GET') {
+    return fs.readFile(layoutFile, (err, data) => {
+      if (err) return send(res, 404, { error: 'no layout' });
+      res.writeHead(200, { 'Content-Type': TYPES['.json'], 'Cache-Control': 'no-store', 'X-Layout-Updated': fs.statSync(layoutFile).mtime.toISOString() });
+      res.end(data);
+    });
   }
-  if (url.pathname === '/api/layout' && req.method === 'PUT') {
+  if (layoutFile && req.method === 'PUT') {
     if (!checkToken(req)) return send(res, 401, { error: '로그인이 필요합니다' });
     let list;
     try { list = JSON.parse(await readBody(req)); } catch (_) { return send(res, 400, { error: 'JSON 형식이 아닙니다' }); }
     if (!validLayout(list)) return send(res, 400, { error: '배치 데이터 형식이 아닙니다' });
-    try { fs.copyFileSync(LAYOUT_FILE, LAYOUT_FILE.replace(/\.json$/, '.previous.json')); } catch (_) { /* first publish */ }
-    fs.writeFileSync(LAYOUT_FILE, JSON.stringify(list, null, 1));
+    try { fs.copyFileSync(layoutFile, layoutFile.replace(/\.json$/, '.previous.json')); } catch (_) { /* first publish */ }
+    fs.writeFileSync(layoutFile, JSON.stringify(list, null, 1));
     return send(res, 200, { ok: true, count: list.length });
   }
   return send(res, 404, { error: 'not found' });
@@ -96,8 +106,13 @@ http.createServer((req, res) => {
     return api(req, res, url).catch(err => send(res, 500, { error: err.message }));
   }
   // /admin is the same page as / — the page switches to the editor from its own path (like admin.html on Pages)
+  // /v2/admin is that editor again for the v2 layout; <base href="/"> keeps its relative files at the root (as in dist/v2/admin.html)
+  if (['/v2/admin', '/v2/admin/', '/v2/admin.html'].includes(url.pathname)) {
+    return send(res, 200, v2AdminPage(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')), TYPES['.html']);
+  }
+  const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html' };
   const page = ['/', '/admin', '/admin/', '/admin.html', '/flags', '/flags/', '/flags.html'].includes(url.pathname) ? '/index.html'
-    : url.pathname;
+    : PAGES[url.pathname] || url.pathname;
   const rel = decodeURIComponent(page);
   const file = path.normalize(path.join(ROOT, rel));
   if (!file.startsWith(ROOT + path.sep) || rel.includes('..')) return send(res, 403, 'forbidden', 'text/plain');
@@ -108,4 +123,4 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
     res.end(data);
   });
-}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (관리자: /admin${ADMIN_HASH ? '' : ' — 계정 미설정'})`));
+}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (관리자: /admin · 신규 자리: /v2, /v2/admin${ADMIN_HASH ? '' : ' — 계정 미설정'})`));

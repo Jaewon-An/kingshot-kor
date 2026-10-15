@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- /v2/plan 작전도 — 원본: USB "킹샷2382_곰덫배치/code/src/template.html". 엔진은 /v2/core.js, 지도는 /mapdata.js (같은 데이터) -->
+<title>곰덫 배치 작전도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: 작전 테이블 — 왼쪽 지휘 패널(조건·요약), 오른쪽 큰 작전 지도, 아래 설치 명령표 */
+:root {
+  --bg: #e9ece6; --panel: #f6f7f3; --ink: #1b231e; --muted: #5a665e; --line: #cdd5ca;
+  --accent: #94600f; --accent-ink: #fffaf0; --ok: #2f7a4a; --bad: #b4322b; --focus: #2f6fb0;
+  --m-void: #d6dbd1; --m-ground: #e1e6d9; --m-fertile: #cddfbd; --m-mount: #8d887d; --m-lake: #8db2cb;
+  --m-node: #b4c08f; --m-struct: #7b5a8f; --m-nobuild: #e8cdc6; --m-grid: rgba(27,35,30,.10); --m-edge: #1b231e;
+  --c-hq: #b07d1a; --c-t2: #b4322b; --c-t1: #c96f1c; --c-banner: #2f5fa8; --c-city2: #2f8277; --c-city1: #8a6d2f;
+  --c-terr: #3d7fd1; --on-obj: #ffffff; --m-foreign: #cbbcdc; --shadow: rgba(27,35,30,.18);
+  --f-display: "Gowun Batang", "Nanum Myeongjo", "Batang", serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111513; --panel: #181d1a; --ink: #e2e7df; --muted: #97a39a; --line: #2b332e;
+    --accent: #d6a24a; --accent-ink: #1a1408; --ok: #5cb87d; --bad: #e2675f; --focus: #7fb0ec;
+    --m-void: #0b0e0c; --m-ground: #1c231e; --m-fertile: #223220; --m-mount: #4f4b45; --m-lake: #26465c;
+    --m-node: #3d4830; --m-struct: #5c406d; --m-nobuild: #3b2623; --m-grid: rgba(226,231,223,.08); --m-edge: #e2e7df;
+    --c-hq: #e0b04a; --c-t2: #e5574e; --c-t1: #e8913e; --c-banner: #5f95e6; --c-city2: #3aa594; --c-city1: #b8954a;
+    --c-terr: #4f8fe6; --on-obj: #ffffff; --m-foreign: #352b45; --shadow: rgba(0,0,0,.5); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111513; --panel: #181d1a; --ink: #e2e7df; --muted: #97a39a; --line: #2b332e;
+  --accent: #d6a24a; --accent-ink: #1a1408; --ok: #5cb87d; --bad: #e2675f; --focus: #7fb0ec;
+  --m-void: #0b0e0c; --m-ground: #1c231e; --m-fertile: #223220; --m-mount: #4f4b45; --m-lake: #26465c;
+  --m-node: #3d4830; --m-struct: #5c406d; --m-nobuild: #3b2623; --m-grid: rgba(226,231,223,.08); --m-edge: #e2e7df;
+  --c-hq: #e0b04a; --c-t2: #e5574e; --c-t1: #e8913e; --c-banner: #5f95e6; --c-city2: #3aa594; --c-city1: #b8954a;
+  --c-terr: #4f8fe6; --on-obj: #ffffff; --m-foreign: #352b45; --shadow: rgba(0,0,0,.5); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.55; word-break: keep-all; overflow-wrap: break-word; }
+.page { max-width: 1880px; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 18px; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-family: var(--f-display); font-size: 1.9rem; line-height: 1.2; letter-spacing: -0.01em; }
+h2 { font-family: var(--f-display); font-size: 1.3rem; }
+h3 { font-size: .8rem; font-weight: 600; letter-spacing: .06em; color: var(--muted); }
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.eyebrow { margin: 0 0 4px; font-family: var(--f-mono); font-size: .75rem; letter-spacing: .12em; color: var(--accent); }
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.hqchip { font-family: var(--f-mono); font-size: .85rem; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); white-space: nowrap; }
+
+.grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+form { display: flex; flex-direction: column; gap: 14px; margin: 0; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+legend { padding: 0; margin-bottom: 6px; font-size: .75rem; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
+.f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.f.wide { grid-column: 1 / -1; }
+label { font-size: .82rem; color: var(--ink); }
+.hint { font-size: .74rem; color: var(--muted); line-height: 1.4; }
+input[type=number], select { width: 100%; font: inherit; font-size: .9rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); }
+input[type=number] { font-family: var(--f-mono); }
+.chk { display: flex; gap: 8px; align-items: flex-start; grid-column: 1 / -1; font-size: .82rem; }
+.chk input { margin-top: 3px; accent-color: var(--accent); }
+details { border-top: 1px solid var(--line); padding-top: 10px; }
+summary { cursor: pointer; font-size: .82rem; font-weight: 600; color: var(--muted); }
+details[open] summary { margin-bottom: 10px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.btn { font: inherit; font-weight: 600; border-radius: 4px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink); padding: 6px 10px; font-size: .82rem; }
+.btn:hover { border-color: var(--muted); }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.run { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-size: .95rem; padding: 10px 12px; }
+.run:hover { filter: brightness(1.06); border-color: var(--accent); }
+.prog { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.prog > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.status { margin: 0; font-size: .8rem; color: var(--muted); min-height: 1.3em; }
+.status.err { color: var(--bad); }
+
+.sum { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line); padding-top: 14px; }
+.traps { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.trap { border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--bg); }
+.trap .k { font-size: .74rem; font-weight: 600; letter-spacing: .05em; display: flex; align-items: center; gap: 6px; }
+.trap .k i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.trap .v { font-size: 1.05rem; font-weight: 600; }
+.trap .s { font-size: .74rem; color: var(--muted); }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; }
+.stats div { display: flex; flex-direction: column; }
+.stats dt { font-size: .74rem; color: var(--muted); }
+.stats dd { margin: 0; font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: 1.05rem; font-weight: 600; }
+.bands { display: flex; gap: 4px; }
+.bands div { flex: 1; text-align: center; padding: 6px 2px; border-radius: 4px; background: var(--bg); border: 1px solid var(--line); }
+.bands b { display: block; font-family: var(--f-mono); font-size: 1rem; }
+.bands span { font-size: .7rem; color: var(--muted); }
+.pill { align-self: flex-start; font-size: .78rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; }
+.pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); }
+.warn { margin: 0; font-size: .78rem; color: var(--bad); }
+
+.mapcol { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mapbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mapbar .sp { flex: 1; }
+.readout { font-family: var(--f-mono); font-size: .78rem; color: var(--muted); min-height: 1.4em; overflow-wrap: anywhere; }
+.mapwrap { position: relative; height: clamp(560px, calc(100vh - 130px), 1400px); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--m-void); }
+@media (max-width: 900px) { .mapwrap { height: 80vh; min-height: 420px; } }
+/* 메뉴 숨김: 지도를 화면 전체 폭·높이로 */
+.page.wide { max-width: none; padding-block: 12px 32px; gap: 12px; }
+.page.wide .grid { grid-template-columns: minmax(0, 1fr); }
+.page.wide .lede { display: none; }
+.page.wide .top { padding-bottom: 8px; align-items: center; }
+.page.wide .eyebrow { margin: 0; }
+.page.wide h1 { font-size: 1.25rem; }
+.page.wide .hqchip { padding: 4px 8px; }
+.page.wide .mapwrap { height: max(480px, calc(100vh - 166px)); }
+.mstat { font-family: var(--f-mono); font-size: .78rem; font-variant-numeric: tabular-nums; color: var(--ink); padding: 5px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); overflow-wrap: anywhere; }
+.mstat:empty { display: none; }
+.mstat.err { color: var(--bad); border-color: var(--bad); }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.tip { position: absolute; left: 0; top: 0; pointer-events: none; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 5px 9px; box-shadow: 0 3px 10px var(--shadow); font-size: .74rem; line-height: 1.4; max-width: 280px; }
+.tip b { display: block; font-family: var(--f-mono); font-size: 1rem; font-weight: 600; letter-spacing: .01em; }
+.f textarea { min-height: 54px; resize: vertical; font-size: .85rem; background: var(--bg); }
+canvas.drag { cursor: grabbing; }
+canvas.moving { cursor: move; }
+.btn.mvmode[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.movebar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
+.mvinfo { flex: 1 1 240px; min-width: 0; font-size: .8rem; }
+.mvinfo.ok { color: var(--ok); } .mvinfo.bad { color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: default; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .76rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+
+.orders { display: flex; flex-direction: column; gap: 12px; }
+.ordhead { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 18px; }
+@media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.cols > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tbl { overflow: auto; max-height: 460px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
+table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 600; font-size: .74rem; color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 5px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td.n, th.n { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+tbody tr { cursor: default; }
+tbody tr:hover, tbody tr.hl { background: var(--bg); }
+.tag { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+textarea { width: 100%; min-height: 160px; font-family: var(--f-mono); font-size: .78rem; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r); padding: 8px; }
+footer { border-top: 1px solid var(--line); padding-top: 12px; font-size: .76rem; color: var(--muted); max-width: 90ch; }
+footer a { color: inherit; }
+@media (prefers-reduced-motion: reduce) { .prog > div { transition: none; } }
+</style>
+
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <p class="eyebrow">KINGSHOT · 서버 2382 · 곰 사냥</p>
+      <h1>곰덫 배치 작전도</h1>
+      <p class="lede">평원 본부를 기준으로 곰덫 2개를 옥토 쪽에 세우고, 연맹원 도시를 곰덫2에 최대한 가깝게 채우는 자리와 깃발 위치를 계산합니다. 실제 킹덤 지도의 산·호수·자원지와 금지구역을 반영합니다. 이름 없이 자리만 계산하며, 연맹원 이름 배치는 <a href="/v2/admin">v2 관리자</a>의 "이름 배치 다시 계산"으로 합니다.</p>
+    </div>
+    <div class="hqchip" id="hqchip">평원 본부 X:523 Y:759</div>
+  </header>
+
+  <div class="grid">
+    <aside class="panel" id="side">
+      <form id="form" novalidate>
+        <fieldset>
+          <legend>평원 본부 좌표</legend>
+          <div class="f"><label for="hx">X</label><input id="hx" type="number" min="0" max="1199" value="523"></div>
+          <div class="f"><label for="hy">Y</label><input id="hy" type="number" min="0" max="1199" value="759"></div>
+        </fieldset>
+        <fieldset>
+          <legend>인원</legend>
+          <div class="f"><label for="n">연맹원 도시 수</label><input id="n" type="number" min="1" max="100" value="100"></div>
+          <div class="f"><label for="k2">곰덫2 주변 인원</label><input id="k2" type="number" min="0" max="100" value="91"></div>
+          <p class="hint f wide">곰덫2 주변 인원을 줄이면 나머지는 곰덫1 주변에 먼저 배치합니다 (12명 이하면 곰덫1 1줄부터).</p>
+          <div class="f"><label for="lines">곰덫 주변 우선 줄 수</label><input id="lines" type="number" min="0" max="6" value="3"></div>
+          <p class="hint f">곰덫에 붙은 1줄부터 이 줄까지를 먼저 꽉 채웁니다. 0이면 거리만 봅니다.</p>
+          <label class="chk"><input id="grid" type="checkbox" checked> 도시 오와 열 맞춤 (모든 도시를 같은 2칸 격자에 정렬해 반 칸 엇갈림 없음)</label>
+        </fieldset>
+        <fieldset>
+          <legend>곰덫 위치</legend>
+          <div class="f wide"><label for="trapPos">곰덫2 자리 정하기</label>
+            <select id="trapPos">
+              <option value="auto">옥토 쪽에서 자동 탐색</option>
+              <option value="near" selected>지정 좌표 근처에서 최선 자리 탐색</option>
+              <option value="fixed">곰덫2·곰덫1 좌표 고정</option>
+            </select></div>
+          <div class="f pos-set"><label for="p2x">곰덫2 X</label><input id="p2x" type="number" min="0" max="1199" value="515"></div>
+          <div class="f pos-set"><label for="p2y">곰덫2 Y</label><input id="p2y" type="number" min="0" max="1199" value="703"></div>
+          <div class="f pos-near"><label for="pr">탐색 범위 (±칸)</label><input id="pr" type="number" min="0" max="10" value="0"></div>
+          <p class="hint f pos-near">이 범위 안에서 우선 줄에 도시가 가장 많이 들어가는 칸으로 곰덫2를 옮깁니다. 0이면 그 자리에 고정하고 곰덫1만 찾습니다.</p>
+          <div class="f pos-fixed"><label for="p1x">곰덫1 X</label><input id="p1x" type="number" min="0" max="1199" value="527"></div>
+          <div class="f pos-fixed"><label for="p1y">곰덫1 Y</label><input id="p1y" type="number" min="0" max="1199" value="703"></div>
+          <div class="f wide pos-free"><label for="mode">곰덫 2·1 위치 조건</label>
+            <select id="mode">
+              <option value="toward" selected>옥토 쪽 (본부보다 옥토에 3칸 이상 가깝게)</option>
+              <option value="inside">옥토 안 (곰덫 전체가 옥토 구역 안)</option>
+              <option value="any">제한 없음</option>
+            </select></div>
+          <div class="f wide pos-free"><label for="w1">곰덫1 자리</label>
+            <select id="w1">
+              <option value="line" selected>곰덫2와 일직선 · 사이에 도시 줄 두기</option>
+              <option value="0">곰덫2 최우선 · 곰덫1은 무리 가장자리</option>
+              <option value="0.25">곰덫2 우선 · 곰덫1도 가깝게</option>
+              <option value="0.6">두 곰덫 모두 무리 중앙</option>
+            </select></div>
+          <div class="f pos-free t1gap-row"><label for="t1gap">두 곰덫 사이 도시 줄 수</label><input id="t1gap" type="number" min="1" max="10" value="4"></div>
+          <div class="f pos-free t1gap-row"><label for="t1side">곰덫1 방향</label>
+            <select id="t1side">
+              <option value="right" selected>오른쪽 (X+)</option>
+              <option value="left">왼쪽 (X−)</option>
+              <option value="up">위 (Y+)</option>
+              <option value="down">아래 (Y−)</option>
+              <option value="">자동 (가장 좋은 쪽)</option>
+            </select></div>
+          <p class="hint f wide pos-free t1gap-row">곰덫1을 곰덫2와 같은 가로·세로줄에 두고, 사이에 이 줄 수만큼 도시가 들어가게 합니다. 화면 기준으로 X+는 오른쪽 위, Y+는 왼쪽 위입니다.</p>
+          <div class="f pos-auto"><label for="dmax">본부에서 최대 거리</label><input id="dmax" type="number" min="10" max="80" value="40"></div>
+          <div class="f"><label for="effort">탐색 강도</label>
+            <select id="effort"><option value="fast">빠름</option><option value="normal" selected>보통</option><option value="deep">정밀</option></select></div>
+        </fieldset>
+        <fieldset>
+          <legend>다른 연맹 영토 (설치 금지)</legend>
+          <div class="f wide"><label for="blocks">금지 구역 · 한 줄에 하나씩 X1,Y1 ~ X2,Y2</label>
+            <textarea id="blocks" spellcheck="false">544,724 ~ 1199,764</textarea>
+            <span class="hint">양 끝 칸을 포함합니다. 기본값은 X=544 선(Y 724~764)의 우측 전체로, 우리 건물은 X 543 이하에만 놓입니다.</span></div>
+        </fieldset>
+        <details>
+          <summary>게임 규칙 설정</summary>
+          <fieldset>
+            <div class="f wide"><label for="rule">깃발 설치 조건</label>
+              <select id="rule">
+                <option value="adjacent" selected>깃발 영역이 기존 영토에 맞닿으면 설치</option>
+                <option value="inside">깃발 칸이 기존 영토 안에 있어야 설치</option>
+              </select></div>
+            <div class="f wide"><label for="anchor">게임 좌표가 가리키는 칸</label>
+              <select id="anchor">
+                <option value="corner" selected>건물의 최소 X·Y 모서리 칸</option>
+                <option value="center">건물의 중심 칸</option>
+              </select></div>
+            <label class="chk"><input id="cityterr" type="checkbox" checked> 도시를 연맹 영토 안에만 배치 (곰 사냥 보상 조건)</label>
+            <label class="chk"><input id="nodes" type="checkbox" checked> 자원지를 장애물로 처리</label>
+          </fieldset>
+        </details>
+        <button class="btn run" id="run" type="submit">최적 배치 계산</button>
+        <div class="prog" aria-hidden="true"><div id="bar"></div></div>
+        <p class="status" id="status" role="status">지도 데이터를 불러오는 중…</p>
+      </form>
+      <section class="sum" id="sum" hidden></section>
+    </aside>
+
+    <section class="mapcol">
+      <div class="mapbar">
+        <button class="btn" id="sideBtn" type="button" aria-controls="side" aria-expanded="true">메뉴 숨기기</button>
+        <button class="btn mvmode" id="mv" type="button" aria-pressed="false" title="곰덫·깃발·도시를 한 덩어리로 끌어서 이동 (본부 고정)">배치 이동</button>
+        <button class="btn" id="rot" type="button" aria-pressed="true">게임 시점</button>
+        <button class="btn" id="lbl" type="button" aria-pressed="true">번호</button>
+        <button class="btn" id="ter" type="button" aria-pressed="true">영토</button>
+        <button class="btn" id="fit" type="button">전체 보기</button>
+        <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
+        <button class="btn" id="zout" type="button" aria-label="축소">－</button>
+        <span class="sp"></span>
+        <span class="mstat" id="mstat"></span>
+      </div>
+      <div class="movebar" id="movebar" hidden>
+        <span class="mvinfo" id="mvinfo" role="status"></span>
+        <button class="btn" id="mvBan" type="button">깃발 다시 계산</button>
+        <button class="btn" id="mvOpt" type="button">이 곰덫 위치로 다시 최적화</button>
+        <button class="btn" id="mvUndo" type="button">이동 취소</button>
+      </div>
+      <div class="readout" id="readout">지도 위에 마우스를 올리거나 탭하면 그 칸의 좌표가 표시됩니다.</div>
+      <div class="mapwrap"><canvas id="cv"></canvas><div class="tip" id="tip" hidden></div></div>
+      <div class="legend">
+        <span><i style="background:var(--c-hq)"></i>본부</span>
+        <span><i style="background:var(--c-t2)"></i>곰덫2</span>
+        <span><i style="background:var(--c-t1)"></i>곰덫1</span>
+        <span><i style="background:var(--c-banner)"></i>깃발(설치 순서)</span>
+        <span><i style="background:var(--c-city2)"></i>도시(곰덫2 가까운 순)</span>
+        <span><i style="background:var(--c-city1)"></i>도시(곰덫1 배정)</span>
+        <span><i style="background:var(--c-terr);opacity:.45"></i>연맹 영토</span>
+        <span><i style="background:var(--m-fertile)"></i>옥토</span>
+        <span><i style="background:var(--m-mount)"></i>산</span>
+        <span><i style="background:var(--m-lake)"></i>호수</span>
+        <span><i style="background:var(--m-node)"></i>자원지</span>
+        <span><i style="background:var(--m-nobuild)"></i>연맹 건물 금지</span>
+        <span><i style="background:var(--m-foreign)"></i>다른 연맹 영토</span>
+        <span><i style="background:var(--bad)"></i>이동 후 문제 건물</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="orders" id="orders" hidden>
+    <div class="ordhead">
+      <h2>설치 명령</h2>
+      <button class="btn" id="copy" type="button">연맹 채팅용 텍스트 복사</button>
+    </div>
+    <div class="cols">
+      <div><h3>깃발 · 설치 순서대로</h3><div class="tbl"><table id="tb"></table></div></div>
+      <div><h3>도시 자리 · 곰덫2 가까운 순</h3><div class="tbl"><table id="tc"></table></div></div>
+    </div>
+    <textarea id="copytext" readonly hidden aria-label="복사용 텍스트"></textarea>
+  </section>
+
+  <footer>
+    지도·규칙 데이터는 <a href="https://www.kingshotguide.org/tools/alliance-layout-planner" target="_blank" rel="noopener">kingshotguide.org Alliance Layout Planner</a>에서 가져왔습니다. 본부 3×3(영토 15×15), 깃발 1×1(영토 7×7), 곰덫 3×3, 도시 2×2 기준이며, 옥토는 450~749 구역입니다. 거리는 도시 중심에서 곰덫 중심까지의 칸 수로, 행군 시간에 비례합니다. 첫 깃발을 세울 때 게임 화면의 좌표와 한 번 대조해 보세요.
+  </footer>
+</div>
+
+<script src="/mapdata.js"></script>
+<script src="/v2/core.js"></script>
+<script>
+const TERRAIN_B64 = window.KS_MAPDATA.TERRAIN_B64, NODES_B64 = window.KS_MAPDATA.NODES_B64;
+</script>
+<script>
+(function () {
+  'use strict';
+  const K = window.KSCore, G = K.G;
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), gx = cv.getContext('2d');
+  let MAP = null, RES = null, P = null, running = false, stopFlag = false;
+  let REG = null, terrImg = null, terrKey = '', ovImg = null, objAt = new Map(), edges = null;
+  const view = { cx: 530, cy: 755, s: 12, rot: true, labels: true, terr: true, hl: null };
+
+  // ---------- 입력 ----------
+  const int = (v, lo, hi, d) => { const n = parseInt(v, 10); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
+  function parseBlocks(text) {
+    const out = [];
+    for (const line of text.split(/[\n;]/)) {
+      const v = (line.match(/\d+/g) || []).map(Number);
+      if (v.length < 4) continue;
+      out.push({ x1: Math.min(v[0], v[2]), y1: Math.min(v[1], v[3]), x2: Math.max(v[0], v[2]), y2: Math.max(v[1], v[3]) });
+    }
+    return out;
+  }
+  const inBlock = (x, y) => P && P.blocks.some(b => x >= b.x1 && x <= b.x2 && y >= b.y1 && y <= b.y2);
+  function readParams() {
+    const anchor = $('anchor').value, o3 = anchor === 'center' ? 1 : 0;
+    const N = int($('n').value, 1, 100, 100), K2 = int($('k2').value, 0, N, N);
+    $('n').value = N; $('k2').value = K2;
+    return {
+      hx: int($('hx').value, 0, 1199, 523) - o3, hy: int($('hy').value, 0, 1199, 759) - o3,
+      N, K2, t1First: K2 < N, t1Lines: N - K2 <= 12 ? 1 : int($('lines').value, 0, 6, 3), w1: parseFloat($('w1').value) || 0, t1Gap: $('w1').value === 'line' ? int($('t1gap').value, 1, 10, 4) : 0, t1Side: $('t1side').value || null, trapMode: $('mode').value, dmax: int($('dmax').value, 10, 80, 40),
+      rule: $('rule').value, cityInTerr: $('cityterr').checked, nodesBlock: $('nodes').checked, grid: $('grid').checked,
+      blocks: parseBlocks($('blocks').value), lines: int($('lines').value, 0, 6, 3),
+      effort: $('effort').value, anchor, seed: 20382, ...posParams(o3),
+    };
+  }
+  function posParams(o3) {
+    const mode = $('trapPos').value;
+    const t2 = { x: int($('p2x').value, 0, 1196, 515) - o3, y: int($('p2y').value, 0, 1196, 703) - o3 };
+    if (mode === 'near') return { near: { ...t2, r: int($('pr').value, 0, 10, 0) } };
+    if (mode === 'fixed') return { fixT2: t2, fixT1: { x: int($('p1x').value, 0, 1196, 527) - o3, y: int($('p1y').value, 0, 1196, 703) - o3 } };
+    return {};
+  }
+  function posUI() {
+    const m = $('trapPos').value;
+    const show = (cls, on) => document.querySelectorAll('.' + cls).forEach(el => { el.hidden = !on; });
+    show('pos-set', m !== 'auto'); show('pos-near', m === 'near'); show('pos-fixed', m === 'fixed');
+    show('pos-auto', m === 'auto'); show('pos-free', m !== 'fixed');
+    if (m !== 'fixed') show('t1gap-row', $('w1').value === 'line');
+  }
+  function fillPos() { // 현재 곰덫 좌표를 입력칸에 기록 (새로고침 후에도 남도록)
+    if (!RES) return;
+    $('p2x').value = RES.t2.x + off(3); $('p2y').value = RES.t2.y + off(3);
+    $('p1x').value = RES.t1.x + off(3); $('p1y').value = RES.t1.y + off(3);
+  }
+  const off = s => (P && P.anchor === 'center') ? Math.floor(s / 2) : 0;
+  const xy = (o, s) => `X:${o.x + off(s)} Y:${o.y + off(s)}`;
+  const f1 = v => v.toFixed(1);
+
+  // ---------- 지도 로드 ----------
+  async function inflate(b64) {
+    const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const stream = new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  // ---------- 색 ----------
+  let C = {};
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ['m-void', 'm-ground', 'm-fertile', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'm-nobuild', 'm-grid', 'm-edge',
+      'c-hq', 'c-t2', 'c-t1', 'c-banner', 'c-city2', 'c-city1', 'c-terr', 'on-obj', 'ink', 'bg', 'accent', 'm-foreign', 'bad']) C[k] = cs.getPropertyValue('--' + k).trim();
+  }
+  const rgb = h => { const m = /^#?([0-9a-f]{6})$/i.exec(h); const n = m ? parseInt(m[1], 16) : 0x808080; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+
+  function region(hx, hy) {
+    const R = 150, x0 = Math.max(0, hx - R), y0 = Math.max(0, hy - R);
+    return { x0, y0, w: Math.min(G, hx + 3 + R) - x0, h: Math.min(G, hy + 3 + R) - y0 };
+  }
+  function buildTerrain() {
+    const key = REG.x0 + ',' + REG.y0 + ',' + C['m-ground'] + C['m-mount'] + (P ? P.nodesBlock + JSON.stringify(P.blocks) : 1);
+    if (key === terrKey) return;
+    terrKey = key;
+    const c = document.createElement('canvas'); c.width = REG.w; c.height = REG.h;
+    const g = c.getContext('2d'), img = g.createImageData(REG.w, REG.h), d = img.data;
+    const col = { ground: rgb(C['m-ground']), fert: rgb(C['m-fertile']), mount: rgb(C['m-mount']), lake: rgb(C['m-lake']), node: rgb(C['m-node']), st: rgb(C['m-struct']), nb: rgb(C['m-nobuild']), fo: rgb(C['m-foreign']), v: rgb(C['m-void']) };
+    const [F0, F1] = K.FERTILE;
+    for (let r = 0; r < REG.h; r++) for (let x = 0; x < REG.w; x++) {
+      const wx = REG.x0 + x, wy = REG.y0 + r, i = wy * G + wx, k = MAP.kind[i], f = MAP.flags[i];
+      let c3 = (wx >= F0 && wx <= F1 && wy >= F0 && wy <= F1) ? col.fert : col.ground;
+      if ((f & K.F_NOALLY) && !(f & K.F_BLOCK)) c3 = col.nb;
+      if (inBlock(wx, wy)) c3 = col.fo;
+      if (k === 1) c3 = col.mount; else if (k === 2) c3 = col.lake; else if (k >= 3 && k <= 6) c3 = col.node; else if (k >= 7) c3 = col.st;
+      const p = 4 * (r * REG.w + x);
+      d[p] = c3[0]; d[p + 1] = c3[1]; d[p + 2] = c3[2]; d[p + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    terrImg = c;
+  }
+  function buildOverlay() {
+    ovImg = null; edges = null;
+    if (!RES) return;
+    const set = new Uint8Array(REG.w * REG.h);
+    const cov = (x, y, s, c) => {
+      for (let yy = y - c; yy < y + s + c; yy++) for (let xx = x - c; xx < x + s + c; xx++) {
+        const lx = xx - REG.x0, ly = yy - REG.y0;
+        if (lx >= 0 && ly >= 0 && lx < REG.w && ly < REG.h) set[ly * REG.w + lx] = 1;
+      }
+    };
+    cov(RES.hq.x, RES.hq.y, 3, K.HQ_COV);
+    for (const b of RES.banners) cov(b.x, b.y, 1, K.BN_COV);
+    const c = document.createElement('canvas'); c.width = REG.w; c.height = REG.h;
+    const g = c.getContext('2d'), img = g.createImageData(REG.w, REG.h), d = img.data, t = rgb(C['c-terr']);
+    edges = new Path2D();
+    for (let r = 0; r < REG.h; r++) for (let x = 0; x < REG.w; x++) {
+      if (!set[r * REG.w + x]) continue;
+      const p = 4 * (r * REG.w + x); d[p] = t[0]; d[p + 1] = t[1]; d[p + 2] = t[2]; d[p + 3] = 255;
+      const wx = REG.x0 + x, wy = REG.y0 + r;
+      if (x === 0 || !set[r * REG.w + x - 1]) { edges.moveTo(wx, wy); edges.lineTo(wx, wy + 1); }
+      if (x === REG.w - 1 || !set[r * REG.w + x + 1]) { edges.moveTo(wx + 1, wy); edges.lineTo(wx + 1, wy + 1); }
+      if (r === 0 || !set[(r - 1) * REG.w + x]) { edges.moveTo(wx, wy); edges.lineTo(wx + 1, wy); }
+      if (r === REG.h - 1 || !set[(r + 1) * REG.w + x]) { edges.moveTo(wx, wy + 1); edges.lineTo(wx + 1, wy + 1); }
+    }
+    g.putImageData(img, 0, 0);
+    ovImg = c;
+  }
+
+  // ---------- 보기 변환 ----------
+  const SQ = Math.SQRT1_2;
+  function mat(w, h) {
+    const s = view.s, cx = view.cx, cy = view.cy;
+    if (!view.rot) return [s, 0, 0, -s, w / 2 - cx * s, h / 2 + cy * s];
+    const k = s * SQ;
+    return [k, -k, -k, -k, w / 2 - k * (cx - cy), h / 2 + k * (cx + cy)];
+  }
+  function toScreen(x, y) {
+    const w = cv.clientWidth, h = cv.clientHeight, m = mat(w, h);
+    return { x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] };
+  }
+  function toWorld(sx, sy) {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (!view.rot) return { x: view.cx + (sx - w / 2) / view.s, y: view.cy - (sy - h / 2) / view.s };
+    const k = view.s * SQ, p = (sx - w / 2) / k, q = -(sy - h / 2) / k;
+    return { x: view.cx + (p + q) / 2, y: view.cy + (q - p) / 2 };
+  }
+  function fit() {
+    if (!REG) return;
+    let x0, y0, x1, y1;
+    if (RES) {
+      const pts = [RES.hq, RES.t2, RES.t1].map(o => [o.x, o.y, 3]).concat(RES.cities.map(c => [c.x, c.y, 2]), RES.banners.map(b => [b.x - 3, b.y - 3, 7]));
+      x0 = Math.min(...pts.map(p => p[0])); y0 = Math.min(...pts.map(p => p[1]));
+      x1 = Math.max(...pts.map(p => p[0] + p[2])); y1 = Math.max(...pts.map(p => p[1] + p[2]));
+    } else { x0 = P.hx - 20; y0 = P.hy - 20; x1 = P.hx + 23; y1 = P.hy + 23; }
+    x0 -= 3; y0 -= 3; x1 += 3; y1 += 3;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    view.cx = (x0 + x1) / 2; view.cy = (y0 + y1) / 2;
+    const bw = x1 - x0, bh = y1 - y0;
+    view.s = view.rot ? Math.min(w, h) / ((bw + bh) * SQ) : Math.min(w / bw, h / bh);
+    view.s = Math.max(2, Math.min(60, view.s));
+    draw();
+  }
+
+  // ---------- 그리기 ----------
+  let pending = false;
+  function draw() { if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; paint(); }); } }
+  function paint() {
+    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    gx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gx.fillStyle = C['m-void']; gx.fillRect(0, 0, w, h);
+    if (!MAP || !REG) return;
+    buildTerrain();
+    const m = mat(w, h), s = view.s;
+    gx.setTransform(m[0] * dpr, m[1] * dpr, m[2] * dpr, m[3] * dpr, m[4] * dpr, m[5] * dpr);
+    gx.imageSmoothingEnabled = false;
+    gx.drawImage(terrImg, REG.x0, REG.y0, REG.w, REG.h);
+    if (ovImg && view.terr) {
+      gx.globalAlpha = 0.24; gx.drawImage(ovImg, REG.x0, REG.y0, REG.w, REG.h); gx.globalAlpha = 1;
+      gx.strokeStyle = C['c-terr']; gx.lineWidth = 1.6 / s; gx.stroke(edges);
+    }
+    if (s >= 7) { // 격자
+      const a = toWorld(0, 0), b = toWorld(w, 0), c = toWorld(0, h), d = toWorld(w, h);
+      const xa = Math.max(REG.x0, Math.floor(Math.min(a.x, b.x, c.x, d.x))), xb = Math.min(REG.x0 + REG.w, Math.ceil(Math.max(a.x, b.x, c.x, d.x)));
+      const ya = Math.max(REG.y0, Math.floor(Math.min(a.y, b.y, c.y, d.y))), yb = Math.min(REG.y0 + REG.h, Math.ceil(Math.max(a.y, b.y, c.y, d.y)));
+      gx.beginPath();
+      for (let x = xa; x <= xb; x++) { gx.moveTo(x, ya); gx.lineTo(x, yb); }
+      for (let y = ya; y <= yb; y++) { gx.moveTo(xa, y); gx.lineTo(xb, y); }
+      gx.strokeStyle = C['m-grid']; gx.lineWidth = 1 / s; gx.stroke();
+    }
+    // 옥토 경계
+    const [F0, F1] = K.FERTILE;
+    gx.setLineDash([6 / s, 4 / s]); gx.strokeStyle = C['c-t1']; gx.lineWidth = 2 / s;
+    gx.strokeRect(F0, F0, F1 - F0 + 1, F1 - F0 + 1); gx.setLineDash([]);
+    if (P) { // 다른 연맹 영토 경계
+      gx.strokeStyle = C['bad']; gx.lineWidth = 2 / s; gx.setLineDash([3 / s, 3 / s]);
+      for (const b of P.blocks) gx.strokeRect(b.x1, b.y1, b.x2 - b.x1 + 1, b.y2 - b.y1 + 1);
+      gx.setLineDash([]);
+    }
+
+    if (RES) {
+      const c2 = { x: RES.t2.x + 1.5, y: RES.t2.y + 1.5 };
+      gx.setLineDash([4 / s, 4 / s]); gx.strokeStyle = C['c-t2']; gx.lineWidth = 1.2 / s;
+      if (P.lines) for (let k = 1; k <= P.lines; k++) {
+        const r = lineRect(RES.t2, k);
+        gx.lineWidth = (k === P.lines ? 2.2 : 1) / s;
+        gx.strokeRect(r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
+      } else for (const r of [5, 10]) { gx.beginPath(); gx.arc(c2.x, c2.y, r, 0, Math.PI * 2); gx.stroke(); }
+      gx.setLineDash([]);
+      const box = (o, sz, fill, inset) => {
+        gx.fillStyle = fill; gx.fillRect(o.x + inset, o.y + inset, sz - 2 * inset, sz - 2 * inset);
+      };
+      for (const c of RES.cities) box(c, 2, c.g === 2 ? C['c-city2'] : C['c-city1'], 0.08);
+      for (const b of RES.banners) box(b, 1, C['c-banner'], 0.06);
+      box(RES.hq, 3, C['c-hq'], 0.05); box(RES.t2, 3, C['c-t2'], 0.05); box(RES.t1, 3, C['c-t1'], 0.05);
+      if (RES.bad) { // 이동 후 규칙에 걸린 건물
+        const B = RES.bad, list = [];
+        if (B.t2) list.push([RES.t2, 3]); if (B.t1) list.push([RES.t1, 3]);
+        for (const i of B.banners) if (RES.banners[i]) list.push([RES.banners[i], 1]);
+        for (const i of B.cities) if (RES.cities[i]) list.push([RES.cities[i], 2]);
+        gx.fillStyle = C['bad']; gx.globalAlpha = 0.55;
+        for (const [o, sz] of list) gx.fillRect(o.x, o.y, sz, sz);
+        gx.globalAlpha = 1; gx.strokeStyle = C['bad']; gx.lineWidth = 2 / s;
+        for (const [o, sz] of list) gx.strokeRect(o.x, o.y, sz, sz);
+      }
+      if (view.hl) {
+        const o = view.hl;
+        gx.strokeStyle = C['m-edge']; gx.lineWidth = 3 / s;
+        gx.strokeRect(o.x - 0.15, o.y - 0.15, o.sz + 0.3, o.sz + 0.3);
+        if (o.kind === 'banner') { gx.setLineDash([5 / s, 4 / s]); gx.lineWidth = 1.5 / s; gx.strokeRect(o.x - 3, o.y - 3, 7, 7); gx.setLineDash([]); }
+      }
+    } else if (P) {
+      gx.fillStyle = C['c-hq']; gx.fillRect(P.hx + 0.05, P.hy + 0.05, 2.9, 2.9);
+    }
+    if (view.cur) { // 마우스가 가리키는 칸
+      gx.strokeStyle = C['m-edge']; gx.lineWidth = 2.2 / s;
+      gx.strokeRect(view.cur.x, view.cur.y, 1, 1);
+    }
+
+    // 라벨 (화면 좌표)
+    gx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gx.textAlign = 'center'; gx.textBaseline = 'middle';
+    const label = (o, sz, text, px, color) => {
+      const p = toScreen(o.x + sz / 2, o.y + sz / 2);
+      if (p.x < -40 || p.y < -20 || p.x > w + 40 || p.y > h + 20) return;
+      gx.font = `600 ${px}px "IBM Plex Mono", ui-monospace, monospace`;
+      gx.fillStyle = color; gx.fillText(text, p.x, p.y + 0.5);
+    };
+    if (RES) {
+      if (view.labels && s >= 9) {
+        const px = Math.min(13, Math.max(8, s * 0.62));
+        for (const c of RES.cities) label(c, 2, String(parseInt(c.label.slice(2), 10)), px, C['on-obj']);
+        if (s >= 11) RES.banners.forEach((b, i) => label(b, 1, String(i + 1), Math.min(11, s * 0.55), C['on-obj']));
+      }
+      const big = Math.min(15, Math.max(10, s * 0.75));
+      label(RES.t2, 3, '덫2', big, C['on-obj']); label(RES.t1, 3, '덫1', big, C['on-obj']); label(RES.hq, 3, '본부', big, C['on-obj']);
+    } else if (P) label({ x: P.hx, y: P.hy }, 3, '본부', 12, C['on-obj']);
+  }
+
+  // k줄 경계 사각형 (격자 홀짝에 따라 한쪽은 곰덫에 붙고 반대쪽은 1칸 틈)
+  function lineRect(t, k) {
+    const c0 = RES.cities[0], side = (v, p) => {
+      if (!P.grid || !c0) return [v - 2 * k - 1, v + 3 + 2 * k + 1];
+      return ((v - 2 - p) & 1) === 0 ? [v - 2 * k, v + 3 + 2 * k + 1] : [v - 2 * k - 1, v + 3 + 2 * k];
+    };
+    const [x0, x1] = side(t.x, c0 ? c0.x & 1 : 0), [y0, y1] = side(t.y, c0 ? c0.y & 1 : 0);
+    return { x0, x1, y0, y1 };
+  }
+  const lineOfCity = c => c.g === 2 ? c.l2 : c.l1;
+
+  // ---------- 결과 표시 ----------
+  function indexObjects() {
+    objAt = new Map();
+    const put = (o, sz, info) => { for (let y = o.y; y < o.y + sz; y++) for (let x = o.x; x < o.x + sz; x++) objAt.set(y * G + x, info); };
+    put(RES.hq, 3, { kind: 'hq', x: RES.hq.x, y: RES.hq.y, sz: 3, text: `본부 ${xy(RES.hq, 3)}` });
+    put(RES.t2, 3, { kind: 'trap', x: RES.t2.x, y: RES.t2.y, sz: 3, text: `곰덫2 ${xy(RES.t2, 3)}` });
+    put(RES.t1, 3, { kind: 'trap', x: RES.t1.x, y: RES.t1.y, sz: 3, text: `곰덫1 ${xy(RES.t1, 3)}` });
+    RES.banners.forEach((b, i) => put(b, 1, { kind: 'banner', x: b.x, y: b.y, sz: 1, text: `깃발 ${i + 1}번 ${xy(b, 1)}`, id: 'b' + i }));
+    RES.cities.forEach(c => put(c, 2, { kind: 'city', x: c.x, y: c.y, sz: 2, text: `도시 ${c.label} ${xy(c, 2)} · ${lineOfCity(c)}줄 · 곰덫2 ${f1(c.d2)}칸 · 곰덫1 ${f1(c.d1)}칸`, id: 'c' + c.label }));
+  }
+  const fertDist = t => {
+    const [F0, F1] = K.FERTILE, cx = t.x + 1.5, cy = t.y + 1.5;
+    const dx = cx < F0 ? F0 - cx : cx > F1 + 1 ? cx - F1 - 1 : 0, dy = cy < F0 ? F0 - cy : cy > F1 + 1 ? cy - F1 - 1 : 0;
+    const inside = t.x >= F0 && t.y >= F0 && t.x + 2 <= F1 && t.y + 2 <= F1;
+    return inside ? '옥토 안' : `옥토 경계까지 ${Math.ceil(Math.hypot(dx, dy))}칸`;
+  };
+  function renderResult() {
+    const c2 = RES.cities.filter(c => c.g === 2), c1 = RES.cities.filter(c => c.g === 1);
+    const d2 = c2.map(c => c.d2), avg = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0;
+    const byLine = l => c2.filter(c => (l < 4 ? c.l2 === l : c.l2 >= 4)).length;
+    const cap = l => P.grid ? ` / ${[0, 12, 20, 28][l]}` : '';
+    const L3 = byLine(1) + byLine(2) + byLine(3);
+    const ok = !RES.validation.length;
+    const t12 = Math.hypot(RES.t1.x - RES.t2.x, RES.t1.y - RES.t2.y);
+    mstat();
+    $('sum').innerHTML = `
+      <div class="traps">
+        <div class="trap"><span class="k"><i style="background:var(--c-t2)"></i>곰덫 2</span><span class="v mono">${xy(RES.t2, 3)}</span><span class="s">${fertDist(RES.t2)}</span></div>
+        <div class="trap"><span class="k"><i style="background:var(--c-t1)"></i>곰덫 1</span><span class="v mono">${xy(RES.t1, 3)}</span><span class="s">${P.t1Gap && (RES.t1.x === RES.t2.x || RES.t1.y === RES.t2.y) ? `곰덫2와 일직선 · 사이 도시 ${P.t1Gap}줄` : `곰덫2와 ${f1(t12)}칸`} · ${fertDist(RES.t1)}</span></div>
+      </div>
+      <dl class="stats">
+        <div><dt>곰덫2 평균 거리</dt><dd>${f1(avg(d2))}칸</dd></div>
+        <div><dt>가장 먼 도시</dt><dd>${f1(d2.length ? Math.max(...d2) : 0)}칸</dd></div>
+        <div><dt>깃발</dt><dd>${RES.banners.length}개</dd></div>
+        <div><dt>도시 배치</dt><dd>${RES.cities.length}/${RES.K2 + RES.K1}</dd></div>
+        ${c1.length ? `<div><dt>곰덫1 배정 평균</dt><dd>${f1(avg(c1.map(c => c.d1)))}칸</dd></div>` : ''}
+      </dl>
+      <p class="hint">곰덫2 주변 1~3줄: <b class="mono">${L3}명</b>${P.grid && P.cityInTerr ? ' (장애물 없는 땅에서 최대 59명 · 무리 안 깃발 1자리 필요)' : ''}</p>
+      <div class="bands" aria-label="곰덫2 주변 줄별 도시 수">
+        <div><b>${byLine(1)}${cap(1)}</b><span>1줄</span></div>
+        <div><b>${byLine(2)}${cap(2)}</b><span>2줄</span></div>
+        <div><b>${byLine(3)}${cap(3)}</b><span>3줄</span></div>
+        <div><b>${byLine(4)}</b><span>4줄 이상</span></div>
+      </div>
+      <span class="pill ${ok ? 'ok' : 'bad'}">${ok ? '규칙 검증 통과 · 겹침·장애물·영토·연결' + (P.grid ? '·정렬' : '') + ' 이상 없음' : '규칙 위반 ' + RES.validation.length + '건'}</span>
+      ${P.grid && RES.cities.length ? `<p class="hint">오와 열 정렬: 모든 도시 좌표가 ${gridRule()}입니다. 게임에서 자리를 옮길 때 이 규칙으로 바로 확인할 수 있습니다.</p>` : ''}
+      ${ok ? '' : `<p class="warn">${RES.validation.slice(0, 4).join('<br>')}</p>`}
+      ${(RES.warn || []).map(w => `<p class="warn">${w}</p>`).join('')}`;
+    $('sum').hidden = false;
+    $('hqchip').textContent = `평원 본부 ${xy(RES.hq, 3)}`;
+
+    $('tb').innerHTML = '<thead><tr><th class="n">순서</th><th>좌표</th><th>구역</th></tr></thead><tbody>' +
+      RES.banners.map((b, i) => `<tr data-id="b${i}"><td class="n">${i + 1}</td><td class="mono">${xy(b, 1)}</td><td>${K.zoneName(b.x, b.y)}</td></tr>`).join('') + '</tbody>';
+    $('tc').innerHTML = '<thead><tr><th>자리</th><th>좌표</th><th class="n">줄</th><th class="n">곰덫2</th><th class="n">곰덫1</th></tr></thead><tbody>' +
+      RES.cities.map(c => `<tr data-id="c${c.label}"><td><span class="tag" style="background:var(${c.g === 2 ? '--c-city2' : '--c-city1'})"></span>${c.label}</td><td class="mono">${xy(c, 2)}</td><td class="n">${lineOfCity(c)}</td><td class="n">${f1(c.d2)}</td><td class="n">${f1(c.d1)}</td></tr>`).join('') + '</tbody>';
+    $('orders').hidden = false;
+    $('copytext').hidden = true;
+    indexObjects(); buildOverlay();
+  }
+  const gridRule = () => {
+    const c = RES.cities[0], odd = v => (v & 1) ? '홀수' : '짝수';
+    return `X ${odd(c.x + off(2))} · Y ${odd(c.y + off(2))}`;
+  };
+  function copyText() {
+    const L = [];
+    L.push(`[곰덫 배치안] 서버 2382 · 평원 본부 ${xy(RES.hq, 3)}`);
+    L.push(`곰덫2 ${xy(RES.t2, 3)} / 곰덫1 ${xy(RES.t1, 3)}`);
+    { const c2 = RES.cities.filter(c => c.g === 2), n = l => c2.filter(c => c.l2 === l).length;
+      L.push(`곰덫2 주변 1줄 ${n(1)}명 · 2줄 ${n(2)}명 · 3줄 ${n(3)}명`); }
+    L.push(`깃발 ${RES.banners.length}개 (이 순서대로 설치)`);
+    L.push(RES.banners.map((b, i) => `${i + 1}) ${xy(b, 1)}`).join('  '));
+    L.push(`도시 자리 (곰덫2 가까운 순, 활동 많은 분부터 앞번호)${P.grid ? ` · 오와 열 정렬: ${gridRule()}` : ''}`);
+    for (let i = 0; i < RES.cities.length; i += 4) L.push(RES.cities.slice(i, i + 4).map(c => `${c.label} ${xy(c, 2)}`).join('  '));
+    return L.join('\n');
+  }
+
+  // ---------- 실행 ----------
+  async function run(fixed) {
+    if (running) { stopFlag = true; return; }
+    if (!MAP) return;
+    const prev = RES;
+    P = readParams();
+    if (fixed) Object.assign(P, fixed);
+    const warn = K.checkHQ(MAP, P);
+    const r = region(P.hx, P.hy);
+    if (!REG || r.x0 !== REG.x0 || r.y0 !== REG.y0) { REG = r; terrKey = ''; }
+    gdrag = null; moveHist = []; $('movebar').hidden = true;
+    if (!fixed) {
+      RES = null; ovImg = null; edges = null; view.hl = null;
+      $('sum').hidden = true; $('orders').hidden = true;
+      fit();
+    }
+    running = true; stopFlag = false;
+    $('run').textContent = '계산 중지'; $('status').className = 'status';
+    $('status').textContent = '곰덫2 후보 지점을 평가하는 중…'; $('bar').style.width = '0%';
+    await new Promise(res => setTimeout(res, 30));
+    const t0 = performance.now();
+    const res = await K.optimize(MAP, P, p => {
+      $('bar').style.width = Math.round(p * 100) + '%';
+      $('status').textContent = `배치 탐색 ${Math.round(p * 100)}% · 도시 배치와 깃발 조합을 반복 개선하는 중`;
+    }, () => stopFlag);
+    running = false; $('run').textContent = '최적 배치 계산';
+    if (res.error) {
+      $('status').textContent = res.error; $('status').className = 'status err';
+      if (fixed && prev) { RES = prev; showMoveBar(res.error); }
+      draw(); return;
+    }
+    RES = res; RES.warn = warn; RES.bad = K.inspect(MAP, P, RES).bad;
+    RES.origin = { x: RES.t2.x, y: RES.t2.y };
+    $('bar').style.width = '100%';
+    $('status').textContent = `${stopFlag ? '중지됨 · 지금까지의 최선안' : fixed ? '옮긴 곰덫 위치로 다시 최적화 완료' : '계산 완료'} (${((performance.now() - t0) / 1000).toFixed(1)}초)`;
+    renderResult();
+    if (fixed) draw(); else fit();
+  }
+
+  // ---------- 배치 이동 (본부 제외 전체 그룹) ----------
+  let gdrag = null, moveHist = [];
+  const snapshot = () => ({ t2: { ...RES.t2 }, t1: { ...RES.t1 }, banners: RES.banners.map(b => ({ ...b })), cities: RES.cities.map(c => ({ ...c })) });
+  function restore(sn, dx = 0, dy = 0) {
+    RES.t2 = { x: sn.t2.x + dx, y: sn.t2.y + dy }; RES.t1 = { x: sn.t1.x + dx, y: sn.t1.y + dy };
+    RES.banners = sn.banners.map(b => ({ x: b.x + dx, y: b.y + dy }));
+    RES.cities = sn.cities.map(c => ({ ...c, x: c.x + dx, y: c.y + dy }));
+    const ins = K.inspect(MAP, P, RES);
+    RES.validation = ins.errs; RES.bad = ins.bad;
+  }
+  function moveText() {
+    const dx = RES.t2.x - RES.origin.x, dy = RES.t2.y - RES.origin.y, sg = v => (v > 0 ? '+' : '') + v;
+    const n = RES.validation.length;
+    const cut = RES.validation.some(e => e.includes('연결 끊김'));
+    return { text: `계산 위치에서 X ${sg(dx)} · Y ${sg(dy)} 이동 · ${n ? `문제 ${n}건 (빨간 건물)` : '규칙 문제 없음'}${cut ? ' · 본부와 깃발 연결이 끊겼습니다. 깃발 다시 계산을 누르세요' : ''}`, ok: !n };
+  }
+  function showMoveBar(msg) {
+    const m = moveText(), el = $('mvinfo');
+    el.textContent = msg || m.text; el.className = 'mvinfo ' + (msg ? 'bad' : m.ok ? 'ok' : 'bad');
+    $('mvUndo').disabled = !moveHist.length;
+    $('movebar').hidden = false;
+  }
+  function commit(base) { moveHist.push(base); renderResult(); fillPos(); showMoveBar(); draw(); }
+  function nudge(dx, dy) {
+    if (!RES || running) return;
+    const base = snapshot(); restore(base, dx, dy); commit(base);
+  }
+
+  // ---------- 상호작용 ----------
+  const ptrs = new Map(); let pinch = null, downAt = null;
+  const tip = $('tip');
+  cv.addEventListener('pointerdown', e => {
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 합성 이벤트 등 */ }
+    ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); downAt = { x: e.offsetX, y: e.offsetY };
+    if (view.move && RES && !running && ptrs.size === 1) gdrag = { start: toWorld(e.offsetX, e.offsetY), base: snapshot(), dx: 0, dy: 0 };
+    else if (gdrag) { restore(gdrag.base); buildOverlay(); gdrag = null; draw(); } // 두 손가락이면 이동 취소 후 확대/축소
+    cv.classList.add('drag');
+  });
+  cv.addEventListener('pointermove', e => {
+    const prev = ptrs.get(e.pointerId);
+    if (prev) {
+      const cur = { x: e.offsetX, y: e.offsetY };
+      if (downAt && Math.hypot(cur.x - downAt.x, cur.y - downAt.y) > 5) { downAt = null; tip.hidden = true; }
+      if (ptrs.size === 1 && gdrag) { // 그룹 이동: 1칸 단위로 스냅
+        const w = toWorld(cur.x, cur.y), dx = Math.round(w.x - gdrag.start.x), dy = Math.round(w.y - gdrag.start.y);
+        if (dx !== gdrag.dx || dy !== gdrag.dy) {
+          gdrag.dx = dx; gdrag.dy = dy; restore(gdrag.base, dx, dy); buildOverlay();
+          const m = moveText(); $('readout').textContent = `이동 중 · ${m.text}`; draw();
+        }
+      } else if (ptrs.size === 1) {
+        const a = toWorld(prev.x, prev.y), b = toWorld(cur.x, cur.y);
+        view.cx += a.x - b.x; view.cy += a.y - b.y; draw();
+      } else if (ptrs.size === 2) {
+        const pts = [...ptrs.entries()].map(([id, p]) => id === e.pointerId ? cur : p);
+        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        if (pinch) zoomAt((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, dist / pinch);
+        pinch = dist;
+      }
+      ptrs.set(e.pointerId, cur);
+      return;
+    }
+    hover(e.offsetX, e.offsetY);
+  });
+  const up = e => {
+    ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
+    if (gdrag && !ptrs.size) {
+      const g = gdrag; gdrag = null;
+      if (g.dx || g.dy) commit(g.base);
+    }
+    if (!ptrs.size) { cv.classList.remove('drag'); if (downAt) hover(e.offsetX, e.offsetY); }
+    downAt = null;
+  };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('pointerleave', e => {
+    if (e.pointerType !== 'mouse' || ptrs.size) return;
+    tip.hidden = true; view.cur = null;
+    if (view.hl && view.hl.fromMap) view.hl = null;
+    draw();
+  });
+  cv.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+  function zoomAt(sx, sy, f) {
+    const a = toWorld(sx, sy);
+    view.s = Math.max(1.2, Math.min(60, view.s * f));
+    const b = toWorld(sx, sy);
+    view.cx += a.x - b.x; view.cy += a.y - b.y; draw();
+  }
+  function hover(sx, sy) {
+    if (!MAP) return;
+    const w = toWorld(sx, sy), x = Math.floor(w.x), y = Math.floor(w.y);
+    if (x < 0 || y < 0 || x >= G || y >= G) { tip.hidden = true; view.cur = null; draw(); return; }
+    const k = MAP.kind[y * G + x];
+    const kn = ['', '산', '호수', '자원지(식량)', '자원지(목재)', '자원지(석재)', '자원지(철)', '구조물', '왕성'][k] || '';
+    const o = objAt.get(y * G + x);
+    const info = [K.zoneName(x, y), inBlock(x, y) ? '다른 연맹 영토' : '', kn, o ? o.text : ''].filter(Boolean).join(' · ');
+    $('readout').textContent = `칸 X:${x} Y:${y} · ${info}`;
+    // 커서 옆 좌표 말풍선
+    const b = document.createElement('b'); b.textContent = `X:${x}  Y:${y}`;
+    tip.replaceChildren(b, document.createTextNode(info));
+    tip.hidden = false;
+    const W = cv.clientWidth, H = cv.clientHeight, tw = tip.offsetWidth, th = tip.offsetHeight;
+    let lx = sx + 16, ly = sy + 18;
+    if (lx + tw > W - 6) lx = sx - tw - 12;
+    if (ly + th > H - 6) ly = sy - th - 12;
+    tip.style.transform = `translate(${Math.max(6, lx)}px, ${Math.max(6, ly)}px)`;
+    const moved = !view.cur || view.cur.x !== x || view.cur.y !== y;
+    view.cur = { x, y };
+    const hl = o ? Object.assign({ fromMap: true }, o) : null;
+    if ((hl && (!view.hl || view.hl.text !== hl.text)) || (!hl && view.hl && view.hl.fromMap)) { view.hl = hl; markRow(o && o.id); }
+    if (moved) draw();
+  }
+  function markRow(id) {
+    document.querySelectorAll('tr.hl').forEach(r => r.classList.remove('hl'));
+    if (id) { const r = document.querySelector(`tr[data-id="${id}"]`); if (r) r.classList.add('hl'); }
+  }
+  function rowHover(e) {
+    const tr = e.target.closest('tr[data-id]');
+    if (!tr || !RES) return;
+    const id = tr.dataset.id;
+    for (const o of objAt.values()) if (o.id === id) { view.hl = o; draw(); return; }
+  }
+  $('tb').addEventListener('mouseover', rowHover); $('tc').addEventListener('mouseover', rowHover);
+  const toggle = (btn, key, after) => $(btn).addEventListener('click', () => { view[key] = !view[key]; $(btn).setAttribute('aria-pressed', String(view[key])); after ? after() : draw(); });
+  toggle('rot', 'rot', fit); toggle('lbl', 'labels'); toggle('ter', 'terr');
+  toggle('mv', 'move', () => {
+    cv.classList.toggle('moving', view.move);
+    $('readout').textContent = view.move
+      ? '배치 이동 켜짐 · 지도를 끌면 곰덫·깃발·도시가 한 덩어리로 1칸 단위 이동합니다 (본부 고정). 방향키 ←→ 는 X, ↑↓ 는 Y 1칸.'
+      : '배치 이동 꺼짐 · 지도를 끌면 화면이 움직입니다.';
+    draw();
+  });
+  document.addEventListener('keydown', e => {
+    if (!view.move || !RES || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+    if (!d) return;
+    e.preventDefault(); nudge(d[0], d[1]);
+  });
+  $('mvUndo').addEventListener('click', () => {
+    if (!moveHist.length) return;
+    restore(moveHist.pop()); renderResult(); showMoveBar(); draw();
+  });
+  $('mvBan').addEventListener('click', () => {
+    if (!RES || running) return;
+    const r = K.rebanner(MAP, P, RES);
+    if (r.error) { showMoveBar(r.error); return; }
+    const base = snapshot();
+    RES.banners = r.banners; restore(snapshot());
+    commit(base);
+  });
+  $('mvOpt').addEventListener('click', () => {
+    if (!RES || running) return;
+    fillPos(); $('trapPos').value = 'fixed'; posUI();
+    run({ fixT2: { ...RES.t2 }, fixT1: { ...RES.t1 } });
+  });
+  $('trapPos').addEventListener('change', posUI);
+  $('w1').addEventListener('change', posUI);
+  $('fit').addEventListener('click', fit);
+  $('zin').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.35));
+  $('zout').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.35));
+  $('form').addEventListener('submit', e => { e.preventDefault(); run(); });
+  $('n').addEventListener('change', () => { const n = int($('n').value, 1, 100, 100); if (int($('k2').value, 0, 100, n) > n) $('k2').value = n; });
+  $('copy').addEventListener('click', () => {
+    if (!RES) return;
+    const text = copyText();
+    const fallback = () => { const t = $('copytext'); t.value = text; t.hidden = false; t.focus(); t.select(); $('copy').textContent = '아래 텍스트를 선택해 복사하세요'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => { $('copy').textContent = '복사했습니다'; setTimeout(() => $('copy').textContent = '연맹 채팅용 텍스트 복사', 1800); }, fallback);
+    else fallback();
+  });
+  const themeChanged = () => { readColors(); terrKey = ''; if (RES) buildOverlay(); draw(); };
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeChanged);
+  new MutationObserver(themeChanged).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  new ResizeObserver(() => draw()).observe(cv);
+
+  // ---------- 좌측 메뉴 접기 (기본: 숨김 → 지도 넓게) ----------
+  const pageEl = document.querySelector('.page'), side = $('side');
+  const setSide = open => {
+    side.hidden = !open; pageEl.classList.toggle('wide', !open);
+    $('sideBtn').setAttribute('aria-expanded', String(open));
+    $('sideBtn').textContent = open ? '메뉴 숨기기' : '메뉴 열기';
+    try { localStorage.setItem('ks-side', open ? '1' : '0'); } catch (err) { /* 저장 불가 환경 */ }
+  };
+  let sideOpen = false;
+  try { sideOpen = localStorage.getItem('ks-side') === '1'; } catch (err) { /* 저장 불가 환경 */ }
+  setSide(sideOpen);
+  $('sideBtn').addEventListener('click', () => setSide(side.hidden));
+  // 메뉴를 숨겨도 계산 상태·핵심 수치는 지도 위에 표시
+  const mstat = () => {
+    const s = $('status'), m = $('mstat');
+    let t = s.textContent;
+    if (RES && !running && !s.classList.contains('err')) {
+      const L3 = RES.cities.filter(c => c.g === 2 && c.l2 <= 3).length;
+      t = `곰덫2 ${xy(RES.t2, 3)} · 곰덫1 ${xy(RES.t1, 3)} · 1~3줄 ${L3}명 · 깃발 ${RES.banners.length}개` + (RES.validation.length ? ` · 규칙 위반 ${RES.validation.length}건` : ' · 규칙 검증 통과');
+    }
+    m.textContent = t; m.classList.toggle('err', s.classList.contains('err'));
+  };
+  new MutationObserver(mstat).observe($('status'), { childList: true, characterData: true, subtree: true, attributes: true });
+
+  // ---------- 시작 (페이지 갱신 시 옮겨 둔 배치 유지) ----------
+  const hot = window.claude && window.claude.hot, SNAP_VER = 13;
+  try {
+    if (hot && typeof hot.snapshot === 'function')
+      hot.snapshot(() => (RES ? { ver: SNAP_VER, res: { ...RES, bad: null }, p: P } : null));
+  } catch (err) { /* 미지원 환경 */ }
+  async function start(data) {
+    readColors(); posUI();
+    try {
+      const [t, n] = await Promise.all([inflate(TERRAIN_B64), inflate(NODES_B64)]);
+      MAP = K.buildMap(t, n);
+    } catch (err) {
+      $('status').textContent = '지도 데이터를 풀지 못했습니다. 최신 Chrome·Edge·Safari·Firefox에서 열어 주세요.';
+      $('status').className = 'status err';
+      return;
+    }
+    const saved = data && data.res && data.p;
+    if (!(saved && data.ver === SNAP_VER)) { // 새 버전: 곰덫 위치 입력을 이번 기본 배치로
+      for (const id of ['p2x', 'p2y', 'pr', 'p1x', 'p1y', 't1gap', 'n', 'k2']) $(id).value = $(id).defaultValue;
+      for (const sel of ['trapPos', 'w1', 't1side']) for (const o of $(sel).options) o.selected = o.defaultSelected;
+      // /v2/plan?t2=X,Y&t1=X,Y — /v2/admin이 편집 중인 곰덫 자리로 엽니다 (t1이 있으면 두 곰덫 고정)
+      const q = new URLSearchParams(location.search), pt = s => /^(\d+),(\d+)$/.exec(s || '');
+      const q2 = pt(q.get('t2')), q1 = pt(q.get('t1'));
+      if (q2) { $('p2x').value = q2[1]; $('p2y').value = q2[2]; }
+      if (q2 && q1) { $('p1x').value = q1[1]; $('p1y').value = q1[2]; $('trapPos').value = 'fixed'; }
+      posUI();
+    }
+    if (saved && data.ver === SNAP_VER) {
+      P = data.p; RES = data.res; REG = region(P.hx, P.hy); terrKey = '';
+      RES.bad = K.inspect(MAP, P, RES).bad;
+      renderResult(); fit();
+      $('status').textContent = '갱신 전 화면의 배치를 그대로 이어서 보여 줍니다.';
+      return;
+    }
+    run();
+  }
+  if (hot && typeof hot.ready === 'function') hot.ready(start); else start((hot && hot.data) || {});
+})();
+</script>
+
+</body>
+</html>

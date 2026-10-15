@@ -25,7 +25,10 @@ const MAP_SIZE = 1200;
 const MAX_COORD = 1199;
 const ROTATE_ANGLE = Math.PI / 4;
 const WORLD_SIZE = MAP_SIZE * TILE_SIZE;
-const STORAGE_KEY = 'ks-sim-objects-v1';
+// `/v2/admin` is this editor for the v2 layout (new seats around the bear traps in the fertile land):
+// its own published copy (api/v2/layout), its own draft; the public /v2 page is v2/guide.js.
+const V2 = /^\/v2(\/|$)/.test(location.pathname);
+const STORAGE_KEY = V2 ? 'ks-sim-objects-v2' : 'ks-sim-objects-v1';
 const KID_KEY = 'ks-sim-kid';
 const DEFAULT_KID = '2382';
 // Live castle positions from kingshotstats are switched off: the site serves only the saved layout.
@@ -34,7 +37,8 @@ const LIVE_ENABLED = false;
 const ADMIN = /\/admin(\.html)?\/?$/.test(location.pathname);
 const READONLY = !ADMIN;
 const BASE = new URL('.', document.currentScript.src);
-const PUBLISHED_LAYOUT = new URL('layouts/current.json', BASE).href;
+const PUBLISHED_LAYOUT = new URL(V2 ? 'layouts/v2.json' : 'layouts/current.json', BASE).href;
+const LAYOUT_API = V2 ? 'v2/layout' : 'layout';
 
 const TEMPLATES = {
   'Player':  { color: '#EFFFF3', w: 2, h: 2, type: 'one-tone', kind: 'city' },
@@ -94,7 +98,7 @@ const CAT_KO = {
   'Gathering Outpost': '채집 전초기지', 'Resource Production Outpost': '생산 전초기지',
   'Training Outpost': '훈련 전초기지', 'Frontier Lodge': '변경 산장', 'castle': '왕성',
 };
-const layers = { terrain: true, nodes: true, structs: true, fzones: true, rings: false, free: true };
+const layers = { terrain: true, nodes: true, structs: true, fzones: true, rings: false, free: true, real: true };
 let blockOn = true;
 let terr = null;                     // world grid: 0 empty, 1 mountain, 2 lake, 3..6 node, 7 structure, 8 king zone
 const nobuild = new Uint8Array(MAP_SIZE * MAP_SIZE); // bit 1: any structure zone, bit 2: zone that also blocks cities
@@ -525,6 +529,34 @@ function renderScene(tCtx, W, H, cam, objs, opts = {}) {
       coordsFit ? [displayText, `${logic.lx}, ${logic.ly}`] : [displayText], textColor, cam.zoom);
   }
 
+  // v2: flags standing in the game now (the /flags survey) — dashed territory outline + the flag tiles, for reference
+  if (V2 && layers.real && realFlags.length && !opts.exporting) {
+    tCtx.save();
+    tCtx.strokeStyle = '#3fd9c4';
+    tCtx.lineWidth = Math.max(2, 3 * px);
+    tCtx.setLineDash([8 * px, 5 * px]);
+    tCtx.beginPath();
+    for (const [x0, y0, x1, y1] of realSegs) { tCtx.moveTo(x0 * T, y0 * T); tCtx.lineTo(x1 * T, y1 * T); }
+    tCtx.stroke();
+    tCtx.setLineDash([]);
+    tCtx.fillStyle = 'rgba(63, 217, 196, 0.55)';
+    for (const f of realFlags) { tCtx.fillRect(f.tx * T, f.ty * T, T, T); tCtx.strokeRect(f.tx * T, f.ty * T, T, T); }
+    // flags standing now on a tile the edited layout gives to a castle / trap / building: red X (must come down)
+    const solid = objs.filter(o => !isTerritory(o)).map(o => coreRect(o));
+    const hqCore = objs.filter(o => o.name === '본부 1').map(o => coreRect(o));
+    const blocked = (tx, ty) => solid.concat(hqCore).some(c => tx >= c.x && tx < c.x + c.w && ty >= c.y && ty < c.y + c.h);
+    tCtx.strokeStyle = '#ff3b3b';
+    tCtx.lineWidth = Math.max(2, 4 * px);
+    tCtx.beginPath();
+    for (const f of realFlags) {
+      if (!blocked(f.tx, f.ty)) continue;
+      tCtx.moveTo((f.tx - 0.6) * T, (f.ty - 0.6) * T); tCtx.lineTo((f.tx + 1.6) * T, (f.ty + 1.6) * T);
+      tCtx.moveTo((f.tx + 1.6) * T, (f.ty - 0.6) * T); tCtx.lineTo((f.tx - 0.6) * T, (f.ty + 1.6) * T);
+    }
+    tCtx.stroke();
+    tCtx.restore();
+  }
+
   // selected flags/HQs: outline drawn on top of everything so the cities inside can't hide it
   for (const o of selectedObjects) {
     if (!isTerritory(o) || !objs.includes(o)) continue;
@@ -632,14 +664,22 @@ function renderScene(tCtx, W, H, cam, objs, opts = {}) {
 
 /* Free castle spots: 2×2 places fully inside team-1 territory where a Player could legally stand and
  * nothing (placed object or live castle) is in the way. Spots sit on a fixed 2-tile grid (even game
- * coordinates) so they line up and never straddle each other.
+ * coordinates; on v2 the grid the cities use) so they line up and never straddle each other.
  * Relies on territoryGrid being computed for `objs` (renderScene does that first). */
 const FREE_PROBE = { name: 'Player', type: 'one-tone', w: 2, h: 2 };
 let freeKey = '', freeCache = [];
+function gridParity(objs) {
+  if (!V2) return { x: 0, y: 0 };
+  const n = [0, 0, 0, 0];
+  for (const o of objs) if (o.name === 'Player') { const g = tileToGame(o.tx + 1, o.ty + 1); n[(g.x & 1) * 2 + (g.y & 1)]++; }
+  const i = n.indexOf(Math.max(...n));
+  return { x: i >> 1, y: i & 1 };
+}
 function freeSpots(objs) {
   const liveShown = live.show ? visibleLive() : [];
   const key = objs.map(o => `${o.tx},${o.ty},${o.name}`).join('|') + `#${liveShown.length}`;
   if (key === freeKey) return freeCache;
+  const par = gridParity(objs);
   const taken = new Set();
   const mark = (x, y, w, h) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) taken.add(j * MAP_SIZE + i); };
   for (const o of objs) { const c = coreRect(o); mark(c.x, c.y, c.w, c.h); }
@@ -651,7 +691,7 @@ function freeSpots(objs) {
     const tx = i % MAP_SIZE, ty = (i / MAP_SIZE) | 0;
     if (tx + 1 >= MAP_SIZE || ty + 1 >= MAP_SIZE) continue;
     const g = tileToGame(tx + 1, ty + 1);                           // game min corner of the 2×2
-    if (g.x % 2 || g.y % 2) continue;                               // fixed 2-tile grid: spots line up in rows/columns
+    if ((g.x - par.x) & 1 || (g.y - par.y) & 1) continue;           // fixed 2-tile grid: spots line up in rows/columns
     const cells = [i, i + 1, i + MAP_SIZE, i + MAP_SIZE + 1];
     if (!cells.every(inTeam1) || cells.some(c => taken.has(c))) continue;
     if (blockReason(FREE_PROBE, tx, ty, skipObjects)) continue;     // terrain / nodes / structures / zones
@@ -704,6 +744,8 @@ function updateInfo() {
         if (s) extra.push(`${CAT_KO[s.cat] || s.cat} ${s.name}`);
       } else if (nobuild[hoverTile.ty * MAP_SIZE + hoverTile.tx]) extra.push('건설 금지구역');
     }
+    const rf = V2 && layers.real && realFlags.find(f => f.tx === hoverTile.tx && f.ty === hoverTile.ty);
+    if (rf) extra.push(`현재 깃발 ${rf.name} (게임에 설치됨)`);
     const pl = live.byTile.get(hoverTile.ty * MAP_SIZE + hoverTile.tx);
     if (pl && live.show && !supersededLive().has(pl))extra.push(`${pl.abbr ? `[${pl.abbr}] ` : ''}${pl.name} · TC${pl.tc ?? '?'}`);
     text += ' · ' + extra.join(' · ');
@@ -1543,7 +1585,7 @@ if (markParam) {
 const API = p => new URL(`api/${p}`, BASE).href;
 // published layout: the server's copy (Cloudflare KV / local file), else the bundled file
 const getJSON = url => fetch(url, { cache: 'no-cache' }).then(r => (r.ok ? r.json() : Promise.reject(new Error(r.status))));
-const fetchPublished = () => getJSON(API('layout')).catch(() => getJSON(PUBLISHED_LAYOUT));
+const fetchPublished = () => getJSON(API(LAYOUT_API)).catch(() => getJSON(PUBLISHED_LAYOUT));
 
 // /flags (flags.html) is the KOR flag survey (flags.js + layouts/flags.json), kept apart from the seat layout.
 // /flags?layout=<name> instead shows another file from layouts/ read-only.
@@ -1579,8 +1621,16 @@ function startAdmin() {
   document.body.classList.add('admin');
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (_) { /* no draft */ }
-  if (Array.isArray(saved) && saved.length) { loadObjects(saved); centerOnObjects(); }
-  else fetchPublished().then(list => { loadObjects(list); centerOnObjects(); }).catch(() => {});
+  if (Array.isArray(saved) && saved.length) { loadObjects(saved); centerOnObjects(); fillV2Traps(); }
+  else fetchPublished().then(list => { loadObjects(list); centerOnObjects(); fillV2Traps(); }).catch(() => {});
+}
+if (V2) {
+  document.body.classList.add('v2');
+  document.title = '킹샷 배치 시뮬레이터 · v2 신규 자리';
+  document.querySelector('.admin-badge').textContent = '관리자 · v2 신규 자리';
+  const back = document.querySelector('#login-form a');
+  back.href = '/v2/';
+  back.textContent = '신규 자리 안내로 가기';
 }
 
 /* ---- admin sign-in: the server checks the password and hands out a signed, 12-hour token ---- */
@@ -1631,7 +1681,7 @@ $('publish-btn').onclick = async () => {
   if (!confirm(`현재 배치(기물 ${objects.length}개)를 게시할까요? 모든 사람의 화면에 반영됩니다.`)) return;
   if (!tokenValid(adminToken)) { toast('다시 로그인하세요'); requireLogin(); return; }
   try {
-    const r = await fetch(API('layout'), {
+    const r = await fetch(API(LAYOUT_API), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify(serialize()),
@@ -1696,5 +1746,205 @@ $('diff-btn').onclick = async () => {
     box.append(el);
   }
   box.append(resultItem('↩ 전부 게시본으로 되돌리기', '', () => { loadObjects(published); box.innerHTML = ''; toast('게시된 배치도로 되돌렸습니다'); }));
+};
+
+/* ================= v2 admin: flags standing in the game now (layouts/flags.json, same data as /flags) ================= */
+let realFlags = [], realSegs = [], realRaw = [];
+function setRealFlags(list) {
+  realRaw = list;
+  // a flag's in-game X/Y is its own tile; its territory is the 7×7 around it
+  realFlags = list.map(f => ({ tx: MAX_COORD - f.y, ty: MAX_COORD - f.x, name: f.name }));
+  const cells = new Set();
+  for (const f of realFlags) for (let y = f.ty - 3; y <= f.ty + 3; y++) for (let x = f.tx - 3; x <= f.tx + 3; x++) cells.add(`${x},${y}`);
+  realSegs = [];
+  for (const c of cells) {
+    const [x, y] = c.split(',').map(Number);
+    if (!cells.has(`${x - 1},${y}`)) realSegs.push([x, y, x, y + 1]);
+    if (!cells.has(`${x + 1},${y}`)) realSegs.push([x + 1, y, x + 1, y + 1]);
+    if (!cells.has(`${x},${y - 1}`)) realSegs.push([x, y, x + 1, y]);
+    if (!cells.has(`${x},${y + 1}`)) realSegs.push([x, y + 1, x + 1, y + 1]);
+  }
+}
+if (V2) getJSON(new URL('layouts/flags.json', BASE).href).then(d => {
+  setRealFlags(d.flags);
+  $('v2-real-count').textContent = `${realFlags.length}개 · 조사 ${d.updated || '-'}`;
+  requestDraw();
+}).catch(() => { $('v2-real-count').textContent = '불러오지 못함'; });
+
+/* ================= v2 admin: rule check · re-assign names (USB tools: v2/core.js + v2/plan.js) ================= */
+let v2Map = null;
+function v2Engine() {
+  const load = src => new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = new URL(src, BASE).href;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error(`${src} 를 불러오지 못했습니다`));
+    document.body.append(s);
+  });
+  if (!v2Map) v2Map = load('v2/core.js').then(() => load('v2/plan.js')).then(() => load('v2/flagplan.js')).then(() => window.KSPlan.loadMap());
+  return v2Map.catch(err => { v2Map = null; throw err; });
+}
+const objNamed = n => objects.find(o => o.nickname === n);
+const focusObj = o => { if (!o) return; selectedObjects = [o]; centerOnTile(o.tx, o.ty, o.w, o.h); };
+const lineSummary = s => `곰덫2 1줄 ${s.lines[1]} · 2줄 ${s.lines[2]} · 3줄 ${s.lines[3]} · 4줄+ ${s.lines[4]} · 곰덫1 1줄 ${s.lines1[1]} · 2줄 ${s.lines1[2]}`;
+
+// trap inputs start at the editor's current bear traps
+function fillV2Traps() {
+  if (!V2) return;
+  const traps = objects.filter(o => o.name === '곰덫');
+  const t1 = traps.find(o => o.nickname === '사냥 함정 1') || traps[0], t2 = traps.find(o => o.nickname === '사냥 함정 2') || traps[1];
+  const corner = o => ({ x: MAP_SIZE - o.ty - o.h, y: MAP_SIZE - o.tx - o.w });   // game min corner (same as plan.js toGame)
+  for (const [o, k] of [[t2, 't2'], [t1, 't1']]) {
+    if (!o || $(`v2-${k}x`).value) continue;
+    const g = corner(o);
+    $(`v2-${k}x`).value = g.x;
+    $(`v2-${k}y`).value = g.y;
+  }
+}
+
+// 작전도 opens on the trap spots typed below (/v2/plan?t2=X,Y&t1=X,Y)
+$('v2-plan-link').onclick = e => {
+  const v = id => $(id).value.trim();
+  const ok = ['v2-t2x', 'v2-t2y', 'v2-t1x', 'v2-t1y'].every(id => /^\d+$/.test(v(id)));
+  e.currentTarget.href = ok ? `/v2/plan?t2=${v('v2-t2x')},${v('v2-t2y')}&t1=${v('v2-t1x')},${v('v2-t1y')}` : '/v2/plan';
+};
+
+$('v2-check-btn').onclick = async () => {
+  const box = $('v2-check-result');
+  box.textContent = '검사 중…';
+  let map;
+  try { map = await v2Engine(); } catch (err) { box.textContent = err.message; return; }
+  const list = serialize();
+  const r = window.KSPlan.check(map, list);
+  box.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'grp';
+  head.textContent = r.stats
+    ? `연맹원 ${r.stats.members} · 빈자리 ${r.stats.spare} · 깃발 ${r.stats.banners} · ${lineSummary(r.stats)}`
+    : '';
+  box.append(head);
+  if (!r.errs.length) {
+    const ok = resultItem('규칙 위반 없음', '겹침·장애물·영토·깃발 연결·오와 열', () => {});
+    ok.classList.add('ok');
+    box.append(ok);
+    return;
+  }
+  // one row per broken object (click = go there), then the errors that are not about one object (오와 열 …)
+  const rows = r.bad.map(b => { const o = objects[list.indexOf(b.o)]; return [o ? o.nickname || o.name : '?', b.msg, () => focusObj(o)]; })
+    .concat(r.errs.filter(e => !e.includes(':')).map(e => [e, '', () => {}]));
+  for (const [text, meta, go] of rows) {
+    const el = resultItem(text, meta, go);
+    el.classList.add('err');
+    box.append(el);
+  }
+};
+
+$('v2-assign-btn').onclick = async () => {
+  const box = $('v2-assign-result');
+  const num = id => parseInt($(id).value, 10);
+  const t2 = { x: num('v2-t2x'), y: num('v2-t2y') }, t1 = { x: num('v2-t1x'), y: num('v2-t1y') };
+  const total = clamp(num('v2-total') || 100, 1, 200);
+  if (![t2.x, t2.y, t1.x, t1.y].every(v => Number.isFinite(v) && v >= 0 && v <= MAX_COORD - 2)) { toast('곰덫 좌표를 입력하세요'); return; }
+  if (!confirm(`곰덫2 ${t2.x},${t2.y} / 곰덫1 ${t1.x},${t1.y} 기준으로 v2 배치를 새로 만듭니다.\n편집 중인 배치가 바뀝니다 (Ctrl+Z로 되돌릴 수 있음). 계속할까요?`)) return;
+  box.textContent = '계산 중…';
+  let map, old;
+  try {
+    [map, old] = await Promise.all([v2Engine(), getJSON(API('layout')).catch(() => getJSON(new URL('layouts/current.json', BASE).href))]);
+  } catch (err) { box.textContent = `불러오기 실패: ${err.message}`; return; }
+  let out;
+  try {
+    const hq = window.KSPlan.readLayout(serialize()).hq || undefined;   // keep the editor's HQ, else the plains HQ 523,759
+    out = window.KSPlan.assign(map, old, { t2, t1, total, hq });
+  } catch (err) { box.textContent = `계산 실패: ${err.message}`; return; }
+  const { objects: list, stats: s } = out;
+  loadObjects(list);
+  centerOnObjects();
+  box.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'grp';
+  head.textContent = `같은 상대 자리 ${s.same}/${s.members}명 · 옮긴 ${s.moved.length}명 · 깃발 ${s.banners} · 빈자리 ${s.spare} · 검증 오류 ${s.errs.length}`;
+  box.append(head);
+  const lines = document.createElement('div');
+  lines.className = 'grp';
+  lines.textContent = `연맹원 ${lineSummary(s)}${s.resMissing ? ` · 연맹 자원 ${s.resMissing}개 자리 없음` : ''}`;
+  box.append(lines);
+  for (const m of s.moved) box.append(resultItem(`옮김: ${m.n}`, `${m.from.x},${m.from.y} → ${m.to.x},${m.to.y} (${m.d.toFixed(1)}칸)`, () => focusObj(objNamed(m.n))));
+  for (const e of s.errs.slice(0, 10)) { const el = resultItem(e, '', () => {}); el.classList.add('err'); box.append(el); }
+  toast('계산한 배치를 불러왔습니다 — 확인 후 게시하기를 누르세요');
+};
+
+/* ================= v2 admin: flag relocation that reuses the flags standing now + work order (v2/flagplan.js) ================= */
+let fpWorker = null;
+function runFlagWorker(msg) {
+  return new Promise((resolve, reject) => {
+    if (!fpWorker) fpWorker = new Worker(new URL('v2/flagworker.js', BASE).href);
+    fpWorker.onmessage = e => (e.data.ok ? resolve(e.data.r) : reject(new Error(e.data.error)));
+    fpWorker.onerror = e => { fpWorker = null; reject(new Error(e.message || '계산 워커 오류')); };
+    fpWorker.postMessage(msg);
+  });
+}
+const RULE_KO = { corner: '꼭짓점 접촉', edge: '변 접촉' };
+const focusGame = (x, y) => centerOnTile(MAX_COORD - y - 3, MAX_COORD - x - 3, 7, 7);
+const fpCap = () => { const v = parseInt($('fp-cap').value, 10); return Number.isFinite(v) && v > 0 ? v : undefined; };
+
+// steps: [{op, f, why, phase}] — build steps are named after the editor's flag on that tile
+function showFlagOrder(box, plan, head) {
+  box.innerHTML = '';
+  for (const text of head) { const d = document.createElement('div'); d.className = 'grp'; d.textContent = text; box.append(d); }
+  const nameAt = new Map(objects.filter(o => o.name === '깃발 1').map(o => { const g = tileToGame(o.tx + 3, o.ty + 3); return [`${g.x},${g.y}`, o.nickname]; }));
+  const PH = { 1: '1단계 · 새 깃발 설치', 2: '2단계 · 새 자리 비우기 (꼭 철거)' };
+  let ph = 0, n = 0;
+  for (const s of plan.steps) {
+    if (s.phase !== ph) { ph = s.phase; const d = document.createElement('div'); d.className = 'grp'; d.textContent = PH[ph]; box.append(d); }
+    const label = s.op === 'build' ? `${++n}. 설치 ${nameAt.get(`${s.f.x},${s.f.y}`) || ''}` : `${++n}. 철거 ${s.f.name || ''}`;
+    const el = resultItem(label, `${s.f.x},${s.f.y} · ${s.why}`, () => focusGame(s.f.x, s.f.y));
+    el.classList.add(s.op === 'build' ? 'ok' : 'err');
+    box.append(el);
+  }
+  if (plan.stuck) { const el = resultItem('일부 작업을 이어서 할 수 없습니다', `남은 설치 ${plan.left.build.length} · 철거 ${plan.left.remove.length}`, () => {}); el.classList.add('err'); box.append(el); }
+  if (plan.optional && plan.optional.length) { const d = document.createElement('div'); d.className = 'grp'; d.textContent = `v2에 쓰지 않는 지금 깃발 ${plan.optional.length}개는 자리와 겹치지 않아 그대로 둬도 됩니다`; box.append(d); }
+}
+
+$('fp-btn').onclick = async () => {
+  const box = $('fp-result');
+  if (!realRaw.length) { toast('지금 깃발 데이터(layouts/flags.json)를 아직 불러오지 못했습니다'); return; }
+  if (!confirm('지금 깃발을 재사용하도록 편집 중인 배치의 깃발(과 빈자리)을 바꿉니다. Ctrl+Z로 되돌릴 수 있습니다. 계속할까요?')) return;
+  box.textContent = '계산 중… (몇 초 걸립니다)';
+  $('fp-btn').disabled = true;
+  let r;
+  try {
+    // 기존 배치(/ 게시본): 마지막 줄 채우기(곰덫2 3줄 · 곰덫1 2줄)에서 각자의 기준 곰덫을 정하는 데 씀
+    const oldList = await getJSON(API('layout')).catch(() => getJSON(new URL('layouts/current.json', BASE).href)).catch(() => null);
+    r = await runFlagWorker({ list: serialize(), existing: realRaw, opt: { rule: $('fp-rule').value, cap: fpCap(), refitSpares: $('fp-refit').checked, oldList } });
+  } catch (err) { box.textContent = `계산 실패: ${err.message}`; return; }
+  finally { $('fp-btn').disabled = false; }
+  loadObjects(r.objects);
+  const s = r.stats;
+  showFlagOrder(box, r.plan, [
+    `${RULE_KO[r.rule]} 기준 · 깃발 ${s.total}개 = 유지 ${s.keep} + 새로 설치 ${s.build} · 꼭 철거 ${s.remove} (계산 전 ${s.before}개)`,
+    r.alt ? `비교: ${RULE_KO[r.alt.rule]}이면 새로 ${r.alt.stats.build}개 · 전체 ${r.alt.stats.total}개` : '',
+    r.errs.length ? `규칙 위반 ${r.errs.length}건: ${r.errs.slice(0, 2).join(' / ')}` : '규칙 위반 없음',
+    r.promoted && r.promoted.length ? `우선 구역 채우기로 옮긴 연맹원: ${r.promoted.map(m => `${m.n} ${m.from.x},${m.from.y}→${m.to.x},${m.to.y}`).join(' / ')}` : '',
+    r.filled && r.filled.moved.length ? `줄 채우기 (곰덫2 1·2·3줄 ${r.filled.before.t2.join('·')} → ${r.filled.after.t2.join('·')}): ${r.filled.moved.map(m => `${m.n} ${m.from.x},${m.from.y}→${m.to.x},${m.to.y}`).join(' / ')}` : '',
+    `작업 순서 · 깃발 수 상한 ${Number.isFinite(r.plan.cap) ? r.plan.cap + '개' : '없음'}`,
+  ].filter(Boolean));
+  toast(`깃발 ${s.total}개 (새로 ${s.build}개) — 확인 후 게시하기를 누르세요`);
+};
+
+$('fp-order-btn').onclick = async () => {
+  const box = $('fp-result');
+  if (!realRaw.length) { toast('지금 깃발 데이터(layouts/flags.json)를 아직 불러오지 못했습니다'); return; }
+  box.textContent = '계산 중…';
+  try { await v2Engine(); } catch (err) { box.textContent = err.message; return; }
+  const FP = window.KSFlagPlan, KP = window.KSPlan;
+  const list = serialize(), L = KP.readLayout(list);
+  const target = L.banners.map(b => ({ x: b.x, y: b.y }));
+  const hq = L.hq || KP.HQ_DEFAULT;
+  const rule = FP.reach(hq, target, 'edge').length === target.length ? 'edge' : 'corner';   // 계획 깃발이 변 접촉으로도 이어지면 엄격한 쪽으로
+  const plan = FP.schedule(list, realRaw, target, { rule, cap: fpCap() });
+  const keys = new Set(realRaw.map(f => `${f.x},${f.y}`));
+  const keep = target.filter(f => keys.has(`${f.x},${f.y}`)).length;
+  const must = plan.steps.filter(st => st.op === 'remove' && st.phase === 2).length + plan.left.remove.length;
+  showFlagOrder(box, plan, [`편집 중 배치 기준 (${RULE_KO[rule]}) · 깃발 ${target.length}개 = 유지 ${keep} + 새로 설치 ${target.length - keep} · 꼭 철거 ${must}`, `작업 순서 · 깃발 수 상한 ${Number.isFinite(plan.cap) ? plan.cap + '개' : '없음'}`]);
 };
 })();
