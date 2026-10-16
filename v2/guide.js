@@ -3,6 +3,7 @@
  * 좌표는 게임 좌표(건물의 최소 X·Y 칸). 줄·거리·기준 곰덫 계산은 v2/plan.js(KSPlan)와 같습니다.
  * /v2: 곰덫2 1~2줄·곰덫1 1줄(NAMED_LINES) 연맹원 자리만 이름, 그 밖의 자리와 빈자리는 자리 번호.
  *   번호로 표시된 연맹원 자리는 명단·내 자리 찾기에 나오지 않음 (빈자리는 명단에 번호로 나옴).
+ *   기존 배치도(v1)에 있는데 신규 배치에 자리가 없는 연맹원은 왼쪽 "미배치 인원"에 기존 곰덫·줄별로 표시.
  * /v2/map (<html data-mode="share">): 공유용 — 자리 배치와 지도 위치만. 도시 자리는 이름 대신 번호(빈자리 포함),
  *   이름(기존 배치도)·지금 깃발·작업 순서 데이터는 불러오지 않음. ?s=자리번호 · ?at=X,Y 로 그 위치를 열고, 누른 위치가 주소에 남음. */
 (function () {
@@ -38,6 +39,7 @@
   let T2, T1, HQ, members, spare, res, banners, migrated, CX, CY, CW, CH, kind;
   let real = [], survey = null;   // 게임에 지금 설치된 연맹 깃발 (layouts/flags.json, /flags 와 같은 데이터)
   let curList = null, toTake = new Set();   // v2 배치 원본 · 철거할 지금 깃발 (x,y)
+  let unplaced = [];   // 기존 배치도(v1)에는 있는데 신규 배치에 자리가 없는 연맹원
   async function load() {
     let cur, old = null, map;
     try { cur = await getJSON('/api/v2/layout', '/layouts/v2.json'); } catch (_) { fail('신규 배치도를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.'); return; }
@@ -55,6 +57,12 @@
     const O = old ? KP.readLayout(old.list) : null;
     migrated = !O || !O.t1 || !O.t2 || (O.t2.x === T2.x && O.t2.y === T2.y && O.t1.x === T1.x && O.t1.y === T1.y);
     const oldBy = new Map(migrated ? [] : O.members.map(m => [norm(m.n), m]));
+    // 미배치: 기존 배치도의 닉네임 중 신규 배치 연맹원에 없는 사람 (괄호 = 기존 배치도에서 가까웠던 곰덫·줄)
+    const placed = new Set(V.members.map(m => norm(m.n)));
+    unplaced = !O ? [] : O.members.filter(m => !placed.has(norm(m.n))).map(m => {
+      const ref = O.t1 && O.t2 ? KP.refOf(m, O.t1, O.t2) : 0;
+      return { n: m.n, x: m.x, y: m.y, ref, l: ref ? KP.lineOf(m, ref === 1 ? O.t1 : O.t2) : 0 };
+    });
     // 참여 곰덫 (색·명단·번호): 곰덫2 1~3줄은 모두 곰덫2, 그 밖은 새 자리에서 더 가까운 곰덫
     const partOf = p => KP.lineOf(p, T2) <= 3 ? 2 : KP.refOf(p, T1, T2);
     members = V.members.map((m, i) => {
@@ -142,6 +150,20 @@
       `<tbody data-g="${gi}"><tr class="grp"><td colspan="3">${esc(gr.title)} · ${gr.rows.length}</td></tr>` +
       gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k="${m.named ? esc(norm(m.n)) : ''}"><td class="nm"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${esc(seatName(m))}</td><td class="mono">${xy(m)}</td>${migrated ? '' : `<td class="mono">${oldCell(m)}</td>`}</tr>`).join('') + '</tbody>').join('');
     if ($('bn')) $('bn').innerHTML = banners.map(b => `<li>${b.x},${b.y}</li>`).join('');
+
+    // ---------- 미배치 인원 (기존 배치도 기준) ----------
+    if ($('unplaced') && unplaced.length) {
+      const rows = unplaced.slice().sort((a, b) => b.ref - a.ref || a.l - b.l || a.n.localeCompare(b.n, 'ko'));
+      let html = '', last = null;
+      for (const u of rows) {
+        const title = u.ref ? `기존 ${trapName(u.ref)} ${u.l}줄` : '기존 배치도';
+        if (title !== last) { last = title; html += `<li class="grp">${esc(title)} · ${rows.filter(r => (r.ref ? `기존 ${trapName(r.ref)} ${r.l}줄` : '기존 배치도') === title).length}</li>`; }
+        html += `<li>${esc(u.n)} <span class="mono sumx">${u.x},${u.y}</span></li>`;
+      }
+      $('unsum').textContent = `${unplaced.length}명`;
+      $('unlist').innerHTML = html;
+      $('unplaced').hidden = false;
+    }
     byId = new Map(members.concat(spare).map(m => [m.id, m]));
 
     // ---------- 현재 설치된 깃발 (게임) ----------
@@ -369,12 +391,12 @@
   });
   function search(pickFirst) {
     // "12"·"자리 12" = 자리 번호, "520 723"·"X:520 Y:723" = 좌표 (그런 닉네임이 있으면 닉네임 우선)
-    let q = norm($('q').value), hit;
+    let q = norm($('q').value), hit, byNick = false;
     // 명단에 있는 자리(이름이 보이는 자리·빈자리)만 찾음. 번호로 표시된 연맹원 자리는 명단에 없어서 찾지 않음
     const d = q.replace(/^자리\s*/, ''), nick = members.some(m => m.named && norm(m.n) === q);
     if (!nick && /^\d+$/.test(d)) { q = d; hit = r => r.dataset.no === q; }
     else if (!nick && /^(x\s*:?\s*)?\d+[\s,]+(y\s*:?\s*)?\d+$/.test(d)) { q = d.replace(/[^\d]+/g, ' ').trim().replace(/ /g, ','); hit = r => r.dataset.xy === q; }
-    else hit = r => !q || r.dataset.k.includes(q);
+    else { hit = r => !q || r.dataset.k.includes(q); byNick = true; }
     const hits = [];
     document.querySelectorAll('#list tbody').forEach(tb => {
       let any = false;
@@ -383,7 +405,9 @@
     });
     // 정확히 같은 닉네임이 있으면 그 자리, 결과가 하나뿐이어도 그 자리
     const exact = q && hits.find(r => r.dataset.k === q);
-    if ($('qhint')) $('qhint').textContent = q && !hits.length ? '찾는 자리가 없습니다. 닉네임 없이 번호로 표시된 연맹원 자리는 검색되지 않습니다.' : QHINT;
+    // 자리가 없을 때 미배치 인원이면 그렇다고 알려 줌
+    const un = q && !hits.length && byNick ? unplaced.find(u => norm(u.n) === q) || unplaced.find(u => norm(u.n).includes(q)) : null;
+    if ($('qhint')) $('qhint').textContent = un ? `${un.n} 님은 신규 배치에 아직 자리가 없습니다 (미배치).` : q && !hits.length ? '찾는 자리가 없습니다. 닉네임 없이 번호로 표시된 연맹원 자리는 검색되지 않습니다.' : QHINT;
     const pick = exact || (q && (hits.length === 1 || pickFirst) ? hits[0] : null);
     if (pick) select(byId.get(pick.dataset.id), true);
   }

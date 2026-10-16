@@ -89,7 +89,7 @@ details { border-top: 1px solid var(--line); padding-top: 10px; }
 summary { cursor: pointer; font-size: .85rem; font-weight: 600; }
 ol.bn { margin: 8px 0 0; padding-left: 2.2em; font-family: var(--f-mono); font-size: .82rem; columns: 2; column-gap: 18px; }
 .sumx { font-weight: 400; font-size: .76rem; color: var(--muted); }
-#real .hint { margin-top: 8px; }
+#real .hint, #unplaced .hint { margin-top: 8px; }
 ul.real { list-style: none; margin: 8px 0 0; padding: 0; font-size: .82rem; columns: 2; column-gap: 18px; }
 ul.real li { break-inside: avoid; padding: 1px 0; }
 ul.real li.grp { column-span: all; font-size: .74rem; font-weight: 600; color: var(--muted); margin-top: 6px; }
