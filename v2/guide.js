@@ -1,8 +1,7 @@
 /* /v2 신규 자리 안내 — 원본: USB "code/x2/template.html" 스크립트.
  * 데이터는 게시본에서 매번 계산합니다: 신규 배치 /api/v2/layout, 이전 자리 /api/layout(기존 배치도).
  * 좌표는 게임 좌표(건물의 최소 X·Y 칸). 줄·거리·기준 곰덫 계산은 v2/plan.js(KSPlan)와 같습니다.
- * /v2: 곰덫2 1~2줄·곰덫1 1줄(NAMED_LINES) 연맹원 자리만 이름, 그 밖의 자리와 빈자리는 자리 번호.
- *   번호로 표시된 연맹원 자리는 명단·내 자리 찾기에 나오지 않음 (빈자리는 명단에 번호로 나옴).
+ * /v2: 연맹원 자리는 모두 닉네임, 빈자리는 자리 번호 (명단에도 번호로 나옴).
  *   기존 배치도(v1)에 있는데 신규 배치에 자리가 없는 연맹원은 왼쪽 "미배치 인원"에 기존 곰덫·줄별로 표시.
  * /v2/map (<html data-mode="share">): 공유용 — 자리 배치와 지도 위치만. 도시 자리는 이름 대신 번호(빈자리 포함),
  *   이름(기존 배치도)·지금 깃발·작업 순서 데이터는 불러오지 않음. ?s=자리번호 · ?at=X,Y 로 그 위치를 열고, 누른 위치가 주소에 남음. */
@@ -18,9 +17,8 @@
   const norm = s => String(s || '').replace(/ /g, ' ').trim().toLowerCase();
   const BLOCKS = KP.BLOCKS_DEFAULT;
   const SHARE = document.documentElement.dataset.mode === 'share';
-  const NAMED_LINES = { 2: 2, 1: 1 };   // /v2: 참여 곰덫별로 이 줄 안 자리만 이름, 그 밖은 자리 번호 (곰덫1 2줄은 일단 번호)
   const QHINT = $('qhint') ? $('qhint').textContent : '';
-  // 목록·지도에 보이는 이름: 이름 표시 연맹원 자리만 이름, 그 밖(빈자리 포함)은 자리 번호
+  // 목록·지도에 보이는 이름: /v2 연맹원 자리는 닉네임, 빈자리와 /v2/map은 자리 번호
   const seatName = m => SHARE || !m.named ? `자리 ${m.no}` : m.n;
   const [F0, F1] = K.FERTILE;
 
@@ -74,7 +72,7 @@
       return {
         n: m.n, x: m.x, y: m.y, g, ref, l, d2: KP.dist(m, T2), d1: KP.dist(m, T1), id: 'm' + i, kind: 'city',
         old: o ? { x: o.x, y: o.y, l: KP.lineOf(o, ot) } : null, same: !!o && m.x - rt.x === o.x - ot.x && m.y - rt.y === o.y - ot.y,
-        named: !SHARE && l <= NAMED_LINES[g],
+        named: !SHARE,
       };
     });
     spare = V.spare.map((s, i) => ({ x: s.x, y: s.y, l: KP.lineOf(s, T2), n: s.n && s.n !== 'Player' ? s.n : `빈자리 ${i + 1}`, id: 's' + i, kind: 'spare' }));
@@ -136,8 +134,8 @@
         const title = `${trapName(s.g)} ${s.l}줄${s.tier === 2 ? ' (나머지)' : ''}`, last = groups[groups.length - 1];
         if (last && last.title === title) last.rows.push(s); else groups.push({ title, rows: [s] });
       }
-    } else { // 이름이 보이는 자리 + 빈자리(번호 순). 번호로 표시된 연맹원 자리는 명단·검색에 넣지 않음
-      const shown = members.filter(m => m.named);
+    } else { // 연맹원(참여 곰덫·줄별) + 빈자리(번호 순)
+      const shown = members;
       for (const g of [2, 1]) {
         const lines = [...new Set(shown.filter(m => m.g === g).map(m => m.l))].sort((a, b) => a - b);
         for (const l of lines) groups.push({ title: `${trapName(g)} 기준 ${l}줄`, rows: shown.filter(m => m.g === g && m.l === l).sort((a, b) => (g === 2 ? a.d2 - b.d2 : a.d1 - b.d1)) });
@@ -371,8 +369,6 @@
     const card = $('card');
     if (SHARE || m.kind === 'spare') card.innerHTML = `<span class="nm">자리 ${m.no}${m.kind === 'spare' ? ' <span class="badge new">빈자리</span>' : ''}</span><span class="co">${xy(m)}</span>
         <span class="meta">${trapName(m.g)} 기준 ${m.l}줄 · 곰덫2까지 ${f1(m.d2)}칸 · 곰덫1까지 ${f1(m.d1)}칸</span>`;
-    else if (!m.named) card.innerHTML = `<span class="nm">자리 ${m.no}</span><span class="co">${xy(m)}</span>
-        <span class="meta">${trapName(m.g)} 기준 ${m.l}줄 · 곰덫2까지 ${f1(m.d2)}칸 · 곰덫1까지 ${f1(m.d1)}칸</span>`;   // 번호 자리: 닉네임·이전 자리 없이
     else {
       const prev = migrated ? '' : m.old
         ? `<span class="meta">이전 자리 X:${m.old.x} Y:${m.old.y} (${trapName(m.ref)} 기준 ${m.old.l}줄) <span class="badge ${m.same ? 'same' : 'mv'}">${m.same ? '이전과 같은 위치 관계' : '조금 조정됨'}</span></span>`
@@ -395,7 +391,7 @@
   function search(pickFirst) {
     // "12"·"자리 12" = 자리 번호, "520 723"·"X:520 Y:723" = 좌표 (그런 닉네임이 있으면 닉네임 우선)
     let q = norm($('q').value), hit, byNick = false;
-    // 명단에 있는 자리(이름이 보이는 자리·빈자리)만 찾음. 번호로 표시된 연맹원 자리는 명단에 없어서 찾지 않음
+    // 명단에 있는 자리(연맹원·빈자리)에서 찾음
     const d = q.replace(/^자리\s*/, ''), nick = members.some(m => m.named && norm(m.n) === q);
     if (!nick && /^\d+$/.test(d)) { q = d; hit = r => r.dataset.no === q; }
     else if (!nick && /^(x\s*:?\s*)?\d+[\s,]+(y\s*:?\s*)?\d+$/.test(d)) { q = d.replace(/[^\d]+/g, ' ').trim().replace(/ /g, ','); hit = r => r.dataset.xy === q; }
@@ -410,7 +406,7 @@
     const exact = q && hits.find(r => r.dataset.k === q);
     // 자리가 없을 때 미배치 인원이면 그렇다고 알려 줌
     const un = q && !hits.length && byNick ? unplaced.find(u => norm(u.n) === q) || unplaced.find(u => norm(u.n).includes(q)) : null;
-    if ($('qhint')) $('qhint').textContent = un ? `${un.n} 님은 신규 배치에 아직 자리가 없습니다 (미배치).` : q && !hits.length ? '찾는 자리가 없습니다. 닉네임 없이 번호로 표시된 연맹원 자리는 검색되지 않습니다.' : QHINT;
+    if ($('qhint')) $('qhint').textContent = un ? `${un.n} 님은 신규 배치에 아직 자리가 없습니다 (미배치).` : q && !hits.length ? '찾는 자리가 없습니다.' : QHINT;
     const pick = exact || (q && (hits.length === 1 || pickFirst) ? hits[0] : null);
     if (pick) select(byId.get(pick.dataset.id), true);
   }
