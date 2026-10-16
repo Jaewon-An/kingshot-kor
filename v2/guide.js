@@ -3,6 +3,7 @@
  * 좌표는 게임 좌표(건물의 최소 X·Y 칸). 줄·거리·기준 곰덫 계산은 v2/plan.js(KSPlan)와 같습니다.
  * /v2: 연맹원 자리는 모두 닉네임, 빈자리는 자리 번호 (명단에도 번호로 나옴).
  *   기존 배치도(v1)에 있는데 신규 배치에 자리가 없는 연맹원은 왼쪽 "미배치 인원"에 기존 곰덫·줄별로 표시.
+ *   layouts/v2-excluded.json 의 배치 제외 인원은 미배치 인원에서 빼고 "배치 제외 인원"에 따로 표시.
  * /v2/map (<html data-mode="share">): 공유용 — 자리 배치와 지도 위치만. 도시 자리는 이름 대신 번호(빈자리 포함),
  *   이름(기존 배치도)·지금 깃발·작업 순서 데이터는 불러오지 않음. ?s=자리번호 · ?at=X,Y 로 그 위치를 열고, 누른 위치가 주소에 남음. */
 (function () {
@@ -38,6 +39,7 @@
   let real = [], survey = null;   // 게임에 지금 설치된 연맹 깃발 (layouts/flags.json, /flags 와 같은 데이터)
   let curList = null, toTake = new Set();   // v2 배치 원본 · 철거할 지금 깃발 (x,y)
   let unplaced = [];   // 기존 배치도(v1)에는 있는데 신규 배치에 자리가 없는 연맹원
+  let exNames = [], excluded = [];   // 배치 제외 인원 (layouts/v2-excluded.json) · 그중 신규 배치에 없는 사람
   async function load() {
     let cur, old = null, map;
     try { cur = await getJSON('/api/v2/layout', '/layouts/v2.json'); } catch (_) { fail('신규 배치도를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.'); return; }
@@ -46,6 +48,10 @@
       const r = await fetch('/layouts/flags.json', { cache: 'no-cache' });
       if (r.ok) { survey = await r.json(); real = survey.flags.map((f, i) => ({ x: f.x, y: f.y, n: f.name, area: f.area || '', src: f.src || '', id: 'f' + i, kind: 'real' })); }
     } catch (_) { /* 현재 깃발 없이 표시 */ }
+    if (!SHARE) try {
+      const r = await fetch('/layouts/v2-excluded.json', { cache: 'no-cache' });
+      if (r.ok) exNames = (await r.json()).names || [];
+    } catch (_) { /* 제외 명단 없이 표시 */ }
     try { map = await KP.loadMap(); } catch (_) { fail('지도 데이터를 풀지 못했습니다. 최신 Chrome·Edge·Safari·Firefox에서 열어 주세요.'); return; }
     curList = cur.list;
     const V = KP.readLayout(cur.list);
@@ -56,8 +62,11 @@
     migrated = !O || !O.t1 || !O.t2 || (O.t2.x === T2.x && O.t2.y === T2.y && O.t1.x === T1.x && O.t1.y === T1.y);
     const oldBy = new Map(migrated ? [] : O.members.map(m => [norm(m.n), m]));
     // 미배치: 기존 배치도의 닉네임 중 신규 배치 연맹원에 없는 사람 (괄호 = 기존 배치도에서 가까웠던 곰덫·줄)
+    // 배치 제외 인원은 미배치에서 빼고 따로 표시 (신규 배치에 다시 넣으면 제외 표시도 사라짐)
     const placed = new Set(V.members.map(m => norm(m.n)));
-    unplaced = !O ? [] : O.members.filter(m => !placed.has(norm(m.n))).map(m => {
+    const exSet = new Set(exNames.map(norm));
+    excluded = exNames.filter(n => !placed.has(norm(n)));
+    unplaced = !O ? [] : O.members.filter(m => !placed.has(norm(m.n)) && !exSet.has(norm(m.n))).map(m => {
       const ref = O.t1 && O.t2 ? KP.refOf(m, O.t1, O.t2) : 0;
       return { n: m.n, x: m.x, y: m.y, ref, l: ref ? KP.lineOf(m, ref === 1 ? O.t1 : O.t2) : 0 };
     });
@@ -164,6 +173,11 @@
       $('unsum').textContent = `${unplaced.length}명`;
       $('unlist').innerHTML = html;
       $('unplaced').hidden = false;
+    }
+    if ($('excluded') && excluded.length) {
+      $('exsum').textContent = `${excluded.length}명`;
+      $('exlist').innerHTML = excluded.map(n => `<li>${esc(n)}</li>`).join('');
+      $('excluded').hidden = false;
     }
     byId = new Map(members.concat(spare).map(m => [m.id, m]));
 
@@ -404,9 +418,10 @@
     });
     // 정확히 같은 닉네임이 있으면 그 자리, 결과가 하나뿐이어도 그 자리
     const exact = q && hits.find(r => r.dataset.k === q);
-    // 자리가 없을 때 미배치 인원이면 그렇다고 알려 줌
+    // 자리가 없을 때 미배치·배치 제외 인원이면 그렇다고 알려 줌
     const un = q && !hits.length && byNick ? unplaced.find(u => norm(u.n) === q) || unplaced.find(u => norm(u.n).includes(q)) : null;
-    if ($('qhint')) $('qhint').textContent = un ? `${un.n} 님은 신규 배치에 아직 자리가 없습니다 (미배치).` : q && !hits.length ? '찾는 자리가 없습니다.' : QHINT;
+    const ex = q && !hits.length && byNick && !un ? excluded.find(n => norm(n) === q) || excluded.find(n => norm(n).includes(q)) : null;
+    if ($('qhint')) $('qhint').textContent = un ? `${un.n} 님은 신규 배치에 아직 자리가 없습니다 (미배치).` : ex ? `${ex} 님은 배치 제외 인원입니다.` : q && !hits.length ? '찾는 자리가 없습니다.' : QHINT;
     const pick = exact || (q && (hits.length === 1 || pickFirst) ? hits[0] : null);
     if (pick) select(byId.get(pick.dataset.id), true);
   }

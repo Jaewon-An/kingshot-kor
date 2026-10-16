@@ -34,8 +34,13 @@
       <div class="tbl"><table id="list"></table></div>
       <details id="unplaced" open hidden>
         <summary>미배치 인원 <span class="sumx" id="unsum"></span></summary>
-        <p class="hint">기존 배치도에 있지만 신규 배치에 아직 자리가 없는 연맹원입니다. 묶음은 기존 배치도의 곰덫·줄, 숫자는 기존 좌표입니다.</p>
+        <p class="hint">기존 배치도에 있지만 신규 배치에 아직 자리가 없는 연맹원입니다(배치 제외 인원은 뺌). 묶음은 기존 배치도의 곰덫·줄, 숫자는 기존 좌표입니다.</p>
         <ul class="real" id="unlist"></ul>
+      </details>
+      <details id="excluded" hidden>
+        <summary>배치 제외 인원 <span class="sumx" id="exsum"></span></summary>
+        <p class="hint">신규 배치에 넣지 않기로 한 연맹원입니다.</p>
+        <ul class="real" id="exlist"></ul>
       </details>
       <details>
         <summary>깃발 설치 순서</summary>
