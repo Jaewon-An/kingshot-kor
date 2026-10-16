@@ -307,7 +307,7 @@
   "color": "#EFFFF3",
   "tx": 481,
   "ty": 680,
-  "nickname": "삼성라이온즈"
+  "nickname": "빈자리 1"
  },
  {
   "name": "Player",
@@ -527,7 +527,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 670,
-  "nickname": "빈자리 1"
+  "nickname": "빈자리 2"
  },
  {
   "name": "Player",
@@ -537,7 +537,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 668,
-  "nickname": "빈자리 2"
+  "nickname": "빈자리 3"
  },
  {
   "name": "Player",
@@ -567,7 +567,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 678,
-  "nickname": "빈자리 3"
+  "nickname": "빈자리 4"
  },
  {
   "name": "Player",
@@ -617,7 +617,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 668,
-  "nickname": "빈자리 4"
+  "nickname": "빈자리 5"
  },
  {
   "name": "Player",
@@ -637,7 +637,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 680,
-  "nickname": "빈자리 5"
+  "nickname": "빈자리 6"
  },
  {
   "name": "Player",
@@ -657,7 +657,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 668,
-  "nickname": "빈자리 6"
+  "nickname": "빈자리 7"
  },
  {
   "name": "Player",
@@ -667,7 +667,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 682,
-  "nickname": "빈자리 7"
+  "nickname": "빈자리 8"
  },
  {
   "name": "Player",
@@ -697,7 +697,7 @@
   "color": "#EFFFF3",
   "tx": 481,
   "ty": 684,
-  "nickname": "빈자리 8"
+  "nickname": "삼성라이온즈"
  },
  {
   "name": "Player",
