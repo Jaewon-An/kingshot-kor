@@ -4,6 +4,7 @@
  * /v2: 연맹원 자리는 모두 닉네임, 빈자리는 자리 번호 (명단에도 번호로 나옴).
  *   기존 배치도(v1)에 있는데 신규 배치에 자리가 없는 연맹원은 왼쪽 "미배치 인원"에 기존 곰덫·줄별로 표시.
  *   layouts/v2-excluded.json 의 배치 제외 인원은 미배치 인원에서 빼고 "배치 제외 인원"에 따로 표시 (기존 배치도에 있던/없던 인원으로 나눔).
+ *   layouts/v2-aliases.json (기존 닉네임 → 신규 닉네임): 이름을 바꾼 연맹원을 기존 배치도와 같은 사람으로 맞춤.
  * /v2/map (<html data-mode="share">): 공유용 — 자리 배치와 지도 위치만. 도시 자리는 이름 대신 번호(빈자리 포함),
  *   이름(기존 배치도)·지금 깃발·작업 순서 데이터는 불러오지 않음. ?s=자리번호 · ?at=X,Y 로 그 위치를 열고, 누른 위치가 주소에 남음. */
 (function () {
@@ -40,6 +41,7 @@
   let curList = null, toTake = new Set();   // v2 배치 원본 · 철거할 지금 깃발 (x,y)
   let unplaced = [];   // 기존 배치도(v1)에는 있는데 신규 배치에 자리가 없는 연맹원
   let exNames = [], excluded = [];   // 배치 제외 인원 (layouts/v2-excluded.json) · 그중 신규 배치에 없는 사람
+  let alias = new Map();   // 기존 배치도 닉네임 → 신규 배치 닉네임 (layouts/v2-aliases.json)
   async function load() {
     let cur, old = null, map;
     try { cur = await getJSON('/api/v2/layout', '/layouts/v2.json'); } catch (_) { fail('신규 배치도를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.'); return; }
@@ -52,6 +54,10 @@
       const r = await fetch('/layouts/v2-excluded.json', { cache: 'no-cache' });
       if (r.ok) exNames = (await r.json()).names || [];
     } catch (_) { /* 제외 명단 없이 표시 */ }
+    if (!SHARE) try {
+      const r = await fetch('/layouts/v2-aliases.json', { cache: 'no-cache' });
+      if (r.ok) alias = new Map(Object.entries((await r.json()).names || {}).map(([a, b]) => [norm(a), b]));
+    } catch (_) { /* 이름 대응 없이 표시 */ }
     try { map = await KP.loadMap(); } catch (_) { fail('지도 데이터를 풀지 못했습니다. 최신 Chrome·Edge·Safari·Firefox에서 열어 주세요.'); return; }
     curList = cur.list;
     const V = KP.readLayout(cur.list);
@@ -59,6 +65,8 @@
     T2 = V.t2; T1 = V.t1; HQ = V.hq || KP.HQ_DEFAULT;
     // 기존 배치도의 곰덫이 이미 새 자리에 있으면(배치 이전 완료) 이전 자리 비교는 하지 않음
     const O = old ? KP.readLayout(old.list) : null;
+    // 이름을 바꾼 연맹원은 기존 배치도 쪽 이름을 신규 배치 이름으로 맞춤 (이전 자리 비교·미배치 판단)
+    if (O) O.members.forEach(m => { const to = alias.get(norm(m.n)); if (to) m.n = to; });
     migrated = !O || !O.t1 || !O.t2 || (O.t2.x === T2.x && O.t2.y === T2.y && O.t1.x === T1.x && O.t1.y === T1.y);
     const oldBy = new Map(migrated ? [] : O.members.map(m => [norm(m.n), m]));
     // 미배치: 기존 배치도의 닉네임 중 신규 배치 연맹원에 없는 사람 (괄호 = 기존 배치도에서 가까웠던 곰덫·줄)
