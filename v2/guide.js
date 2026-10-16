@@ -21,7 +21,8 @@
   const SHARE = document.documentElement.dataset.mode === 'share';
   const QHINT = $('qhint') ? $('qhint').textContent : '';
   // 목록·지도에 보이는 이름: /v2 연맹원 자리는 닉네임, 빈자리와 /v2/map은 자리 번호
-  const seatName = m => SHARE || !m.named ? `자리 ${m.no}` : m.n;
+  const seatName = m => m.kind === 'res' ? `${m.n} (자리 ${m.no})` : SHARE || !m.named ? `자리 ${m.no}` : m.n;
+  const isSeat = o => o && (o.kind === 'city' || o.kind === 'spare' || (o.kind === 'res' && o.seat));
   const [F0, F1] = K.FERTILE;
 
   // ---------- 불러오기 ----------
@@ -36,7 +37,7 @@
   };
   function fail(msg) { const n = $('notice'); n.textContent = msg; n.className = 'notice err'; n.hidden = false; }
 
-  let T2, T1, HQ, members, spare, res, banners, migrated, CX, CY, CW, CH, kind;
+  let T2, T1, HQ, members, spare, res, fixed, banners, migrated, CX, CY, CW, CH, kind;
   let real = [], survey = null;   // 게임에 지금 설치된 연맹 깃발 (layouts/flags.json, /flags 와 같은 데이터)
   let curList = null, toTake = new Set();   // v2 배치 원본 · 철거할 지금 깃발 (x,y)
   let unplaced = [];   // 기존 배치도(v1)에는 있는데 신규 배치에 자리가 없는 연맹원
@@ -96,14 +97,15 @@
       };
     });
     spare = V.spare.map((s, i) => ({ x: s.x, y: s.y, l: KP.lineOf(s, T2), n: s.n && s.n !== 'Player' ? s.n : `빈자리 ${i + 1}`, id: 's' + i, kind: 'spare' }));
-    res = V.res.map((r, i) => ({ x: r.x, y: r.y, n: r.n, id: 'r' + i, kind: 'res' }));
+    res = V.res.map((r, i) => ({ x: r.x, y: r.y, n: r.n, id: 'r' + i, kind: 'res', seat: V.fixed.includes(r) }));
+    fixed = res.filter(r => r.seat);   // 자리 번호를 차지하는 연맹 건물 (개척자)
     banners = V.banners.map((b, i) => ({ x: b.x, y: b.y, n: `깃발 ${i + 1}번`, id: 'b' + i, kind: 'banner' }));
     // 자리 번호 (빈자리 포함, /v2·/v2/map 같은 번호): ① 곰덫2 1~3줄 → ② 곰덫1 1~2줄 → ③ 나머지. 같은 단계에서는 줄 → 곰덫에 가까운 순
     // 거리까지 같으면 배치 목록에 적힌 순서 (연맹원·빈자리 구분 없이 → 빈자리에 연맹원을 넣어도 번호 그대로)
     const ord = new Map(cur.list.map((o, i) => [o, i]));
-    const at = new Map(V.members.concat(V.spare).map(p => [`${p.x},${p.y}`, ord.get(p.o)]));
-    // 빈자리도 참여 곰덫 기준 줄·거리로 표시
-    const seats = members.concat(spare).map(s => {
+    const at = new Map(V.members.concat(V.spare, V.fixed).map(p => [`${p.x},${p.y}`, ord.get(p.o)]));
+    // 빈자리도 참여 곰덫 기준 줄·거리로 표시. 자리에 들어선 연맹 건물(개척자)도 번호를 차지 → 다른 자리 번호 그대로
+    const seats = members.concat(spare, fixed).map(s => {
       const g = partOf(s), t = g === 1 ? T1 : T2;
       return { s, g, l: KP.lineOf(s, t), sd: KP.dist(s, t), tier: KP.lineOf(s, T2) <= 3 ? 0 : KP.lineOf(s, T1) <= 2 ? 1 : 2, oi: at.get(`${s.x},${s.y}`) };
     });
@@ -150,7 +152,7 @@
 
     // ---------- 명단 ----------
     if (SHARE) { // 번호 순으로 같은 곰덫·줄끼리 묶음, 빈자리도 같은 줄에
-      for (const s of members.concat(spare).sort((a, b) => a.no - b.no)) {
+      for (const s of members.concat(spare, fixed).sort((a, b) => a.no - b.no)) {
         const title = `${trapName(s.g)} ${s.l}줄${s.tier === 2 ? ' (나머지)' : ''}`, last = groups[groups.length - 1];
         if (last && last.title === title) last.rows.push(s); else groups.push({ title, rows: [s] });
       }
@@ -161,15 +163,17 @@
         for (const l of lines) groups.push({ title: `${trapName(g)} 기준 ${l}줄`, rows: shown.filter(m => m.g === g && m.l === l).sort((a, b) => (g === 2 ? a.d2 - b.d2 : a.d1 - b.d1)) });
       }
       if (spare.length) groups.push({ title: '빈자리', rows: spare.slice().sort((a, b) => a.no - b.no) });
+      if (fixed.length) groups.push({ title: '연맹 건물 (자리 번호 차지)', rows: fixed.slice().sort((a, b) => a.no - b.no) });
     }
-    const oldCell = m => m.kind === 'spare' ? '' : m.old ? `X:${m.old.x} Y:${m.old.y}${m.same ? '' : ' <span class="mvd">조정</span>'}` : '<span class="nw">신규</span>';
+    const tagOf = m => m.kind === 'res' ? '--c-res' : m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2';
+    const oldCell = m => m.kind !== 'city' ? '' : m.old ? `X:${m.old.x} Y:${m.old.y}${m.same ? '' : ' <span class="mvd">조정</span>'}` : '<span class="nw">신규</span>';
     // data-no·data-xy = 자리 번호·좌표 검색, data-k = 닉네임 검색
     if (SHARE) $('list').innerHTML = '<thead><tr><th>자리</th><th>좌표</th><th></th></tr></thead>' + groups.map((gr, gi) =>
       `<tbody data-g="${gi}"><tr class="grp"><td colspan="3">${esc(gr.title)} · ${gr.rows.length}</td></tr>` +
-      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k=""><td class="nm mono"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${m.no}</td><td class="mono">${xy(m)}</td><td>${m.kind === 'spare' ? '<span class="nw">빈자리</span>' : ''}</td></tr>`).join('') + '</tbody>').join('');
+      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k=""><td class="nm mono"><span class="tag" style="background:var(${tagOf(m)})"></span>${m.no}</td><td class="mono">${xy(m)}</td><td>${m.kind === 'spare' ? '<span class="nw">빈자리</span>' : m.kind === 'res' ? `<span class="nw">연맹 건물 ${esc(m.n)}</span>` : ''}</td></tr>`).join('') + '</tbody>').join('');
     else $('list').innerHTML = `<thead><tr><th>닉네임</th><th>신규 좌표</th>${migrated ? '' : '<th>이전 좌표</th>'}</tr></thead>` + groups.map((gr, gi) =>
       `<tbody data-g="${gi}"><tr class="grp"><td colspan="3">${esc(gr.title)} · ${gr.rows.length}</td></tr>` +
-      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k="${m.named ? esc(norm(m.n)) : ''}"><td class="nm"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${esc(seatName(m))}</td><td class="mono">${xy(m)}</td>${migrated ? '' : `<td class="mono">${oldCell(m)}</td>`}</tr>`).join('') + '</tbody>').join('');
+      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k="${m.named || m.kind === 'res' ? esc(norm(m.n)) : ''}"><td class="nm"><span class="tag" style="background:var(${tagOf(m)})"></span>${esc(seatName(m))}</td><td class="mono">${xy(m)}</td>${migrated ? '' : `<td class="mono">${oldCell(m)}</td>`}</tr>`).join('') + '</tbody>').join('');
     if ($('bn')) $('bn').innerHTML = banners.map(b => `<li>${b.x},${b.y}</li>`).join('');
 
     // ---------- 미배치 인원 (기존 배치도 기준) ----------
@@ -193,7 +197,7 @@
           rows.map(u => `<li>${esc(u.n)}${u.old ? ` <span class="mono sumx">${u.old.x},${u.old.y}</span>` : ''}</li>`).join('')).join('');
       $('excluded').hidden = false;
     }
-    byId = new Map(members.concat(spare).map(m => [m.id, m]));
+    byId = new Map(members.concat(spare, fixed).map(m => [m.id, m]));
 
     // ---------- 현재 설치된 깃발 (게임) ----------
     real.forEach(f => realAt.set(f.y * G + f.x, f));
@@ -382,6 +386,7 @@
       const px = Math.min(12, Math.max(8, s * 0.42));
       members.forEach(mm => label(mm, 2, mm.named ? mm.n : String(mm.no), px, C['on-obj'], cellW));
       spare.forEach(sp => label(sp, 2, String(sp.no), px, C['c-spare']));
+      fixed.forEach(r => label(r, 2, SHARE ? String(r.no) : r.n, px, C['on-obj'], cellW));
     }
     if (s >= 10 && !SHARE) banners.forEach((b, i) => label(b, 1, String(i + 1), Math.min(11, s * 0.55), b.built ? C['on-obj'] : C['c-banner']));
     const big = Math.min(15, Math.max(10, s * 0.75));
@@ -395,7 +400,7 @@
     const row = document.querySelector(`tr.row[data-id="${m.id}"]`);
     if (row) { row.classList.add('on'); const box = $('list').parentElement, top = row.offsetTop - box.clientHeight / 2; box.scrollTo({ top: Math.max(0, top) }); }
     const card = $('card');
-    if (SHARE || m.kind === 'spare') card.innerHTML = `<span class="nm">자리 ${m.no}${m.kind === 'spare' ? ' <span class="badge new">빈자리</span>' : ''}</span><span class="co">${xy(m)}</span>
+    if (SHARE || m.kind !== 'city') card.innerHTML = `<span class="nm">자리 ${m.no}${m.kind === 'spare' ? ' <span class="badge new">빈자리</span>' : m.kind === 'res' ? ` <span class="badge new">연맹 건물 ${esc(m.n)}</span>` : ''}</span><span class="co">${xy(m)}</span>
         <span class="meta">${trapName(m.g)} 기준 ${m.l}줄 · 곰덫2까지 ${f1(m.d2)}칸 · 곰덫1까지 ${f1(m.d1)}칸</span>`;
     else {
       const prev = migrated ? '' : m.old
@@ -466,7 +471,7 @@
       cv.classList.remove('drag');
       if (downAt && kind) {
         const o = hover(e.offsetX, e.offsetY);
-        if (o && (o.kind === 'city' || o.kind === 'spare')) select(o, false);
+        if (isSeat(o)) select(o, false);
         else if (SHARE) { const w = toWorld(e.offsetX, e.offsetY); markAt(Math.floor(w.x), Math.floor(w.y), o); }
       }
     }
@@ -482,8 +487,8 @@
     const kn = ['', '산', '호수', '자원지', '구조물'][k] || '';
     let info = [inForeign(x, y) ? '다른 연맹 영토' : '', kn].filter(Boolean).join(' · ');
     if (o) {
-      const extra = o.kind === 'city' || o.kind === 'spare' ? ` ${xy(o)} · ${trapName(o.g)} ${o.l}줄${o.kind === 'spare' ? ' · 빈자리' : ''}` : ` ${xy(o)}`;
-      info = (o.kind === 'city' || o.kind === 'spare' ? seatName(o) : SHARE && o.kind === 'banner' ? '깃발' : o.n) + extra + (info ? ' · ' + info : '');
+      const extra = isSeat(o) ? ` ${xy(o)} · ${trapName(o.g)} ${o.l}줄${o.kind === 'spare' ? ' · 빈자리' : o.kind === 'res' ? ' · 연맹 건물' : ''}` : ` ${xy(o)}`;
+      info = (isSeat(o) ? seatName(o) : SHARE && o.kind === 'banner' ? '깃발' : o.n) + extra + (info ? ' · ' + info : '');
     }
     const rf = realAt.get(y * G + x);
     if (rf) info = `현재 깃발 ${rf.n} (게임에 설치됨)` + (info ? ' · ' + info : '');
@@ -547,7 +552,7 @@
   function openFromURL() {
     const q = new URLSearchParams(location.search);
     const s = +q.get('s'), at = /^(\d+),(\d+)$/.exec(q.get('at') || '');
-    if (s) { const m = members.concat(spare).find(o => o.no === s); if (m) { select(m, true); return; } }
+    if (s) { const m = members.concat(spare, fixed).find(o => o.no === s); if (m) { select(m, true); return; } }
     if (at) { const x = +at[1], y = +at[2]; view.cx = x + 0.5; view.cy = y + 0.5; view.s = Math.max(view.s, 18); const h = objAt.get(y * G + x); markAt(x, y, h && h.o); }
   }
   if (SHARE) $('link').addEventListener('click', () => {
@@ -560,7 +565,7 @@
   // ---------- 복사 ----------
   function copyText() {
     const L = ['[신규 자리 배치] 서버 2382 KOR', `곰덫2(사냥 함정 2) ${xy(T2)} / 곰덫1(사냥 함정 1) ${xy(T1)}`, `깃발 ${banners.length}개 (순서대로): ` + banners.map((b, i) => `${i + 1})${b.x},${b.y}`).join(' ')];
-    for (const gr of groups) { if (!gr.rows.length || gr.rows[0].kind === 'spare') continue; L.push(`■ ${gr.title}`); L.push(gr.rows.map(m => `${seatName(m)} ${m.x},${m.y}`).join(' / ')); }
+    for (const gr of groups) { if (!gr.rows.length || gr.rows[0].kind === 'spare' || gr.rows[0].kind === 'res') continue; L.push(`■ ${gr.title}`); L.push(gr.rows.map(m => `${seatName(m)} ${m.x},${m.y}`).join(' / ')); }
     L.push(`내 자리 찾기: ${location.origin}/v2/`);
     return L.join('\n');
   }

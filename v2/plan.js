@@ -9,7 +9,7 @@
   const BLOCKS_DEFAULT = [{ x1: 544, y1: 724, x2: 1199, y2: 764 }];    // 다른 연맹 영토 (X 544 이상, Y 724~764)
   const T1_NAME = '사냥 함정 1', T2_NAME = '사냥 함정 2';
   const isSpare = n => !n || n === 'Player' || /^빈자리/.test(n);
-  // 이용자가 아닌 성 (기존 배치도에 표시용으로만 있음) — 연맹원으로 세지 않고 v2 배치에도 넣지 않음
+  // 이용자가 아닌 성 — 연맹원으로 세지 않음. v2에서는 연맹 건물(연맹자원)로 두되 자리 번호는 차지함(fixed)
   const NON_MEMBERS = new Set(['개척자']);
   const isNonMember = n => NON_MEMBERS.has(String(n || '').trim());
 
@@ -39,9 +39,10 @@
     const banners = list.filter(o => o.name === '깃발 1').map((o, i) => ({ o, i, k: num(o) }))
       .sort((a, b) => a.k - b.k || a.i - b.i).map(({ o }) => ({ ...toGame(o), o }));
     const players = list.filter(o => o.name === 'Player').map(o => ({ ...toGame(o), n: o.nickname, o }));
+    const res = list.filter(o => o.name === '연맹자원').map(o => ({ ...toGame(o), n: o.nickname, o }));
     return {
       hq: hqo ? toGame(hqo) : null, hqo, t1: t1o ? toGame(t1o) : null, t1o, t2: t2o && t2o !== t1o ? toGame(t2o) : null, t2o,
-      banners, res: list.filter(o => o.name === '연맹자원').map(o => ({ ...toGame(o), n: o.nickname, o })),
+      banners, res, fixed: res.filter(r => isNonMember(r.n)),   // fixed: 자리 번호를 차지하는 연맹 건물 (개척자)
       members: players.filter(p => !isSpare(p.n) && !isNonMember(p.n)), spare: players.filter(p => isSpare(p.n)),
     };
   }
