@@ -225,8 +225,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 485,
-  "ty": 668,
+  "tx": 481,
+  "ty": 672,
   "nickname": "SEOUL"
  },
  {
@@ -235,7 +235,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 481,
+  "tx": 473,
   "ty": 672,
   "nickname": "깡이야"
  },
@@ -348,16 +348,6 @@
   "tx": 475,
   "ty": 670,
   "nickname": "ZaBKoR"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 473,
-  "ty": 672,
-  "nickname": "Anthony salon"
  },
  {
   "name": "Player",
@@ -1028,6 +1018,16 @@
   "tx": 471,
   "ty": 686,
   "nickname": "빈자리 19"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 485,
+  "ty": 668,
+  "nickname": "빈자리 20"
  },
  {
   "name": "깃발 1",
