@@ -587,7 +587,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 680,
-  "nickname": "Sweetvine"
+  "nickname": "빈자리 8"
  },
  {
   "name": "Player",
@@ -607,7 +607,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 670,
-  "nickname": "빈자리 8"
+  "nickname": "빈자리 9"
  },
  {
   "name": "Player",
@@ -617,7 +617,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 668,
-  "nickname": "빈자리 9"
+  "nickname": "빈자리 10"
  },
  {
   "name": "Player",
@@ -637,7 +637,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 680,
-  "nickname": "빈자리 10"
+  "nickname": "빈자리 11"
  },
  {
   "name": "Player",
@@ -657,7 +657,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 668,
-  "nickname": "빈자리 11"
+  "nickname": "빈자리 12"
  },
  {
   "name": "Player",
@@ -667,7 +667,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 682,
-  "nickname": "빈자리 12"
+  "nickname": "빈자리 13"
  },
  {
   "name": "Player",
@@ -697,7 +697,7 @@
   "color": "#EFFFF3",
   "tx": 481,
   "ty": 684,
-  "nickname": "삼성라이온즈"
+  "nickname": "빈자리 14"
  },
  {
   "name": "Player",
@@ -707,7 +707,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 688,
-  "nickname": "빈자리 13"
+  "nickname": "빈자리 15"
  },
  {
   "name": "Player",
@@ -737,7 +737,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 690,
-  "nickname": "빈자리 14"
+  "nickname": "빈자리 16"
  },
  {
   "name": "Player",
@@ -747,7 +747,7 @@
   "color": "#EFFFF3",
   "tx": 479,
   "ty": 692,
-  "nickname": "빈자리 15"
+  "nickname": "빈자리 17"
  },
  {
   "name": "Player",
@@ -757,7 +757,7 @@
   "color": "#EFFFF3",
   "tx": 483,
   "ty": 688,
-  "nickname": "빈자리 16"
+  "nickname": "빈자리 18"
  },
  {
   "name": "Player",
@@ -777,7 +777,7 @@
   "color": "#EFFFF3",
   "tx": 483,
   "ty": 684,
-  "nickname": "빈자리 17"
+  "nickname": "빈자리 19"
  },
  {
   "name": "Player",
@@ -787,7 +787,7 @@
   "color": "#EFFFF3",
   "tx": 483,
   "ty": 690,
-  "nickname": "빈자리 18"
+  "nickname": "빈자리 20"
  },
  {
   "name": "Player",
@@ -797,7 +797,7 @@
   "color": "#EFFFF3",
   "tx": 481,
   "ty": 692,
-  "nickname": "빈자리 19"
+  "nickname": "빈자리 21"
  },
  {
   "name": "Player",
@@ -817,26 +817,6 @@
   "color": "#EFFFF3",
   "tx": 483,
   "ty": 692,
-  "nickname": "빈자리 20"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 477,
-  "ty": 666,
-  "nickname": "빈자리 21"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 469,
-  "ty": 674,
   "nickname": "빈자리 22"
  },
  {
@@ -845,7 +825,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 479,
+  "tx": 477,
   "ty": 666,
   "nickname": "빈자리 23"
  },
@@ -856,7 +836,7 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 469,
-  "ty": 676,
+  "ty": 674,
   "nickname": "빈자리 24"
  },
  {
@@ -865,7 +845,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 475,
+  "tx": 479,
   "ty": 666,
   "nickname": "빈자리 25"
  },
@@ -876,7 +856,7 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 469,
-  "ty": 672,
+  "ty": 676,
   "nickname": "빈자리 26"
  },
  {
@@ -885,7 +865,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 481,
+  "tx": 475,
   "ty": 666,
   "nickname": "빈자리 27"
  },
@@ -896,8 +876,28 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 469,
-  "ty": 678,
+  "ty": 672,
   "nickname": "빈자리 28"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 481,
+  "ty": 666,
+  "nickname": "빈자리 29"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 469,
+  "ty": 678,
+  "nickname": "빈자리 30"
  },
  {
   "name": "Player",
@@ -907,36 +907,6 @@
   "color": "#EFFFF3",
   "tx": 487,
   "ty": 674,
-  "nickname": "Katomy"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 487,
-  "ty": 678,
-  "nickname": "빈자리 29"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 483,
-  "ty": 666,
-  "nickname": "빈자리 30"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 469,
-  "ty": 680,
   "nickname": "빈자리 31"
  },
  {
@@ -946,7 +916,7 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 487,
-  "ty": 680,
+  "ty": 678,
   "nickname": "빈자리 32"
  },
  {
@@ -955,7 +925,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 485,
+  "tx": 483,
   "ty": 666,
   "nickname": "빈자리 33"
  },
@@ -966,8 +936,38 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 469,
-  "ty": 682,
+  "ty": 680,
   "nickname": "빈자리 34"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 487,
+  "ty": 680,
+  "nickname": "빈자리 35"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 485,
+  "ty": 666,
+  "nickname": "빈자리 36"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 469,
+  "ty": 682,
+  "nickname": "빈자리 37"
  },
  {
   "name": "Player",
@@ -977,7 +977,7 @@
   "color": "#EFFFF3",
   "tx": 467,
   "ty": 674,
-  "nickname": "빈자리 35"
+  "nickname": "빈자리 38"
  },
  {
   "name": "Player",
@@ -987,7 +987,7 @@
   "color": "#EFFFF3",
   "tx": 467,
   "ty": 670,
-  "nickname": "빈자리 36"
+  "nickname": "빈자리 39"
  },
  {
   "name": "Player",
@@ -997,7 +997,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 686,
-  "nickname": "빈자리 37"
+  "nickname": "빈자리 40"
  },
  {
   "name": "Player",
@@ -1007,7 +1007,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 684,
-  "nickname": "빈자리 39"
+  "nickname": "빈자리 42"
  },
  {
   "name": "Player",
@@ -1017,7 +1017,7 @@
   "color": "#EFFFF3",
   "tx": 484,
   "ty": 686,
-  "nickname": "빈자리 38"
+  "nickname": "빈자리 41"
  },
  {
   "name": "Player",
@@ -1027,7 +1027,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 684,
-  "nickname": "빈자리 40"
+  "nickname": "빈자리 43"
  },
  {
   "name": "깃발 1",
