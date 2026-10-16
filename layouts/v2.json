@@ -125,16 +125,6 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 479,
-  "ty": 668,
-  "nickname": "K몽실님"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
   "tx": 475,
   "ty": 686,
   "nickname": "산군76"
@@ -205,8 +195,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 481,
-  "ty": 686,
+  "tx": 477,
+  "ty": 690,
   "nickname": "무명인"
  },
  {
@@ -515,6 +505,16 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
+  "tx": 479,
+  "ty": 668,
+  "nickname": "K몽실님"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
   "tx": 473,
   "ty": 676,
   "nickname": "지냐엘"
@@ -678,16 +678,6 @@
   "tx": 479,
   "ty": 678,
   "nickname": "CIAO"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 477,
-  "ty": 690,
-  "nickname": "SuperMario"
  },
  {
   "name": "Player",
@@ -1028,6 +1018,16 @@
   "tx": 479,
   "ty": 690,
   "nickname": "빈자리 21"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 481,
+  "ty": 686,
+  "nickname": "빈자리 22"
  },
  {
   "name": "깃발 1",
