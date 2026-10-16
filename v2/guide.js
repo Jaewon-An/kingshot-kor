@@ -3,7 +3,7 @@
  * 좌표는 게임 좌표(건물의 최소 X·Y 칸). 줄·거리·기준 곰덫 계산은 v2/plan.js(KSPlan)와 같습니다.
  * /v2: 연맹원 자리는 모두 닉네임, 빈자리는 자리 번호 (명단에도 번호로 나옴).
  *   기존 배치도(v1)에 있는데 신규 배치에 자리가 없는 연맹원은 왼쪽 "미배치 인원"에 기존 곰덫·줄별로 표시.
- *   layouts/v2-excluded.json 의 배치 제외 인원은 미배치 인원에서 빼고 "배치 제외 인원"에 따로 표시.
+ *   layouts/v2-excluded.json 의 배치 제외 인원은 미배치 인원에서 빼고 "배치 제외 인원"에 따로 표시 (기존 배치도에 있던/없던 인원으로 나눔).
  * /v2/map (<html data-mode="share">): 공유용 — 자리 배치와 지도 위치만. 도시 자리는 이름 대신 번호(빈자리 포함),
  *   이름(기존 배치도)·지금 깃발·작업 순서 데이터는 불러오지 않음. ?s=자리번호 · ?at=X,Y 로 그 위치를 열고, 누른 위치가 주소에 남음. */
 (function () {
@@ -65,7 +65,10 @@
     // 배치 제외 인원은 미배치에서 빼고 따로 표시 (신규 배치에 다시 넣으면 제외 표시도 사라짐)
     const placed = new Set(V.members.map(m => norm(m.n)));
     const exSet = new Set(exNames.map(norm));
-    excluded = exNames.filter(n => !placed.has(norm(n)));
+    excluded = exNames.filter(n => !placed.has(norm(n))).map(n => {
+      const o = O && O.members.find(m => norm(m.n) === norm(n));
+      return { n, old: o ? { x: o.x, y: o.y } : null };
+    });
     unplaced = !O ? [] : O.members.filter(m => !placed.has(norm(m.n)) && !exSet.has(norm(m.n))).map(m => {
       const ref = O.t1 && O.t2 ? KP.refOf(m, O.t1, O.t2) : 0;
       return { n: m.n, x: m.x, y: m.y, ref, l: ref ? KP.lineOf(m, ref === 1 ? O.t1 : O.t2) : 0 };
@@ -176,7 +179,10 @@
     }
     if ($('excluded') && excluded.length) {
       $('exsum').textContent = `${excluded.length}명`;
-      $('exlist').innerHTML = excluded.map(n => `<li>${esc(n)}</li>`).join('');
+      $('exlist').innerHTML = [['기존 배치도에 있던 인원', excluded.filter(u => u.old)], ['기존 배치도에 없던 인원', excluded.filter(u => !u.old)]]
+        .filter(([, rows]) => rows.length)
+        .map(([title, rows]) => `<li class="grp">${title} · ${rows.length}</li>` +
+          rows.map(u => `<li>${esc(u.n)}${u.old ? ` <span class="mono sumx">${u.old.x},${u.old.y}</span>` : ''}</li>`).join('')).join('');
       $('excluded').hidden = false;
     }
     byId = new Map(members.concat(spare).map(m => [m.id, m]));
@@ -420,8 +426,8 @@
     const exact = q && hits.find(r => r.dataset.k === q);
     // 자리가 없을 때 미배치·배치 제외 인원이면 그렇다고 알려 줌
     const un = q && !hits.length && byNick ? unplaced.find(u => norm(u.n) === q) || unplaced.find(u => norm(u.n).includes(q)) : null;
-    const ex = q && !hits.length && byNick && !un ? excluded.find(n => norm(n) === q) || excluded.find(n => norm(n).includes(q)) : null;
-    if ($('qhint')) $('qhint').textContent = un ? `${un.n} 님은 신규 배치에 아직 자리가 없습니다 (미배치).` : ex ? `${ex} 님은 배치 제외 인원입니다.` : q && !hits.length ? '찾는 자리가 없습니다.' : QHINT;
+    const ex = q && !hits.length && byNick && !un ? excluded.find(u => norm(u.n) === q) || excluded.find(u => norm(u.n).includes(q)) : null;
+    if ($('qhint')) $('qhint').textContent = un ? `${un.n} 님은 신규 배치에 아직 자리가 없습니다 (미배치).` : ex ? `${ex.n} 님은 배치 제외 인원입니다.` : q && !hits.length ? '찾는 자리가 없습니다.' : QHINT;
     const pick = exact || (q && (hits.length === 1 || pickFirst) ? hits[0] : null);
     if (pick) select(byId.get(pick.dataset.id), true);
   }
