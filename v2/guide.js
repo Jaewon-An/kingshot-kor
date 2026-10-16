@@ -81,12 +81,15 @@
     res = V.res.map((r, i) => ({ x: r.x, y: r.y, n: r.n, id: 'r' + i, kind: 'res' }));
     banners = V.banners.map((b, i) => ({ x: b.x, y: b.y, n: `깃발 ${i + 1}번`, id: 'b' + i, kind: 'banner' }));
     // 자리 번호 (빈자리 포함, /v2·/v2/map 같은 번호): ① 곰덫2 1~3줄 → ② 곰덫1 1~2줄 → ③ 나머지. 같은 단계에서는 줄 → 곰덫에 가까운 순
+    // 거리까지 같으면 배치 목록에 적힌 순서 (연맹원·빈자리 구분 없이 → 빈자리에 연맹원을 넣어도 번호 그대로)
+    const ord = new Map(cur.list.map((o, i) => [o, i]));
+    const at = new Map(V.members.concat(V.spare).map(p => [`${p.x},${p.y}`, ord.get(p.o)]));
     // 빈자리도 참여 곰덫 기준 줄·거리로 표시
     const seats = members.concat(spare).map(s => {
       const g = partOf(s), t = g === 1 ? T1 : T2;
-      return { s, g, l: KP.lineOf(s, t), sd: KP.dist(s, t), tier: KP.lineOf(s, T2) <= 3 ? 0 : KP.lineOf(s, T1) <= 2 ? 1 : 2 };
+      return { s, g, l: KP.lineOf(s, t), sd: KP.dist(s, t), tier: KP.lineOf(s, T2) <= 3 ? 0 : KP.lineOf(s, T1) <= 2 ? 1 : 2, oi: at.get(`${s.x},${s.y}`) };
     });
-    seats.sort((a, b) => a.tier - b.tier || b.g - a.g || a.l - b.l || a.sd - b.sd).forEach((e, i) => {
+    seats.sort((a, b) => a.tier - b.tier || b.g - a.g || a.l - b.l || a.sd - b.sd || a.oi - b.oi).forEach((e, i) => {
       e.s.no = i + 1;
       Object.assign(e.s, { g: e.g, l: e.l, sd: e.sd, d2: KP.dist(e.s, T2), d1: KP.dist(e.s, T1), tier: e.tier });
     });
