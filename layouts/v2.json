@@ -407,7 +407,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 680,
-  "nickname": "렌터카공제조합 "
+  "nickname": "빈자리 1"
  },
  {
   "name": "Player",
@@ -527,7 +527,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 670,
-  "nickname": "빈자리 1"
+  "nickname": "빈자리 2"
  },
  {
   "name": "Player",
@@ -537,7 +537,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 668,
-  "nickname": "빈자리 2"
+  "nickname": "빈자리 3"
  },
  {
   "name": "Player",
@@ -597,7 +597,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 682,
-  "nickname": "빈자리 3"
+  "nickname": "렌터카공제조합 "
  },
  {
   "name": "Player",
