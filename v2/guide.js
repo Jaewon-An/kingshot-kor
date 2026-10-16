@@ -1,7 +1,8 @@
 /* /v2 신규 자리 안내 — 원본: USB "code/x2/template.html" 스크립트.
  * 데이터는 게시본에서 매번 계산합니다: 신규 배치 /api/v2/layout, 이전 자리 /api/layout(기존 배치도).
  * 좌표는 게임 좌표(건물의 최소 X·Y 칸). 줄·거리·기준 곰덫 계산은 v2/plan.js(KSPlan)와 같습니다.
- * /v2: 곰덫2 1~2줄·곰덫1 1줄(NAMED_LINES) 자리만 이름, 그 밖은 자리 번호. 번호 자리는 명단·내 자리 찾기에 나오지 않음.
+ * /v2: 곰덫2 1~2줄·곰덫1 1줄(NAMED_LINES) 연맹원 자리만 이름, 그 밖의 자리와 빈자리는 자리 번호.
+ *   번호로 표시된 연맹원 자리는 명단·내 자리 찾기에 나오지 않음 (빈자리는 명단에 번호로 나옴).
  * /v2/map (<html data-mode="share">): 공유용 — 자리 배치와 지도 위치만. 도시 자리는 이름 대신 번호(빈자리 포함),
  *   이름(기존 배치도)·지금 깃발·작업 순서 데이터는 불러오지 않음. ?s=자리번호 · ?at=X,Y 로 그 위치를 열고, 누른 위치가 주소에 남음. */
 (function () {
@@ -18,8 +19,8 @@
   const SHARE = document.documentElement.dataset.mode === 'share';
   const NAMED_LINES = { 2: 2, 1: 1 };   // /v2: 참여 곰덫별로 이 줄 안 자리만 이름, 그 밖은 자리 번호 (곰덫1 2줄은 일단 번호)
   const QHINT = $('qhint') ? $('qhint').textContent : '';
-  // 목록·지도에 보이는 이름: 이름 표시 자리와 빈자리는 이름, 그 밖은 자리 번호
-  const seatName = m => SHARE || (m.kind === 'city' && !m.named) ? `자리 ${m.no}` : m.n;
+  // 목록·지도에 보이는 이름: 이름 표시 연맹원 자리만 이름, 그 밖(빈자리 포함)은 자리 번호
+  const seatName = m => SHARE || !m.named ? `자리 ${m.no}` : m.n;
   const [F0, F1] = K.FERTILE;
 
   // ---------- 불러오기 ----------
@@ -72,14 +73,14 @@
     res = V.res.map((r, i) => ({ x: r.x, y: r.y, n: r.n, id: 'r' + i, kind: 'res' }));
     banners = V.banners.map((b, i) => ({ x: b.x, y: b.y, n: `깃발 ${i + 1}번`, id: 'b' + i, kind: 'banner' }));
     // 자리 번호 (빈자리 포함, /v2·/v2/map 같은 번호): ① 곰덫2 1~3줄 → ② 곰덫1 1~2줄 → ③ 나머지. 같은 단계에서는 줄 → 곰덫에 가까운 순
-    // 공유용은 빈자리도 참여 곰덫 기준 줄·거리로 표시 (/v2 빈자리는 곰덫2 기준 그대로)
+    // 빈자리도 참여 곰덫 기준 줄·거리로 표시
     const seats = members.concat(spare).map(s => {
       const g = partOf(s), t = g === 1 ? T1 : T2;
       return { s, g, l: KP.lineOf(s, t), sd: KP.dist(s, t), tier: KP.lineOf(s, T2) <= 3 ? 0 : KP.lineOf(s, T1) <= 2 ? 1 : 2 };
     });
     seats.sort((a, b) => a.tier - b.tier || b.g - a.g || a.l - b.l || a.sd - b.sd).forEach((e, i) => {
       e.s.no = i + 1;
-      if (SHARE) Object.assign(e.s, { g: e.g, l: e.l, sd: e.sd, d2: KP.dist(e.s, T2), d1: KP.dist(e.s, T1), tier: e.tier });
+      Object.assign(e.s, { g: e.g, l: e.l, sd: e.sd, d2: KP.dist(e.s, T2), d1: KP.dist(e.s, T1), tier: e.tier });
     });
 
     // 지형 잘라내기 (본부·곰덫·자리·본부 근처 현재 깃발 주변) — kind 0 땅 1 산 2 호수 3 자원지 4 구조물
@@ -124,13 +125,13 @@
         const title = `${trapName(s.g)} ${s.l}줄${s.tier === 2 ? ' (나머지)' : ''}`, last = groups[groups.length - 1];
         if (last && last.title === title) last.rows.push(s); else groups.push({ title, rows: [s] });
       }
-    } else { // 이름이 보이는 자리만 (번호 자리는 명단·검색에 넣지 않음)
+    } else { // 이름이 보이는 자리 + 빈자리(번호 순). 번호로 표시된 연맹원 자리는 명단·검색에 넣지 않음
       const shown = members.filter(m => m.named);
       for (const g of [2, 1]) {
         const lines = [...new Set(shown.filter(m => m.g === g).map(m => m.l))].sort((a, b) => a - b);
         for (const l of lines) groups.push({ title: `${trapName(g)} 기준 ${l}줄`, rows: shown.filter(m => m.g === g && m.l === l).sort((a, b) => (g === 2 ? a.d2 - b.d2 : a.d1 - b.d1)) });
       }
-      if (spare.length) groups.push({ title: '빈자리 (새 연맹원용)', rows: spare });
+      if (spare.length) groups.push({ title: '빈자리', rows: spare.slice().sort((a, b) => a.no - b.no) });
     }
     const oldCell = m => m.kind === 'spare' ? '' : m.old ? `X:${m.old.x} Y:${m.old.y}${m.same ? '' : ' <span class="mvd">조정</span>'}` : '<span class="nw">신규</span>';
     // data-no·data-xy = 자리 번호·좌표 검색, data-k = 닉네임 검색
@@ -139,7 +140,7 @@
       gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k=""><td class="nm mono"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${m.no}</td><td class="mono">${xy(m)}</td><td>${m.kind === 'spare' ? '<span class="nw">빈자리</span>' : ''}</td></tr>`).join('') + '</tbody>').join('');
     else $('list').innerHTML = `<thead><tr><th>닉네임</th><th>신규 좌표</th>${migrated ? '' : '<th>이전 좌표</th>'}</tr></thead>` + groups.map((gr, gi) =>
       `<tbody data-g="${gi}"><tr class="grp"><td colspan="3">${esc(gr.title)} · ${gr.rows.length}</td></tr>` +
-      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k="${esc(norm(m.n))}"><td class="nm"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${esc(m.n)}</td><td class="mono">${xy(m)}</td>${migrated ? '' : `<td class="mono">${oldCell(m)}</td>`}</tr>`).join('') + '</tbody>').join('');
+      gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k="${m.named ? esc(norm(m.n)) : ''}"><td class="nm"><span class="tag" style="background:var(${m.kind === 'spare' ? '--c-spare' : m.g === 1 ? '--c-city1' : '--c-city2'})"></span>${esc(seatName(m))}</td><td class="mono">${xy(m)}</td>${migrated ? '' : `<td class="mono">${oldCell(m)}</td>`}</tr>`).join('') + '</tbody>').join('');
     if ($('bn')) $('bn').innerHTML = banners.map(b => `<li>${b.x},${b.y}</li>`).join('');
     byId = new Map(members.concat(spare).map(m => [m.id, m]));
 
@@ -175,7 +176,7 @@
       for (const s of plan.steps) {
         if (s.phase !== ph) { ph = s.phase; html += `<li class="grp">${PH[ph]}</li>`; }
         const what = s.op === 'build' ? `<b class="bd">설치</b> 깃발 ${num.get(`${s.f.x},${s.f.y}`)}번` : `<b class="rm">철거</b> ${esc(s.f.name || '')}`;
-        const on = objAt.get(s.f.y * G + s.f.x), numbered = on && on.o.no && (SHARE || (on.o.kind === 'city' && !on.o.named));
+        const on = objAt.get(s.f.y * G + s.f.x), numbered = on && on.o.no && (SHARE || !on.o.named);
         const why = s.op === 'remove' && numbered ? `새 자리 ${on.o.no} 위에 있음` : s.why;
         html += `<li><button type="button" class="lnk" data-x="${s.f.x}" data-y="${s.f.y}">${what}</button> <span class="mono">${s.f.x},${s.f.y}</span> <span class="why">${esc(why)}</span></li>`;
       }
@@ -329,7 +330,7 @@
     if (view.names && s >= 13) {
       const px = Math.min(12, Math.max(8, s * 0.42));
       members.forEach(mm => label(mm, 2, mm.named ? mm.n : String(mm.no), px, C['on-obj'], cellW));
-      spare.forEach(sp => label(sp, 2, SHARE ? String(sp.no) : '빈', px, C['c-spare']));
+      spare.forEach(sp => label(sp, 2, String(sp.no), px, C['c-spare']));
     }
     if (s >= 10 && !SHARE) banners.forEach((b, i) => label(b, 1, String(i + 1), Math.min(11, s * 0.55), b.built ? C['on-obj'] : C['c-banner']));
     const big = Math.min(15, Math.max(10, s * 0.75));
@@ -343,9 +344,8 @@
     const row = document.querySelector(`tr.row[data-id="${m.id}"]`);
     if (row) { row.classList.add('on'); const box = $('list').parentElement, top = row.offsetTop - box.clientHeight / 2; box.scrollTo({ top: Math.max(0, top) }); }
     const card = $('card');
-    if (SHARE) card.innerHTML = `<span class="nm">자리 ${m.no}${m.kind === 'spare' ? ' <span class="badge new">빈자리</span>' : ''}</span><span class="co">${xy(m)}</span>
+    if (SHARE || m.kind === 'spare') card.innerHTML = `<span class="nm">자리 ${m.no}${m.kind === 'spare' ? ' <span class="badge new">빈자리</span>' : ''}</span><span class="co">${xy(m)}</span>
         <span class="meta">${trapName(m.g)} 기준 ${m.l}줄 · 곰덫2까지 ${f1(m.d2)}칸 · 곰덫1까지 ${f1(m.d1)}칸</span>`;
-    else if (m.kind === 'spare') card.innerHTML = `<span class="nm">${esc(m.n)}</span><span class="co">${xy(m)}</span><span class="meta">곰덫2 기준 ${m.l}줄 · 새로 들어오는 연맹원용 자리</span>`;
     else if (!m.named) card.innerHTML = `<span class="nm">자리 ${m.no}</span><span class="co">${xy(m)}</span>
         <span class="meta">${trapName(m.g)} 기준 ${m.l}줄 · 곰덫2까지 ${f1(m.d2)}칸 · 곰덫1까지 ${f1(m.d1)}칸</span>`;   // 번호 자리: 닉네임·이전 자리 없이
     else {
@@ -370,7 +370,7 @@
   function search(pickFirst) {
     // "12"·"자리 12" = 자리 번호, "520 723"·"X:520 Y:723" = 좌표 (그런 닉네임이 있으면 닉네임 우선)
     let q = norm($('q').value), hit;
-    // 명단에 있는 자리(이름이 보이는 자리·빈자리)만 찾음. 번호 자리는 명단에 없어서 찾지 않음
+    // 명단에 있는 자리(이름이 보이는 자리·빈자리)만 찾음. 번호로 표시된 연맹원 자리는 명단에 없어서 찾지 않음
     const d = q.replace(/^자리\s*/, ''), nick = members.some(m => m.named && norm(m.n) === q);
     if (!nick && /^\d+$/.test(d)) { q = d; hit = r => r.dataset.no === q; }
     else if (!nick && /^(x\s*:?\s*)?\d+[\s,]+(y\s*:?\s*)?\d+$/.test(d)) { q = d.replace(/[^\d]+/g, ' ').trim().replace(/ /g, ','); hit = r => r.dataset.xy === q; }
@@ -383,7 +383,7 @@
     });
     // 정확히 같은 닉네임이 있으면 그 자리, 결과가 하나뿐이어도 그 자리
     const exact = q && hits.find(r => r.dataset.k === q);
-    if ($('qhint')) $('qhint').textContent = q && !hits.length ? '찾는 자리가 없습니다. 번호로 표시된 자리는 검색되지 않습니다.' : QHINT;
+    if ($('qhint')) $('qhint').textContent = q && !hits.length ? '찾는 자리가 없습니다. 닉네임 없이 번호로 표시된 연맹원 자리는 검색되지 않습니다.' : QHINT;
     const pick = exact || (q && (hits.length === 1 || pickFirst) ? hits[0] : null);
     if (pick) select(byId.get(pick.dataset.id), true);
   }
@@ -430,7 +430,7 @@
     const kn = ['', '산', '호수', '자원지', '구조물'][k] || '';
     let info = [inForeign(x, y) ? '다른 연맹 영토' : '', kn].filter(Boolean).join(' · ');
     if (o) {
-      const extra = o.kind === 'city' || (SHARE && o.kind === 'spare') ? ` ${xy(o)} · ${trapName(o.g)} ${o.l}줄${o.kind === 'spare' ? ' · 빈자리' : ''}` : o.kind === 'spare' ? ` ${xy(o)} · 곰덫2 ${o.l}줄` : ` ${xy(o)}`;
+      const extra = o.kind === 'city' || o.kind === 'spare' ? ` ${xy(o)} · ${trapName(o.g)} ${o.l}줄${o.kind === 'spare' ? ' · 빈자리' : ''}` : ` ${xy(o)}`;
       info = (o.kind === 'city' || o.kind === 'spare' ? seatName(o) : SHARE && o.kind === 'banner' ? '깃발' : o.n) + extra + (info ? ' · ' + info : '');
     }
     const rf = realAt.get(y * G + x);
