@@ -126,7 +126,7 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 479,
-  "ty": 690,
+  "ty": 668,
   "nickname": "K몽실님"
  },
  {
@@ -815,16 +815,6 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 479,
-  "ty": 668,
-  "nickname": "SSIPOS"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
   "tx": 483,
   "ty": 684,
   "nickname": "ISR"
@@ -1028,6 +1018,16 @@
   "tx": 485,
   "ty": 668,
   "nickname": "빈자리 20"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 479,
+  "ty": 690,
+  "nickname": "빈자리 21"
  },
  {
   "name": "깃발 1",
