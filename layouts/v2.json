@@ -1007,7 +1007,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 684,
-  "nickname": "빈자리 31"
+  "nickname": "빈자리 32"
  },
  {
   "name": "Player",
@@ -1015,9 +1015,9 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 485,
+  "tx": 484,
   "ty": 686,
-  "nickname": "빈자리 32"
+  "nickname": "빈자리 31"
  },
  {
   "name": "Player",
