@@ -767,16 +767,6 @@
   "color": "#EFFFF3",
   "tx": 475,
   "ty": 692,
-  "nickname": "KIM1228"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 483,
-  "ty": 684,
   "nickname": "빈자리 29"
  },
  {
@@ -786,7 +776,7 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 483,
-  "ty": 690,
+  "ty": 684,
   "nickname": "빈자리 30"
  },
  {
@@ -795,8 +785,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 481,
-  "ty": 692,
+  "tx": 483,
+  "ty": 690,
   "nickname": "빈자리 31"
  },
  {
@@ -805,7 +795,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 473,
+  "tx": 481,
   "ty": 692,
   "nickname": "빈자리 32"
  },
@@ -815,7 +805,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 483,
+  "tx": 473,
   "ty": 692,
   "nickname": "빈자리 33"
  },
@@ -825,9 +815,19 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
+  "tx": 483,
+  "ty": 692,
+  "nickname": "빈자리 34"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
   "tx": 477,
   "ty": 666,
-  "nickname": "빈자리 34"
+  "nickname": "빈자리 35"
  },
  {
   "name": "Player",
@@ -837,7 +837,7 @@
   "color": "#EFFFF3",
   "tx": 469,
   "ty": 674,
-  "nickname": "빈자리 35"
+  "nickname": "빈자리 36"
  },
  {
   "name": "Player",
@@ -847,7 +847,7 @@
   "color": "#EFFFF3",
   "tx": 479,
   "ty": 666,
-  "nickname": "빈자리 36"
+  "nickname": "빈자리 37"
  },
  {
   "name": "Player",
@@ -857,7 +857,7 @@
   "color": "#EFFFF3",
   "tx": 469,
   "ty": 676,
-  "nickname": "빈자리 37"
+  "nickname": "빈자리 38"
  },
  {
   "name": "Player",
@@ -867,7 +867,7 @@
   "color": "#EFFFF3",
   "tx": 475,
   "ty": 666,
-  "nickname": "빈자리 38"
+  "nickname": "빈자리 39"
  },
  {
   "name": "Player",
@@ -877,7 +877,7 @@
   "color": "#EFFFF3",
   "tx": 469,
   "ty": 672,
-  "nickname": "빈자리 39"
+  "nickname": "빈자리 40"
  },
  {
   "name": "Player",
@@ -887,7 +887,7 @@
   "color": "#EFFFF3",
   "tx": 481,
   "ty": 666,
-  "nickname": "빈자리 40"
+  "nickname": "빈자리 41"
  },
  {
   "name": "Player",
@@ -897,16 +897,6 @@
   "color": "#EFFFF3",
   "tx": 469,
   "ty": 678,
-  "nickname": "빈자리 41"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 487,
-  "ty": 674,
   "nickname": "빈자리 42"
  },
  {
@@ -916,8 +906,18 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 487,
-  "ty": 678,
+  "ty": 674,
   "nickname": "빈자리 43"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 487,
+  "ty": 678,
+  "nickname": "빈자리 44"
  },
  {
   "name": "Player",
@@ -927,16 +927,6 @@
   "color": "#EFFFF3",
   "tx": 483,
   "ty": 666,
-  "nickname": "빈자리 44"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 469,
-  "ty": 680,
   "nickname": "빈자리 45"
  },
  {
@@ -945,7 +935,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 487,
+  "tx": 469,
   "ty": 680,
   "nickname": "빈자리 46"
  },
@@ -955,9 +945,19 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
+  "tx": 487,
+  "ty": 680,
+  "nickname": "빈자리 47"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
   "tx": 485,
   "ty": 666,
-  "nickname": "빈자리 47"
+  "nickname": "빈자리 48"
  },
  {
   "name": "Player",
@@ -967,16 +967,6 @@
   "color": "#EFFFF3",
   "tx": 469,
   "ty": 682,
-  "nickname": "빈자리 48"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 467,
-  "ty": 674,
   "nickname": "빈자리 49"
  },
  {
@@ -986,7 +976,7 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 467,
-  "ty": 670,
+  "ty": 674,
   "nickname": "빈자리 50"
  },
  {
@@ -995,8 +985,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 471,
-  "ty": 686,
+  "tx": 467,
+  "ty": 670,
   "nickname": "빈자리 51"
  },
  {
@@ -1006,16 +996,6 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 471,
-  "ty": 684,
-  "nickname": "빈자리 53"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 484,
   "ty": 686,
   "nickname": "빈자리 52"
  },
@@ -1025,9 +1005,29 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 485,
+  "tx": 471,
   "ty": 684,
   "nickname": "빈자리 54"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 484,
+  "ty": 686,
+  "nickname": "빈자리 53"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 485,
+  "ty": 684,
+  "nickname": "빈자리 55"
  },
  {
   "name": "깃발 1",
