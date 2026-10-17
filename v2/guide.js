@@ -246,7 +246,7 @@
       $('takelegend').hidden = !toTake.size;
     }
 
-    readColors(); fit();
+    readColors(); home();
     // ?q=닉네임 으로 열면 바로 그 자리
     const q0 = new URLSearchParams(location.search).get('q');
     if (q0 && $('q')) { $('q').value = q0; search(true); }
@@ -314,6 +314,13 @@
     view.cx = (x0 + x1) / 2; view.cy = (y0 + y1) / 2;
     view.s = Math.max(3, Math.min(60, view.rot ? Math.min(w, h) / ((bw + bh) * SQ) : Math.min(w / bw, h / bh)));
     draw();
+  }
+  // 처음 보기: 전체 보기에서 이름이 안 읽히면(휴대폰) 곰덫2를 가운데에 두고 이름이 보이는 배율로
+  const LABEL_S = 13, HOME_S = 20;
+  function home() {
+    fit();
+    if (view.s >= LABEL_S) return;
+    view.cx = T2.x + 1.5; view.cy = T2.y + 1.5; view.s = HOME_S;
   }
   const lineRect = (t, k) => { // 격자 방향: 도시 격자 홀짝에 따라 한쪽은 곰덫에 붙고 반대쪽은 1칸 틈
     const c0 = members[0] || spare[0], side = (v, p) => ((v - 2 - p) & 1) === 0 ? [v - 2 * k, v + 3 + 2 * k + 1] : [v - 2 * k - 1, v + 3 + 2 * k];
@@ -386,7 +393,7 @@
       gx.fillStyle = color; gx.fillText(t, p.x, p.y + 0.5);
     };
     const cellW = 2 * s * (view.rot ? 1.25 : 0.95);
-    if (view.names && s >= 13) {
+    if (view.names && s >= LABEL_S) {
       const px = Math.min(12, Math.max(8, s * 0.42));
       members.forEach(mm => label(mm, 2, mm.named ? mm.n : String(mm.no), px, C['on-obj'], cellW));
       spare.forEach(sp => label(sp, 2, String(sp.no), px, C['c-spare']));
@@ -513,7 +520,7 @@
     return o;
   }
   const toggle = (id, key, after) => $(id)?.addEventListener('click', () => { view[key] = !view[key]; $(id).setAttribute('aria-pressed', String(view[key])); after ? after() : draw(); });
-  toggle('rot', 'rot', fit); toggle('lbl', 'names'); toggle('ter', 'terr');
+  toggle('rot', 'rot', home); toggle('lbl', 'names'); toggle('ter', 'terr');
   $('orderlist')?.addEventListener('click', e => {
     const btn = e.target.closest('button[data-x]');
     if (!btn) return;
