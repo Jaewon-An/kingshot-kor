@@ -19,7 +19,9 @@
   const norm = s => String(s || '').replace(/ /g, ' ').trim().toLowerCase();
   const BLOCKS = KP.BLOCKS_DEFAULT;
   const SHARE = document.documentElement.dataset.mode === 'share';
-  const QHINT = $('qhint') ? $('qhint').textContent : '';
+  const PHONE = matchMedia('(max-width: 900px)');
+  // 휴대폰에서는 긴 목록·범례를 접어서 시작 (명단이 바로 보이게)
+  if (PHONE.matches) for (const id of ['legend', 'unplaced', 'excluded']) if ($(id)) $(id).open = false;
   // 목록·지도에 보이는 이름: /v2 연맹원 자리는 닉네임, 빈자리와 /v2/map은 자리 번호
   const seatName = m => m.kind === 'res' ? `${m.n} (자리 ${m.no})` : SHARE || !m.named ? `자리 ${m.no}` : m.n;
   const isSeat = o => o && (o.kind === 'city' || o.kind === 'spare' || (o.kind === 'res' && o.seat));
@@ -202,13 +204,11 @@
     // ---------- 현재 설치된 깃발 (게임) ----------
     real.forEach(f => realAt.set(f.y * G + f.x, f));
     if (real.length) {
-      const same = real.filter(f => banners.some(b => b.x === f.x && b.y === f.y)).length;
       const areas = [...new Set(real.map(f => f.area))];
-      $('realsum').textContent = `${real.length}개 · 신규 배치 깃발 ${banners.length}개 중 같은 자리 ${same}개` + (survey && survey.updated ? ` · 조사 ${survey.updated}` : '');
+      $('realsum').textContent = `${real.length}개` + (survey && survey.updated ? ` · ${survey.updated} 기준` : '');
       $('reallist').innerHTML = areas.map(a => `<li class="grp">${esc(a || '기타')}</li>` +
         real.filter(f => f.area === a).map(f => `<li><button type="button" class="lnk" data-f="${f.id}">${esc(f.n)}</button> <span class="mono">${f.x},${f.y}</span></li>`).join('')).join('');
-      $('realnote').textContent = survey && survey.survey ? survey.survey.scope || '' : '';
-      $('real').hidden = false; $('todolegend').hidden = false; $('terrname').textContent = '연맹 영토 (지금 깃발 + 설치할 깃발)';
+      $('real').hidden = false; $('todolegend').hidden = false;
     }
     // 신규 배치 깃발 중 게임에 이미 서 있는 것 (지금 깃발 데이터가 없으면 모두 서 있는 것으로 그림)
     banners.forEach(b => { b.built = !real.length || realAt.has(b.y * G + b.x); });
@@ -419,7 +419,7 @@
     if (!tr) return;
     select(byId.get(tr.dataset.id), true);
     // 휴대폰에서는 명단이 지도 아래에 있으므로 카드·지도가 보이게 올림
-    if (matchMedia('(max-width: 900px)').matches) $('card').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    if (PHONE.matches) $('card').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
   function search(pickFirst) {
     // "12"·"자리 12" = 자리 번호, "520 723"·"X:520 Y:723" = 좌표 (그런 닉네임이 있으면 닉네임 우선)
@@ -440,7 +440,7 @@
     // 자리가 없을 때 미배치·배치 제외 인원이면 그렇다고 알려 줌
     const un = q && !hits.length && byNick ? unplaced.find(u => norm(u.n) === q) || unplaced.find(u => norm(u.n).includes(q)) : null;
     const ex = q && !hits.length && byNick && !un ? excluded.find(u => norm(u.n) === q) || excluded.find(u => norm(u.n).includes(q)) : null;
-    if ($('qhint')) $('qhint').textContent = un ? `${un.n} 님은 신규 배치에 아직 자리가 없습니다 (미배치).` : ex ? `${ex.n} 님은 배치 제외 인원입니다.` : q && !hits.length ? '찾는 자리가 없습니다.' : QHINT;
+    if ($('qhint')) $('qhint').textContent = un ? `${un.n} 님은 신규 배치에 아직 자리가 없습니다 (미배치).` : ex ? `${ex.n} 님은 배치 제외 인원입니다.` : q && !hits.length ? '찾는 자리가 없습니다.' : '';
     const pick = exact || (q && (hits.length === 1 || pickFirst) ? hits[0] : null);
     if (pick) select(byId.get(pick.dataset.id), true);
   }
@@ -471,6 +471,8 @@
       cv.classList.remove('drag');
       if (downAt && kind) {
         const o = hover(e.offsetX, e.offsetY);
+        // 손가락으로 누르면 말풍선이 손에 가리므로 지도 아래 안내 줄로만 보여 줌
+        if (e.pointerType !== 'mouse') tip.hidden = true;
         if (isSeat(o)) select(o, false);
         else if (SHARE) { const w = toWorld(e.offsetX, e.offsetY); markAt(Math.floor(w.x), Math.floor(w.y), o); }
       }
@@ -478,7 +480,7 @@
     downAt = null;
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-  cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !ptrs.size) { tip.hidden = true; view.cur = null; view.flag = null; draw(); } });
+  cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !ptrs.size) { tip.hidden = true; view.cur = null; view.flag = null; if (!view.mark) $('readout').textContent = ''; draw(); } });
   cv.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
   function zoomAt(sx, sy, f) { const a = toWorld(sx, sy); view.s = Math.max(3, Math.min(60, view.s * f)); const b = toWorld(sx, sy); view.cx += a.x - b.x; view.cy += a.y - b.y; draw(); }
   function hover(sx, sy) {
@@ -515,7 +517,7 @@
     view.cx = x + 0.5; view.cy = y + 0.5; view.s = Math.max(view.s, 16); view.cur = { x, y };
     if (SHARE) markAt(x, y, objAt.get(y * G + x) && objAt.get(y * G + x).o, true);
     $('readout').textContent = `${btn.textContent.trim()} · X:${x} Y:${y}`;
-    if (matchMedia('(max-width: 900px)').matches) cv.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (PHONE.matches) cv.scrollIntoView({ block: 'center', behavior: 'smooth' });
     draw();
   });
   $('reallist')?.addEventListener('click', e => {
@@ -524,7 +526,7 @@
     if (!f) return;
     view.cx = f.x + 0.5; view.cy = f.y + 0.5; view.s = Math.max(view.s, 16); view.cur = { x: f.x, y: f.y };
     $('readout').textContent = `현재 깃발 ${f.n} · X:${f.x} Y:${f.y}${f.src ? ' · ' + f.src : ''}`;
-    if (matchMedia('(max-width: 900px)').matches) cv.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (PHONE.matches) cv.scrollIntoView({ block: 'center', behavior: 'smooth' });
     draw();
   });
   $('fit').addEventListener('click', fit);
@@ -545,7 +547,7 @@
     view.pick = null; view.mark = { x, y };
     document.querySelectorAll('tr.row.on').forEach(r => r.classList.remove('on')); $('card').hidden = true;
     setURL('at', `${x},${y}`);
-    if (!keepText) $('readout').textContent = `X:${x} Y:${y} · 이 위치 주소가 만들어졌습니다 (링크 복사)`;
+    if (!keepText) $('readout').textContent = `X:${x} Y:${y} · 링크 복사로 이 위치 공유`;
     draw();
   }
   // 주소로 열기

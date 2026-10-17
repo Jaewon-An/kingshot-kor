@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
 <title>KOR 신규 자리 지도</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,9 +16,8 @@
 <div class="page">
   <header class="top">
     <div>
-      <p class="eyebrow">KINGSHOT · 서버 2382 · KOR 곰 사냥 신규 자리</p>
+      <p class="eyebrow">KINGSHOT · 2382 KOR</p>
       <h1>신규 자리 지도</h1>
-      <p class="lede">자리 번호와 위치를 공유하는 지도입니다. 자리나 칸을 누른 뒤 "링크 복사"로 그 위치를 보내세요.</p>
     </div>
     <dl class="facts" id="facts"></dl>
   </header>
@@ -27,7 +28,7 @@
     <aside class="panel">
       <div class="card" id="card" hidden></div>
       <div class="tbl"><table id="list"></table></div>
-      <p class="hint">번호: ① 곰덫2 1~3줄 → ② 곰덫1 1~2줄 → ③ 나머지. 같은 단계에서는 가까운 줄·곰덫에 가까운 순입니다.</p>
+      <p class="hint">번호 순서: 곰덫2 1~3줄 → 곰덫1 1~2줄 → 나머지</p>
     </aside>
 
     <section class="mapcol">
@@ -35,31 +36,37 @@
         <button class="btn copy" id="link" type="button">링크 복사</button>
         <button class="btn" id="rot" type="button" aria-pressed="true">게임 시점</button>
         <button class="btn" id="lbl" type="button" aria-pressed="true">번호</button>
-        <button class="btn" id="fit" type="button">전체 보기</button>
-        <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
-        <button class="btn" id="zout" type="button" aria-label="축소">－</button>
       </div>
-      <div class="readout" id="readout">자리나 칸을 누르면 그 위치의 주소가 만들어집니다.</div>
-      <div class="mapwrap"><canvas id="cv"></canvas><div class="tip" id="tip" hidden></div></div>
-      <div class="legend">
-        <span><i style="background:var(--c-t2)"></i>곰덫2</span>
-        <span><i style="background:var(--c-t1)"></i>곰덫1</span>
-        <span><i style="background:var(--c-city2)"></i>곰덫2 참여 자리</span>
-        <span><i style="background:var(--c-city1)"></i>곰덫1 참여 자리</span>
-        <span><i style="background:var(--c-spare)"></i>빈자리 (점선)</span>
-        <span><i style="background:var(--c-banner)"></i>깃발</span>
-        <span><i style="background:var(--c-res)"></i>연맹 자원</span>
-        <span><i style="background:var(--c-hq)"></i>본부</span>
-        <span><i style="background:var(--m-node)"></i>자원지</span>
-        <span><i style="background:var(--m-mount)"></i>산</span>
-        <span><i style="background:var(--m-lake)"></i>호수</span>
+      <div class="mapwrap">
+        <canvas id="cv"></canvas>
+        <div class="tip" id="tip" hidden></div>
+        <div class="zoom">
+          <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
+          <button class="btn" id="zout" type="button" aria-label="축소">－</button>
+          <button class="btn" id="fit" type="button" aria-label="전체 보기">전체</button>
+        </div>
+        <div class="readout" id="readout" role="status"></div>
       </div>
+      <details class="legend" id="legend" open>
+        <summary>범례</summary>
+        <div class="keys">
+          <span><i style="background:var(--c-t2)"></i>곰덫2</span>
+          <span><i style="background:var(--c-t1)"></i>곰덫1</span>
+          <span><i style="background:var(--c-city2)"></i>곰덫2 참여</span>
+          <span><i style="background:var(--c-city1)"></i>곰덫1 참여</span>
+          <span><i class="spare"></i>빈자리</span>
+          <span><i style="background:var(--c-banner)"></i>깃발</span>
+          <span><i style="background:var(--c-res)"></i>연맹 자원</span>
+          <span><i style="background:var(--c-hq)"></i>본부</span>
+          <span><i style="background:var(--m-node)"></i>자원지</span>
+          <span><i style="background:var(--m-mount)"></i>산</span>
+          <span><i style="background:var(--m-lake)"></i>호수</span>
+        </div>
+      </details>
     </section>
   </div>
 
-  <footer>
-    좌표는 건물이 차지하는 칸 중 X·Y가 가장 작은 칸 기준입니다. 주소 예: <span class="mono">/v2/map?s=12</span> (자리 12) · <span class="mono">/v2/map?at=520,723</span> (그 칸).
-  </footer>
+  <footer><a href="/v2/">신규 자리 배치도</a></footer>
 </div>
 <script src="/mapdata.js"></script>
 <script src="/v2/core.js"></script>

@@ -1,6 +1,6 @@
-/* /flags — KOR 연맹 깃발 현황 (왕국 전체).
+/* /v1/flags — KOR 연맹 깃발 현황 (왕국 전체).
  * Shows layouts/flags.json, kept apart from the seat layout (layouts/current.json), read-only.
- * Loaded by app.js (startView) on the /flags page; app.js hands over what it needs as window.KS_APP.
+ * Loaded by app.js (startView) on the /v1/flags page; app.js hands over what it needs as window.KS_APP.
  * Coordinates in flags.json are the in-game X/Y shown when tapping the object. */
 (function () {
 'use strict';

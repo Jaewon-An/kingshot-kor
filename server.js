@@ -45,8 +45,14 @@ function checkToken(req) {
 const validLayout = list => Array.isArray(list) && list.length <= 5000 && list.every(o =>
   o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
   (o.nickname === undefined || (typeof o.nickname === 'string' && o.nickname.length <= 80)));
-// same transform as tools/build-dist.mjs uses for dist/v2/admin.html
-const v2AdminPage = html => html.replace('<head>', '<head>\n<base href="/">');
+// same as _worker.js: the front page is /v2/, the old layout pages live under /v1/
+const REDIRECTS = {
+  '/': '/v2/', '/index.html': '/v2/',
+  '/admin': '/v1/admin', '/admin/': '/v1/admin', '/admin.html': '/v1/admin',
+  '/flags': '/v1/flags', '/flags/': '/v1/flags', '/flags.html': '/v1/flags',
+};
+// v1/index.html serves all of these (the page picks its mode from the path, like the copies tools/build-dist.mjs makes)
+const V1_PAGES = ['/v1', '/v1/', '/v1/index.html', '/v1/admin', '/v1/admin/', '/v1/admin.html', '/v1/flags', '/v1/flags/', '/v1/flags.html', '/v2/admin', '/v2/admin/', '/v2/admin.html'];
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -105,22 +111,19 @@ http.createServer((req, res) => {
   if (url.pathname.startsWith('/api/')) {
     return api(req, res, url).catch(err => send(res, 500, { error: err.message }));
   }
-  // /admin is the same page as / — the page switches to the editor from its own path (like admin.html on Pages)
-  // /v2/admin is that editor again for the v2 layout; <base href="/"> keeps its relative files at the root (as in dist/v2/admin.html)
-  if (['/v2/admin', '/v2/admin/', '/v2/admin.html'].includes(url.pathname)) {
-    return send(res, 200, v2AdminPage(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')), TYPES['.html']);
-  }
+  const to = REDIRECTS[url.pathname];
+  if (to) { res.writeHead(302, { Location: to + url.search }); return res.end(); }
   const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html' };
-  const page = ['/', '/admin', '/admin/', '/admin.html', '/flags', '/flags/', '/flags.html'].includes(url.pathname) ? '/index.html'
-    : PAGES[url.pathname] || url.pathname;
+  const page = V1_PAGES.includes(url.pathname) ? '/v1/index.html' : PAGES[url.pathname] || url.pathname;
   const rel = decodeURIComponent(page);
   const file = path.normalize(path.join(ROOT, rel));
   if (!file.startsWith(ROOT + path.sep) || rel.includes('..')) return send(res, 403, 'forbidden', 'text/plain');
   // never serve credentials, secrets, server code or the raw screenshots
-  if (/^\/(admin\.txt|\.admin-secret|_worker\.js|server\.js|screenshot\/)/i.test(rel)) return send(res, 404, 'not found', 'text/plain');
+  const notFound = () => fs.readFile(path.join(ROOT, '404.html'), (e, html) => (e ? send(res, 404, 'not found', 'text/plain') : send(res, 404, html, TYPES['.html'])));
+  if (/^\/(admin\.txt|\.admin-secret|_worker\.js|server\.js|screenshot\/)/i.test(rel)) return notFound();
   fs.readFile(file, (err, data) => {
-    if (err) return send(res, 404, 'not found', 'text/plain');
+    if (err) return notFound();
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
     res.end(data);
   });
-}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (관리자: /admin · 신규 자리: /v2, /v2/admin${ADMIN_HASH ? '' : ' — 계정 미설정'})`));
+}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (신규 자리: /v2, /v2/admin · 기존 배치도: /v1, /v1/admin${ADMIN_HASH ? '' : ' — 계정 미설정'})`));

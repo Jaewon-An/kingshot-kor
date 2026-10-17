@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<!-- /v1/ (읽기 전용) · /v1/admin · /v1/flags · /v2/admin 이 모두 이 페이지. 주소로 모드를 정하고, 파일(app.js 등)은 루트에서 읽음 -->
+<base href="/">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>킹샷 배치 시뮬레이터</title>
@@ -98,7 +100,7 @@
 
       <section class="admin-only v2-only">
         <h3>신규 자리 도구 <span class="muted">(v2)</span></h3>
-        <label class="check"><input type="checkbox" data-layer="real" checked><i class="sw real"></i>현재 설치된 깃발 (게임 · <a href="/flags" target="_blank" rel="noopener">/flags</a>) — <b id="v2-real-count">-</b></label>
+        <label class="check"><input type="checkbox" data-layer="real" checked><i class="sw real"></i>현재 설치된 깃발 (게임 · <a href="/v1/flags" target="_blank" rel="noopener">/v1/flags</a>) — <b id="v2-real-count">-</b></label>
         <h3>깃발 재배치 최적화 <span class="muted">(지금 깃발 재사용)</span></h3>
         <p class="muted note">지금 게임의 깃발을 최대한 그대로 쓰면서 곰덫·성·빈자리·연맹 자원을 모두 덮는 깃발을 찾고, 지금 깃발에서 그 배치로 가는 설치·철거 순서를 만듭니다. 성 자리는 그대로 두고, 빈자리만 영토 안에서 다시 놓습니다. 철거는 새 자리 위에 선 깃발만 꼭 필요합니다(지도에 빨간 X). 쓰지 않는 다른 깃발은 그대로 둬도 됩니다. 깃발 수 상한을 넣으면 설치 전에 비울 깃발도 순서에 넣습니다.</p>
         <div class="row">
@@ -123,7 +125,7 @@
         </div>
         <div id="v2-check-result" class="result"></div>
         <h3>이름 배치 다시 계산 <span class="muted">(기존 배치도 기준)</span></h3>
-        <p class="muted note">기존 배치도(/ 게시본)에서 각자 더 가까운 곰덫 기준 상대 자리를 새 곰덫 위치로 옮깁니다. 막힌 자리만 가까운 빈칸으로 옮기고 깃발·빈자리를 다시 계산합니다. 결과는 편집 중 배치로만 바뀌며 게시하기를 눌러야 반영됩니다.</p>
+        <p class="muted note">기존 배치도(/v1 게시본)에서 각자 더 가까운 곰덫 기준 상대 자리를 새 곰덫 위치로 옮깁니다. 막힌 자리만 가까운 빈칸으로 옮기고 깃발·빈자리를 다시 계산합니다. 결과는 편집 중 배치로만 바뀌며 게시하기를 눌러야 반영됩니다.</p>
         <div class="row">
           <span class="label-text">곰덫2</span><input id="v2-t2x" type="text" inputmode="numeric" placeholder="X"><input id="v2-t2y" type="text" inputmode="numeric" placeholder="Y">
         </div>
@@ -205,7 +207,7 @@
       <input id="login-pw" type="password" placeholder="비밀번호" autocomplete="current-password">
       <button class="btn-main" type="submit">로그인</button>
       <div id="login-error" class="muted"></div>
-      <a href="./" class="muted">읽기 전용 배치도로 가기</a>
+      <a href="/v1/" class="muted">읽기 전용 배치도로 가기</a>
     </form>
   </div>
 </div>

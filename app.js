@@ -33,7 +33,7 @@ const KID_KEY = 'ks-sim-kid';
 const DEFAULT_KID = '2382';
 // Live castle positions from kingshotstats are switched off: the site serves only the saved layout.
 const LIVE_ENABLED = false;
-// `/` is the public read-only view of the published layout; `/admin` (admin.html) is the editor.
+// `/v1/` is the public read-only view of the published layout; `/v1/admin` (v1/admin.html) is the editor.
 const ADMIN = /\/admin(\.html)?\/?$/.test(location.pathname);
 const READONLY = !ADMIN;
 const BASE = new URL('.', document.currentScript.src);
@@ -1587,8 +1587,8 @@ const API = p => new URL(`api/${p}`, BASE).href;
 const getJSON = url => fetch(url, { cache: 'no-cache' }).then(r => (r.ok ? r.json() : Promise.reject(new Error(r.status))));
 const fetchPublished = () => getJSON(API(LAYOUT_API)).catch(() => getJSON(PUBLISHED_LAYOUT));
 
-// /flags (flags.html) is the KOR flag survey (flags.js + layouts/flags.json), kept apart from the seat layout.
-// /flags?layout=<name> instead shows another file from layouts/ read-only.
+// /v1/flags (v1/flags.html) is the KOR flag survey (flags.js + layouts/flags.json), kept apart from the seat layout.
+// /v1/flags?layout=<name> instead shows another file from layouts/ read-only.
 const layoutParam = new URLSearchParams(location.search).get('layout');
 const FLAGS_PAGE = /\/flags(\.html)?\/?$/.test(location.pathname);
 const PROPOSAL = FLAGS_PAGE && layoutParam && /^[\w.-]+$/.test(layoutParam) ? layoutParam : null;
@@ -1913,7 +1913,7 @@ $('fp-btn').onclick = async () => {
   $('fp-btn').disabled = true;
   let r;
   try {
-    // 기존 배치(/ 게시본): 마지막 줄 채우기(곰덫2 3줄 · 곰덫1 2줄)에서 각자의 기준 곰덫을 정하는 데 씀
+    // 기존 배치(/v1 게시본): 마지막 줄 채우기(곰덫2 3줄 · 곰덫1 2줄)에서 각자의 기준 곰덫을 정하는 데 씀
     const oldList = await getJSON(API('layout')).catch(() => getJSON(new URL('layouts/current.json', BASE).href)).catch(() => null);
     r = await runFlagWorker({ list: serialize(), existing: realRaw, opt: { rule: $('fp-rule').value, cap: fpCap(), refitSpares: $('fp-refit').checked, oldList } });
   } catch (err) { box.textContent = `계산 실패: ${err.message}`; return; }

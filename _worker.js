@@ -6,7 +6,7 @@
 //   ADMIN_HASH  secret "salt$sha256hex(salt:id:password)" — made by `node tools/set-admin.mjs`
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 const MAX_LAYOUT_BYTES = 1024 * 1024;
-// Published layouts: "/" (+ /admin) and "/v2" (+ /v2/admin, the new seats around the bear traps in the fertile land).
+// Published layouts: "/v1" (+ /v1/admin) and "/v2" (+ /v2/admin, the new seats around the bear traps in the fertile land).
 // Each keeps one step of rollback in `prev`; the bundled file is served until the first publish.
 const LAYOUTS = {
   '/api/layout': { key: 'current', prev: 'previous', stamp: 'updated_at', file: '/layouts/current.json' },
@@ -93,6 +93,14 @@ async function api(request, env, url) {
   return json({ error: 'not found' }, 404);
 }
 
+// The front page is the v2 seat guide; the old layout pages moved under /v1/ (old links still work).
+// 302, not 301: browsers would otherwise remember the move for good.
+const REDIRECTS = {
+  '/': '/v2/', '/index.html': '/v2/',
+  '/admin': '/v1/admin', '/admin/': '/v1/admin', '/admin.html': '/v1/admin',
+  '/flags': '/v1/flags', '/flags/': '/v1/flags', '/flags.html': '/v1/flags',
+};
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -100,6 +108,8 @@ export default {
       try { return await api(request, env, url); }
       catch (err) { return json({ error: err.message }, 500); }
     }
+    const to = REDIRECTS[url.pathname];
+    if (to) return Response.redirect(new URL(to + url.search, url).href, 302);
     return env.ASSETS.fetch(request);
   },
 };
