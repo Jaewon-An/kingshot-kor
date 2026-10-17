@@ -22,6 +22,10 @@
   const PHONE = matchMedia('(max-width: 900px)');
   // 휴대폰에서는 긴 목록·범례를 접어서 시작 (명단이 바로 보이게)
   if (PHONE.matches) for (const id of ['legend', 'unplaced', 'excluded']) if ($(id)) $(id).open = false;
+  // 휴대폰에서는 요약(곰덫 좌표·깃발·연맹원)을 머리말 대신 지도 아래에 (검색·지도가 먼저 보이게)
+  const factsHome = $('facts').parentNode;
+  const placeFacts = () => (PHONE.matches ? $('legend').before($('facts')) : factsHome.append($('facts')));
+  PHONE.addEventListener('change', placeFacts); placeFacts();
   // 목록·지도에 보이는 이름: /v2 연맹원 자리는 닉네임, 빈자리와 /v2/map은 자리 번호
   const seatName = m => m.kind === 'res' ? `${m.n} (자리 ${m.no})` : SHARE || !m.named ? `자리 ${m.no}` : m.n;
   const isSeat = o => o && (o.kind === 'city' || o.kind === 'spare' || (o.kind === 'res' && o.seat));
