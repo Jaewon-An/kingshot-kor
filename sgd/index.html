@@ -11,6 +11,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/v2/guide.css">
 <style>
+  /* SGD 전용 색: 자원지 종류(빵·나무·석재·철), 자원 깃발과 그 영토 */
+  :root { --n-bread: #d9a03a; --n-wood: #8a4f1d; --n-stone: #b9b9b1; --n-iron: #5b6270; --c-rflag: #11845d; --c-rterr: #18a070; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --n-bread: #b98a2c; --n-wood: #b0723c; --n-stone: #8b8b84; --n-iron: #737b88; --c-rflag: #39c992; --c-rterr: #34bf8b; }
+  }
+  :root[data-theme="dark"] { --n-bread: #b98a2c; --n-wood: #b0723c; --n-stone: #8b8b84; --n-iron: #737b88; --c-rflag: #39c992; --c-rterr: #34bf8b; }
   /* SGD: v2 화면 그대로 + 깃발·다른 연맹 영토 목록 버튼 */
   ol.bn.sgd { columns: 1; padding-left: 0; list-style: none; font-family: var(--f-body); max-height: 50vh; overflow: auto; }
   ol.bn.sgd li { padding: 2px 0; }
@@ -20,6 +26,9 @@
   .legend i.foreign { background: var(--m-foreign); outline: 1.5px dashed var(--bad); outline-offset: -1.5px; }
   .legend i.old { background: transparent; outline: 2px solid var(--c-real); outline-offset: -2px; }
   .legend i.line { border-top-color: var(--c-t1); }
+  .legend i.rterr { background: color-mix(in srgb, var(--c-rterr) 25%, transparent); outline: 1.5px dashed var(--c-rterr); outline-offset: -1.5px; }
+  .legend i.got { background: var(--n-wood); outline: 2px solid var(--n-wood); outline-offset: 1px; }
+  ol.bn.sgd li.wood .lnk { color: var(--n-wood); }
   @media (max-width: 900px) { #link { order: 6; } }
 </style>
 </head>
@@ -53,6 +62,12 @@
         <p class="hint">번호 순서대로 설치하면 항상 본부 영토와 이어지고, 곰덫1 → 앞 번호 자리부터 영토가 됩니다. "1~N번 자리" = 그 깃발까지 지으면 1번부터 N번 자리까지 모두 영토 안.</p>
         <ol class="bn sgd" id="bn"></ol>
       </details>
+      <details id="resplan" open hidden>
+        <summary>자원 깃발 경로 · 나무 우선 <span class="sumx" id="ressum"></span></summary>
+        <p class="hint" id="reshint"></p>
+        <p class="hint">번호 = 설치 순서 (나무를 먼저 얻는 순). ← 는 붙는 영토, + 는 그 깃발로 새로 연맹 자원이 되는 자원지(4칸 중 3칸 이상 영토), 뒤 숫자는 누적. 스크린샷으로 확인한 땅 안에서만 계산했습니다.</p>
+        <ol class="bn sgd" id="reslist"></ol>
+      </details>
       <details id="foreign" hidden>
         <summary>다른 연맹 영토 · 지금 깃발 <span class="sumx" id="forsum"></span></summary>
         <p class="hint" id="forsrc"></p>
@@ -68,6 +83,7 @@
         <button class="btn" id="rot" type="button" aria-pressed="true">게임 시점</button>
         <button class="btn" id="lbl" type="button" aria-pressed="true">이름·번호</button>
         <button class="btn" id="ter" type="button" aria-pressed="true">영토</button>
+        <button class="btn" id="res" type="button" aria-pressed="true" hidden>자원 깃발</button>
       </div>
       <div class="mapwrap">
         <canvas id="cv"></canvas>
@@ -90,8 +106,14 @@
           <span><i class="old"></i>지금 SGD 깃발</span>
           <span><i class="terr"></i>SGD 영토 (깃발 모두 설치 후)</span>
           <span><i class="line"></i>곰덫1 1~3줄</span>
+          <span id="rflaglegend" hidden><i style="background:var(--c-rflag)"></i>자원 깃발 (번호 = 설치 순서)</span>
+          <span id="rterrlegend" hidden><i class="rterr"></i>자원 깃발로 늘어나는 영토</span>
+          <span><i class="got"></i>연맹 자원이 되는 자원지 (나무 굵게)</span>
           <span><i class="foreign"></i>다른 연맹 영토</span>
-          <span><i style="background:var(--m-node)"></i>자원지</span>
+          <span><i style="background:var(--n-wood)"></i>나무</span>
+          <span><i style="background:var(--n-bread)"></i>빵</span>
+          <span><i style="background:var(--n-stone)"></i>석재</span>
+          <span><i style="background:var(--n-iron)"></i>철</span>
           <span><i style="background:var(--m-mount)"></i>산</span>
           <span><i style="background:var(--m-lake)"></i>호수</span>
           <span><i style="background:var(--m-struct)"></i>구조물</span>
