@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
+<title>SGD 자리 배치도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/v2/guide.css">
+<style>
+  /* SGD: v2 화면 그대로 + 깃발·다른 연맹 영토 목록 버튼 */
+  ol.bn.sgd { columns: 1; padding-left: 0; list-style: none; font-family: var(--f-body); max-height: 50vh; overflow: auto; }
+  ol.bn.sgd li { padding: 2px 0; }
+  .lnk { font: inherit; background: none; border: 0; padding: 0; color: var(--ink); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .why { color: var(--muted); font-size: .74rem; }
+  #forlist { columns: 1; }
+  .legend i.foreign { background: var(--m-foreign); outline: 1.5px dashed var(--bad); outline-offset: -1.5px; }
+  .legend i.old { background: transparent; outline: 2px solid var(--c-real); outline-offset: -2px; }
+  .legend i.line { border-top-color: var(--c-t1); }
+  @media (max-width: 900px) { #link { order: 6; } }
+</style>
+</head>
+<body>
+<!-- /sgd SGD 연맹 자리 배치도 (곰덫1 하나). 스크립트 sgd/sgd.js, 배치 layouts/sgd.json (tools/make-sgd-layout.mjs로 계산) -->
+<div class="page">
+  <header class="top">
+    <div>
+      <p class="eyebrow">KINGSHOT · 2382 SGD</p>
+      <h1>SGD 자리 배치도</h1>
+      <p class="stamp" id="stamp"></p>
+    </div>
+    <dl class="facts" id="facts"></dl>
+  </header>
+
+  <p class="notice" id="notice" role="status">배치도를 불러오는 중…</p>
+
+  <div class="grid" id="main" hidden>
+    <aside class="panel">
+      <div class="finder">
+        <label for="q">자리 찾기</label>
+        <input id="q" type="search" enterkeyhint="search" placeholder="자리 번호 · 닉네임 · 좌표" autocomplete="off" spellcheck="false">
+        <p class="hint" id="qhint" role="status"></p>
+      </div>
+      <div class="card" id="card" hidden></div>
+      <div class="tbl"><table id="list"></table></div>
+      <p class="hint">자리 번호: 곰덫1에 가까운 줄 → 가까운 순. 영토 = 그 자리가 연맹 영토 안이 되는 깃발 번호</p>
+      <details open>
+        <summary>깃발 설치 순서 <span class="sumx" id="bnsum"></span></summary>
+        <p class="hint" id="trapneed"></p>
+        <p class="hint">번호 순서대로 설치하면 항상 본부 영토와 이어지고, 곰덫1 → 앞 번호 자리부터 영토가 됩니다. "1~N번 자리" = 그 깃발까지 지으면 1번부터 N번 자리까지 모두 영토 안.</p>
+        <ol class="bn sgd" id="bn"></ol>
+      </details>
+      <details id="foreign" hidden>
+        <summary>다른 연맹 영토 · 지금 깃발 <span class="sumx" id="forsum"></span></summary>
+        <p class="hint" id="forsrc"></p>
+        <ul class="real" id="forlist"></ul>
+      </details>
+      <button class="btn copy" id="copy" type="button">연맹 채팅용 텍스트 복사</button>
+      <textarea id="copytext" readonly hidden aria-label="복사용 텍스트"></textarea>
+    </aside>
+
+    <section class="mapcol">
+      <div class="mapbar">
+        <button class="btn" id="link" type="button">링크 복사</button>
+        <button class="btn" id="rot" type="button" aria-pressed="true">게임 시점</button>
+        <button class="btn" id="lbl" type="button" aria-pressed="true">이름·번호</button>
+        <button class="btn" id="ter" type="button" aria-pressed="true">영토</button>
+      </div>
+      <div class="mapwrap">
+        <canvas id="cv"></canvas>
+        <div class="tip" id="tip" hidden></div>
+        <div class="zoom">
+          <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
+          <button class="btn" id="zout" type="button" aria-label="축소">－</button>
+          <button class="btn" id="fit" type="button" aria-label="전체 보기">전체</button>
+        </div>
+        <div class="readout" id="readout" role="status"></div>
+      </div>
+      <details class="legend" id="legend" open>
+        <summary>범례</summary>
+        <div class="keys">
+          <span><i style="background:var(--c-hq)"></i>본부</span>
+          <span><i style="background:var(--c-t1)"></i>곰덫1</span>
+          <span><i style="background:var(--c-city2)"></i>연맹원 자리</span>
+          <span><i class="spare"></i>빈자리 (번호)</span>
+          <span><i style="background:var(--c-banner)"></i>깃발 (번호 = 설치 순서)</span>
+          <span><i class="old"></i>지금 SGD 깃발</span>
+          <span><i class="terr"></i>SGD 영토 (깃발 모두 설치 후)</span>
+          <span><i class="line"></i>곰덫1 1~3줄</span>
+          <span><i class="foreign"></i>다른 연맹 영토</span>
+          <span><i style="background:var(--m-node)"></i>자원지</span>
+          <span><i style="background:var(--m-mount)"></i>산</span>
+          <span><i style="background:var(--m-lake)"></i>호수</span>
+          <span><i style="background:var(--m-struct)"></i>구조물</span>
+        </div>
+      </details>
+    </section>
+  </div>
+
+  <footer><span class="hint">다른 연맹 영토는 2026-10-24 게임 스크린샷으로 계산한 위치입니다 (오차 1칸 안팎).</span></footer>
+</div>
+<script src="/mapdata.js"></script>
+<script src="/v2/core.js"></script>
+<script src="/v2/plan.js"></script>
+<script src="/sgd/sgd.js"></script>
+</body>
+</html>

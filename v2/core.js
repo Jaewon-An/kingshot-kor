@@ -3,6 +3,9 @@
  * 규칙 출처: kingshotguide.org Alliance Layout Planner (크기·영역·금지구역·지형 데이터)
  * 원본: USB "킹샷2382_곰덫배치/code/src/core.js". 구조물 목록만 사이트의 mapdata.js(같은 데이터)에서 읽습니다.
  * 먼저 mapdata.js를 불러와야 합니다 (window.KS_MAPDATA). 지형은 buildMap(TERRAIN 원본, NODES 원본)으로 넘깁니다.
+ * P.single = true: 곰덫 1개 배치 (/sgd). 도시 N개를 모두 곰덫2 자리(결과 t2)에 붙이고 곰덫1은 두지 않습니다(결과 t1 = null).
+ *   inspect·rebanner도 L.t1이 없으면 곰덫 1개로 봅니다. 곰덫 2개 배치(/v2)의 계산은 그대로입니다.
+ * P.terrBlocks = [{x1,y1,x2,y2}]: 깃발 영토(7×7)가 이 구역(다른 연맹 영토)과 겹치지 않는 칸에만 깃발을 둡니다 (/sgd). 없으면 예전과 같음.
  */
 (function (root) {
   'use strict';
@@ -153,9 +156,17 @@
           const i = (gy - y0) * W + gx - x0; cityOK[i] = 0; allyOK[i] = 0;
         }
     }
+    // P.terrBlocks: 깃발 영토(7×7)가 이 구역과 겹치지 않게 깃발 칸을 더 막음 (없으면 allyOK 그대로)
+    let flagOK = allyOK;
+    if (P.terrBlocks && P.terrBlocks.length) {
+      flagOK = allyOK.slice();
+      for (const b of P.terrBlocks)
+        for (let gy = Math.max(y0, b.y1 - BN_COV); gy <= Math.min(y1 - 1, b.y2 + BN_COV); gy++)
+          for (let gx = Math.max(x0, b.x1 - BN_COV); gx <= Math.min(x1 - 1, b.x2 + BN_COV); gx++) flagOK[(gy - y0) * W + gx - x0] = 0;
+    }
     const hq = { x: P.hx - x0, y: P.hy - y0 };
     const hqc = { x: P.hx + 1.5, y: P.hy + 1.5 };
-    return { map, P, x0, y0, W, H, N, cityOK, allyOK, hq, hqc, L: P.lines || 0, Lg: { 2: P.lines || 0, 1: P.t1Lines != null ? P.t1Lines : (P.lines || 0) }, hqFertD: distRect(hqc.x, hqc.y, FERTILE[0], FERTILE[1]) };
+    return { map, P, x0, y0, W, H, N, cityOK, allyOK, flagOK, hq, hqc, L: P.lines || 0, Lg: { 2: P.lines || 0, 1: P.t1Lines != null ? P.t1Lines : (P.lines || 0) }, hqFertD: distRect(hqc.x, hqc.y, FERTILE[0], FERTILE[1]) };
   }
 
   // 곰덫 위치 조건 (로컬 모서리 좌표). 위치를 직접 지정한 경우 본부 거리 제한 없음
@@ -214,7 +225,7 @@
     for (let yy = y; yy < y + 3; yy++) for (let xx = x; xx < x + 3; xx++) st.occ[yy * W + xx] = 3;
     st.traps.push({ x, y, g });
   }
-  const bannerFree = (st, ctx, i) => ctx.allyOK[i] && (st.occ[i] === 0 || st.occ[i] === 6);
+  const bannerFree = (st, ctx, i) => ctx.flagOK[i] && (st.occ[i] === 0 || st.occ[i] === 6);
   function placeBanner(st, ctx, x, y) {
     st.occ[y * ctx.W + x] = 5; st.banners.push({ x, y });
     addCov(st, ctx, x, y, 1, BN_COV, 1);
@@ -314,7 +325,7 @@
       for (const [ux, uy] of pts) {
         let hit = false;
         for (let yy = c.y; yy < c.y + 2 && !hit; yy++) for (let xx = c.x; xx < c.x + 2 && !hit; xx++)
-          if (ctx.allyOK[yy * W + xx] && Math.abs(xx - ux) <= 3 && Math.abs(yy - uy) <= 3) hit = true;
+          if (ctx.flagOK[yy * W + xx] && Math.abs(xx - ux) <= 3 && Math.abs(yy - uy) <= 3) hit = true;
         if (hit) v++;
       }
       if (v > 0 && c.k < 1000) v -= 0.5; // 우선 줄 도시는 되도록 남김
@@ -401,7 +412,7 @@
   }
 
   function scoreOf(st, ctx, K2, K1) {
-    const w1 = ctx.P.w1, t2 = trapOf(st, 2), t1 = trapOf(st, 1);
+    const w1 = ctx.P.w1, t2 = trapOf(st, 2), t1 = trapOf(st, 1) || t2;   // 곰덫 1개(P.single)면 곰덫1 = 곰덫2 자리
     const c2x = t2.x + 1.5, c2y = t2.y + 1.5, c1x = t1.x + 1.5, c1y = t1.y + 1.5;
     let s = 0, n2 = 0, n1 = 0;
     for (const c of st.cities) {
@@ -429,6 +440,7 @@
     const { W, H } = ctx;
     let cur = st, curScore = scoreOf(st, ctx, K2, K1);
     for (const g of [2, 1]) {
+      if (!trapOf(cur, g)) continue;
       for (const o of lists[g]) {
         if (o[3] >= 1000) break;
         const t = trapOf(cur, g), x = t.x + o[0], y = t.y + o[1];
@@ -472,7 +484,7 @@
   // 한 번의 배치 시도
   function runOnce(ctx, T2, T1, K2, K1, rng, opt) {
     const st = newState(ctx, opt.par);
-    placeTrap(st, ctx, T2.x, T2.y, 2); placeTrap(st, ctx, T1.x, T1.y, 1);
+    placeTrap(st, ctx, T2.x, T2.y, 2); if (T1) placeTrap(st, ctx, T1.x, T1.y, 1);
     const exact = { 2: cut(listFor(ctx.Lg[2]), radFor(K2)), 1: cut(listFor(ctx.Lg[1]), radFor(K1)) };
     const lists = { 2: noisyList(exact[2], opt.noise, rng), 1: noisyList(exact[1], opt.noise, rng) };
     if (opt.preBanners) {
@@ -574,12 +586,12 @@
 
     const pars = P.grid ? [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }] : [null];
     let pairs = [];
-    if (P.fixT2 && P.fixT1) { // 사용자가 옮긴 곰덫 위치 고정
-      const T2 = { x: P.fixT2.x - ctx.x0, y: P.fixT2.y - ctx.y0 }, T1 = { x: P.fixT1.x - ctx.x0, y: P.fixT1.y - ctx.y0 };
+    if (P.fixT2 && (P.fixT1 || P.single)) { // 사용자가 옮긴 곰덫 위치 고정 (P.single: 곰덫 1개 — 도시 N개 모두 fixT2 곰덫에)
+      const T2 = { x: P.fixT2.x - ctx.x0, y: P.fixT2.y - ctx.y0 }, T1 = P.single ? null : { x: P.fixT1.x - ctx.x0, y: P.fixT1.y - ctx.y0 };
       hqOcc();
       const ok2 = canFoot(occ, ctx.allyOK, ctx, T2.x, T2.y, 3);
       if (ok2) markFoot(occ, ctx, T2.x, T2.y, 3, touched);
-      const ok1 = canFoot(occ, ctx.allyOK, ctx, T1.x, T1.y, 3);
+      const ok1 = !T1 || canFoot(occ, ctx.allyOK, ctx, T1.x, T1.y, 3);
       reset();
       if (!ok2 || !ok1) return { error: `${ok2 ? '곰덫1' : '곰덫2'} 자리에 곰덫을 세울 수 없습니다 (장애물·금지구역·겹침). 조금 옮긴 뒤 다시 시도하세요.` };
       for (const par of pars) pairs.push({ T2: { ...T2, par }, T1, par, q: 0 });
@@ -600,10 +612,13 @@
     }
     if (!c2.length) return { error: P.near ? '지정한 곰덫2 위치 주변에 곰덫을 세울 수 있는 칸이 없습니다. 좌표나 탐색 범위를 바꿔 보세요.' : '조건을 만족하는 곰덫 위치가 없습니다. 탐색 반경이나 위치 조건을 바꿔 보세요.' };
     c2.sort((a, b) => a.s - b.s);
-    const T2s = P.near ? pickDiverse(c2, lev[0] + 3, 2) : pickDiverse(c2, lev[0], 3);
+    // 곰덫 1개면 곰덫1 후보를 찾지 않는 대신 곰덫 후보를 더 많이 정밀 배치
+    const nT2 = P.single ? lev[0] * lev[1] : lev[0];
+    const T2s = P.near ? pickDiverse(c2, nT2 + 3, 2) : pickDiverse(c2, nT2, 3);
 
     // 2) 각 곰덫2마다 곰덫1 후보
     for (const T2 of T2s) {
+      if (P.single) { pairs.push({ T2, T1: null, par: T2.par, q: T2.s }); continue; }
       if (P.t1Gap) { // 곰덫1 일직선 규칙
         const SIDES = ['left', 'right', 'down', 'up'];
         for (const T1 of t1LineSpots(ctx, T2, P.t1Gap, T2.par).filter((t, i) => !P.t1Side || SIDES[i] === P.t1Side)) {
@@ -670,7 +685,7 @@
   function finalize(ctx, st, K2, K1) {
     const { x0, y0 } = ctx;
     const order = buildOrder(st, ctx, null) || st.banners;
-    const t2 = trapOf(st, 2), t1 = trapOf(st, 1);
+    const t2 = trapOf(st, 2), t1 = trapOf(st, 1) || t2;   // 곰덫 1개면 t1 = null (거리·줄은 곰덫2 기준과 같음)
     const g = o => ({ x: o.x + x0, y: o.y + y0 });
     const cities = st.cities.filter(c => !c.dead).map(c => ({ ...g(c), g: c.g, d: c.d, line: c.line }));
     const c2 = { x: t2.x + 1.5 + x0, y: t2.y + 1.5 + y0 }, c1 = { x: t1.x + 1.5 + x0, y: t1.y + 1.5 + y0 };
@@ -683,7 +698,7 @@
     grp2.forEach((c, i) => c.label = '2-' + String(i + 1).padStart(2, '0'));
     grp1.forEach((c, i) => c.label = '1-' + String(i + 1).padStart(2, '0'));
     const res = {
-      hq: { x: ctx.P.hx, y: ctx.P.hy }, t2: g(t2), t1: g(t1),
+      hq: { x: ctx.P.hx, y: ctx.P.hy }, t2: g(t2), t1: trapOf(st, 1) ? g(t1) : null,
       banners: order.map(g), cities: grp2.concat(grp1),
       K2, K1, score: st.score,
     };
@@ -696,7 +711,7 @@
     const errs = [], bad = { t2: false, t1: false, banners: new Set(), cities: new Set() };
     const blockMask = F_BLOCK | (P.nodesBlock ? F_NODE : 0);
     const objs = [{ t: 'hq', x: L.hq.x, y: L.hq.y, s: 3, name: '본부' },
-      { t: 'trap', x: L.t2.x, y: L.t2.y, s: 3, k: 't2', name: '곰덫2' }, { t: 'trap', x: L.t1.x, y: L.t1.y, s: 3, k: 't1', name: '곰덫1' }]
+      { t: 'trap', x: L.t2.x, y: L.t2.y, s: 3, k: 't2', name: '곰덫2' }].concat(L.t1 ? [{ t: 'trap', x: L.t1.x, y: L.t1.y, s: 3, k: 't1', name: '곰덫1' }] : [])
       .concat(L.banners.map((b, i) => ({ t: 'banner', x: b.x, y: b.y, s: 1, k: 'b', i, name: `깃발 ${i + 1}번` })),
         L.cities.map((c, i) => ({ t: 'city', x: c.x, y: c.y, s: 2, k: 'c', i, name: `도시 ${c.label || i + 1}` })));
     const mark = o => { if (o.k === 't2') bad.t2 = true; else if (o.k === 't1') bad.t1 = true; else if (o.k === 'b') bad.banners.add(o.i); else if (o.k === 'c') bad.cities.add(o.i); };
@@ -742,10 +757,10 @@
     const ctx = makeCtx(map, P), { x0, y0, W, H } = ctx;
     const loc = o => ({ x: o.x - x0, y: o.y - y0 });
     const inWin = (o, s) => o.x >= 0 && o.y >= 0 && o.x + s <= W && o.y + s <= H;
-    const t2 = loc(L.t2), t1 = loc(L.t1);
-    if (!inWin(t2, 3) || !inWin(t1, 3)) return { error: '곰덫이 본부에서 너무 멀리 있습니다.' };
+    const t2 = loc(L.t2), t1 = L.t1 ? loc(L.t1) : null;   // L.t1 = null: 곰덫 1개
+    if (!inWin(t2, 3) || (t1 && !inWin(t1, 3))) return { error: '곰덫이 본부에서 너무 멀리 있습니다.' };
     const st = newState(ctx, null);
-    placeTrap(st, ctx, t2.x, t2.y, 2); placeTrap(st, ctx, t1.x, t1.y, 1);
+    placeTrap(st, ctx, t2.x, t2.y, 2); if (t1) placeTrap(st, ctx, t1.x, t1.y, 1);
     for (const c of L.cities) {
       const p = loc(c);
       if (!inWin(p, 2)) return { error: '본부에서 너무 멀리 있는 도시가 있습니다.' };

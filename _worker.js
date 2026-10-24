@@ -2,15 +2,17 @@
 // Static files are served from env.ASSETS; /api/* is handled here.
 //
 // Bindings (Pages project ▸ Settings):
-//   LAYOUT_KV   KV namespace holding the published layouts (keys "current" and "v2")
+//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2" and "sgd")
 //   ADMIN_HASH  secret "salt$sha256hex(salt:id:password)" — made by `node tools/set-admin.mjs`
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 const MAX_LAYOUT_BYTES = 1024 * 1024;
-// Published layouts: "/v1" (+ /v1/admin) and "/v2" (+ /v2/admin, the new seats around the bear traps in the fertile land).
+// Published layouts: "/v1" (+ /v1/admin), "/v2" (+ /v2/admin, the new seats around the bear traps in the fertile land)
+// and "/sgd" (the SGD alliance's seats around its one bear trap).
 // Each keeps one step of rollback in `prev`; the bundled file is served until the first publish.
 const LAYOUTS = {
   '/api/layout': { key: 'current', prev: 'previous', stamp: 'updated_at', file: '/layouts/current.json' },
   '/api/v2/layout': { key: 'v2', prev: 'v2_previous', stamp: 'v2_updated_at', file: '/layouts/v2.json' },
+  '/api/sgd/layout': { key: 'sgd', prev: 'sgd_previous', stamp: 'sgd_updated_at', file: '/layouts/sgd.json' },
 };
 
 const enc = new TextEncoder();
