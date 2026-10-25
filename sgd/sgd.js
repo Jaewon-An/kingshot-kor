@@ -4,7 +4,8 @@
  * 자리 번호: 곰덫1 기준 줄 → 곰덫까지 거리 → 배치 목록 순서. 닉네임이 "빈자리 N"이거나 비어 있으면 빈자리, 그 밖은 연맹원.
  * 깃발 번호는 설치 순서: 번호대로 지으면 매번 본부와 이어지고 곰덫 → 앞 번호 자리 순으로 영토가 됩니다.
  * 자원 깃발(layouts/sgd-resource.json, tools/plan-sgd-resources.mjs): 연맹 자원지를 영토에 넣는 깃발 경로 (빵·나무 균형). 짓는 중 깃발이 1번부터, 이미 세운 자원 깃발(built)은 번호 없이 표시.
- *   rates(연맹 창고 생산량)가 있으면 깃발마다 그 깃발까지 세웠을 때 예상 생산량(rate). "자원 깃발" 버튼으로 켜고 끔. */
+ *   목표 생산 비율 ratio(빵·나무·석재·철, 연맹 기술·후반 깃발 비용 비율)에 가까워지는 순. rates(연맹 창고 생산량)가 있으면
+ *   깃발마다 그 깃발까지 세웠을 때 예상 생산량(rate). "자원 깃발" 버튼으로 켜고 끔. */
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -37,7 +38,7 @@
   let HQ, T, seats, banners, area, blocks, oldFlags, CX, CY, CW, CH, kind, terrStep;
   let rplan = null, rflags = [], rBuilt = [], rTerr = new Set(), rNodes = new Map();   // 자원 깃발 경로 (layouts/sgd-resource.json) · 세운 자원 깃발 · 그 영토 · 연맹 자원이 되는 자원지
   const NODE_NAMES = ['빵', '나무', '석재', '철'];
-  const rateText = f => f.rate ? `빵 ${f.rate[0]}K · 나무 ${f.rate[1]}K/h` : `나무 ${f.wood} · 자원 ${f.total}`;   // 그 자원 깃발까지 세웠을 때
+  const rateText = f => f.rate ? NODE_NAMES.map((nm, t) => `${nm} ${f.rate[t]}`).join(' · ') + 'K/h' : `나무 ${f.wood} · 자원 ${f.total}`;   // 그 자원 깃발까지 세웠을 때
   async function load() {
     let cur, map;
     try { cur = await getJSON('/api/sgd/layout', '/layouts/sgd.json'); } catch (_) { fail('SGD 배치도를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.'); return; }
@@ -119,7 +120,7 @@
     $('facts').innerHTML = [
       ['--c-hq', '본부', xy(HQ)], ['--c-t1', '곰덫1', xy(T)], ['--c-banner', '깃발', banners.length + '개'],
       ['--c-city2', '자리', members.length ? `${seats.length} · 연맹원 ${members.length}` : `${seats.length}`],
-      ...(rflags.length ? [['--c-rflag', '자원 깃발', `${rflags.length}개 → ${rateText(rLast)}`]] : []),
+      ...(rflags.length ? [['--c-rflag', '자원 깃발', `${rflags.length}개 · 자원지 +${rflags.reduce((a, f) => a + f.nodes.length, 0)}`]] : []),
     ].map(([c, k, v]) => `<div><dt><i style="background:var(${c})"></i>${k}</dt><dd>${v}</dd></div>`).join('');
 
     // ---------- 명단: 곰덫1 줄별 (번호 순) ----------
@@ -157,15 +158,20 @@
     if (rflags.length) {
       const nb = rflags.filter(f => f.building).length, kindsOf = f => f.nodes.length ? f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') : '연결';
       const gain = t => rflags.reduce((a, f) => a + f.nodes.filter(n => n[2] === t).length, 0);
-      $('ressum').textContent = `${rflags.length}개 · 빵 +${gain(0)} · 나무 +${gain(1)}곳`;
+      $('ressum').textContent = `${rflags.length}개 · ` + NODE_NAMES.map((nm, t) => `${nm} +${gain(t)}`).join(' ') + '곳';
+      const ratio = rplan.ratio && rplan.ratio.some((v, t) => t > 1 && v > 0) ? rplan.ratio : null;
       const first = rflags.find(f => f.needs && f.needs.length);
-      $('reshint').textContent = (R ? `지금 생산 (${R.at} 연맹 창고): 빵 ${R['빵']}K · 나무 ${R['나무']}K · 석재 ${R['석재']}K · 철 ${R['철']}K/h, 자원지 1곳 = ${R.perNode}K/h. ` : '') +
+      const now = rplan.baseRate || (R && NODE_NAMES.map(nm => R[nm])), est = R && R.nodes && rplan.baseCnt && rplan.baseCnt.some((c, t) => c !== R.nodes[t]);
+      const links = rflags.filter(f => !f.nodes.length && !f.building).length, nNew = rflags.filter(f => !f.building).length, got = rflags.reduce((a, f) => a + f.nodes.length, 0);
+      $('reshint').textContent = (R ? `지금 생산${est ? ' 추정' : ''}: ${rateText({ rate: now })} (${R.at} 연맹 창고 화면${est ? ' + 그 뒤 세운 깃발' : ''}), 자원지 1곳 = ${R.perNode}K/h. ` : '') +
         (rBuilt.length ? `이미 세운 자원 깃발 ${rBuilt.length}개는 번호 없이 표시했습니다. ` : '') +
         (nb ? `${nb > 1 ? `1~${nb}번` : '1번'}은 지금 짓는 중인 깃발입니다. ` : '') +
         (first ? `자원 깃발 ${first.no}번은 배치 ${first.link}번에 붙으니 배치 깃발 ${first.needs.map(n => n.replace('깃발 ', '') + '번').join(' → ')}을 먼저 세우세요. ` : '') +
-        (rLast.rate ? `${rLast.no}번까지 세우면 빵 ${rLast.rate[0]}K · 나무 ${rLast.rate[1]}K/h입니다.` : '');
+        (ratio ? `목표 비율은 빵 ${ratio[0]} : 나무 ${ratio[1]} : 석재 ${ratio[2]} : 철 ${ratio[3]}입니다 (연맹 기술 전체 비용·깃발 211개 이후 비용 비율). ` : '') +
+        `깃발 ${rflags.length}개로 연맹 자원지 ${got}곳을 더 얻습니다 (깃발 1개당 ${(got / rflags.length).toFixed(2)}곳${links ? `, 이어 주기만 하는 깃발 ${links}개` : ''}). ` +
+        (rLast.rate ? `${rLast.no}번까지 세우면 ${rateText(rLast)}입니다.` : '');
       $('reslist').innerHTML = rflags.map(f => {
-        const cls = f.nodes.some(n => n[2] === 0) ? 'bread' : f.nodes.some(n => n[2] === 1) ? 'wood' : '';
+        const cls = f.nodes.length ? ['bread', 'wood', 'stone', 'iron'][f.nodes[0][2]] : '';
         return `<li${cls ? ` class="${cls}"` : ''}><button type="button" class="lnk" data-r="${f.id}">자원 ${f.no}번</button> <span class="mono">${f.x},${f.y}</span>${f.building ? ' <span class="tagb">짓는 중</span>' : ''} <span class="why">← ${esc(f.link)} · +${kindsOf(f)} · ${rateText(f)}</span></li>`;
       }).join('');
       $('resplan').hidden = false; $('res').hidden = false;
@@ -282,8 +288,9 @@
     if (view.res && rflags.length) {
       gx.globalAlpha = 0.2; gx.drawImage(rovImg, CX, CY, CW, CH); gx.globalAlpha = 1;
       gx.strokeStyle = C['c-rterr']; gx.lineWidth = 1.5 / s; gx.setLineDash([5 / s, 3 / s]); gx.stroke(redges); gx.setLineDash([]);
-      // 연맹 자원이 되는 자원지 (빵·나무는 굵게)
-      for (const n of rNodes.values()) { gx.strokeStyle = n.t === 1 ? C['n-wood'] : n.t === 0 ? C['n-bread'] : C['m-edge']; gx.lineWidth = (n.t <= 1 ? 3.2 : 1.4) / s; gx.strokeRect(n.x - 0.15, n.y - 0.15, 2.3, 2.3); }
+      // 연맹 자원이 되는 자원지 (종류 색 테두리)
+      const NC = [C['n-bread'], C['n-wood'], C['n-stone'], C['n-iron']];
+      for (const n of rNodes.values()) { gx.strokeStyle = NC[n.t]; gx.lineWidth = 3.2 / s; gx.strokeRect(n.x - 0.15, n.y - 0.15, 2.3, 2.3); }
     }
     if (s >= 7) {
       gx.beginPath();
@@ -500,7 +507,7 @@
       const named = gr.rows.filter(m => m.named);
       if (named.length) { L.push(`■ ${gr.title}`); L.push(named.map(m => `${m.n} ${m.x},${m.y}`).join(' / ')); }
     }
-    if (rflags.length) L.push(`자원 깃발 ${rflags.length}개 (빵·나무 균형, 설치 순서): ` + rflags.map(f => `${f.no})${f.x},${f.y}${f.building ? '(짓는 중)' : ''}`).join(' '));
+    if (rflags.length) L.push(`자원 깃발 ${rflags.length}개 (연구·깃발 비용 비율, 설치 순서): ` + rflags.map(f => `${f.no})${f.x},${f.y}${f.building ? '(짓는 중)' : ''}`).join(' '));
     L.push(`자리 번호·좌표 보기: ${location.origin}/sgd/`);
     return L.join('\n');
   }

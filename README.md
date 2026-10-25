@@ -66,13 +66,14 @@ SGD 연맹(황야 본부 586,900, 2026-10-24 건설 중)의 곰덫1 자리와 �
   node tools/make-sgd-layout.mjs --check layouts/sgd.json      # 규칙 검사 (다른 연맹 영토는 margin 포함)
   ```
   규칙은 v2와 같습니다: 도시도 연맹 영토 안(곰 사냥 보상 조건), 자원지는 장애물, 오와 열 정렬, 깃발은 변 접촉으로 이어지게 계산(꼭짓점 접촉만 되는 게임에서도 통함). 깃발 번호는 번호대로 지으면 곰덫1 → 앞 번호 자리 순으로 영토가 되도록 정합니다.
-- **자원 깃발 경로 (빵·나무 균형)** [layouts/sgd-resource.json](layouts/sgd-resource.json): 지금 영토(본부·배치 깃발·지금 깃발·세운 자원 깃발)에서 연맹 자원지를 영토에 넣는 깃발을 설치 순서대로 둡니다. 짓는 중 깃발이 1번부터이고, 세운 자원 깃발은 번호 없이 보여 줍니다. 자원지는 4칸 중 3칸 이상이 영토면 연맹 자원(app.js와 같음). 깃발은 스크린샷으로 확인한 땅(`sgd-area.json`의 `seen`) 안에만, 영토가 다른 연맹 영토(둘레 margin칸)와 겹치지 않게 둡니다. `/sgd`에서 "자원 깃발" 버튼으로 켜고 끄며, 목록에 붙는 영토·새로 얻는 자원·그 깃발까지 세웠을 때 예상 생산량이 나옵니다.
+- **자원 깃발 경로 (연구·깃발 비용 비율, 깃발 효율)** [layouts/sgd-resource.json](layouts/sgd-resource.json): 지금 영토(본부·배치 깃발·지금 깃발·세운 자원 깃발)에서 연맹 자원지를 영토에 넣는 깃발을 설치 순서대로 둡니다. 짓는 중 깃발이 1번부터이고, 세운 자원 깃발은 번호 없이 보여 줍니다. 자원지는 4칸 중 3칸 이상이 영토면 연맹 자원(app.js와 같음). 깃발은 스크린샷으로 확인한 땅(`sgd-area.json`의 `seen`) 안에만, 영토가 다른 연맹 영토(둘레 margin칸)와 겹치지 않게 둡니다. `/sgd`에서 "자원 깃발" 버튼으로 켜고 끄며, 목록에 붙는 영토·새로 얻는 자원·그 깃발까지 세웠을 때 예상 생산량이 나옵니다.
   ```
-  node tools/plan-sgd-resources.mjs                   # → layouts/sgd-resource.json (빵·나무 균형, 변 접촉, 새 자원 깃발 최대 30)
-  node tools/plan-sgd-resources.mjs --wmin 3 --max 30 --depth 8 --rule edge --dry
+  node tools/plan-sgd-resources.mjs                   # → layouts/sgd-resource.json (비율 1:1:0.66:0.37, 변 접촉, 새 자원 깃발 최대 30, 개선 500회 — 3~5분, 석재·철은 비율만큼만 셈)
+  node tools/plan-sgd-resources.mjs --ratio 1,1,0.66,0.37 --wmin 3 --max 30 --iters 500 --seed 7 --out /tmp/a.json
+  node tools/plan-sgd-resources.mjs --ratio 1,1,0,0 --dry                          # 10-25 빵·나무 균형 계획
   node tools/plan-sgd-resources.mjs --goal weights --weights 100,4,3,1 --max 40   # 10-24 나무 우선 계획
   ```
-  매번 지금 영토에서 깃발 1~depth개로 닿는 자리를 모두 훑어 (가치 증가 ÷ 깃발 수)가 가장 큰 경로를 확정합니다. 깃발 하나에 연맹 자원 빵 30K · 나무 30K가 들어서(10-25 연맹 창고 사용 내역), 가치는 3 × min(빵, 나무 생산) + 빵 + 나무 + 0.1 × 철입니다(석재는 창고 450K가 가득 차 0). 생산량은 `rates`(창고 화면 K/h)에 새로 얻는 자원지 × 3.6K를 더한 값입니다. 자원지 1곳 = 3.6K/h는 10-24 → 10-25 사이 나무 6곳 +21.6K · 철 1곳 +3.6K · 석재 1곳 +3.6K로 확인했습니다. 깃발을 더 세우거나 스크린샷이 새로 오면 `resFlags`·`building`·`rates`를 고치고 다시 돌리세요.
+  매번 지금 영토에서 깃발 1~depth개로 닿는 자리를 모두 훑어 (가치 증가 ÷ 깃발 수)가 가장 큰 경로를 확정하고, 개선 단계에서 가까운 깃발 1~4개를 빼고 다시 채우기를 반복해 같은 깃발 수로 가치가 더 큰 배치(같으면 깃발이 더 적은 배치)를 찾습니다. 번호는 남은 깃발 안에서 지금 영토부터 이어지는 경로 중 (가치 증가 ÷ 깃발 수)가 큰 순입니다. 가치는 3 × min(생산[종류] ÷ 목표 비율[종류]) + 새로 얻는 자원지 수(석재 0.66 · 철 0.37개로 셈 — 비율을 넘는 석재는 창고만 채우므로, `--cw flat`이면 모두 1개)입니다. 목표 비율 빵 1 : 나무 1 : 석재 0.66 : 철 0.37은 연맹 기술 전체 비용(빵 152.3M · 나무 152.3M · 석재 99.8M · 철 56.3M, [kingshotoptimizer](https://kingshotoptimizer.com/data/alliance-tech/))이고, 깃발 211개 이후 비용(1 : 1 : 0.67 : 0.36, [kingshotguide](https://www.kingshotguide.com/database/banner-requirements))도 거의 같습니다. 깃발 120개까지는 빵·나무만 듭니다(10-25 연맹 창고 사용 내역: 깃발 하나 빵 30K · 나무 30K). 생산량은 `rates`(창고 화면 K/h, `rates.nodes` = 그때 연맹 자원지 수)에 그 뒤 얻는 자원지 × 3.6K를 더한 값입니다. 자원지 1곳 = 3.6K/h는 10-24 → 10-25 사이 나무 6곳 +21.6K · 철 1곳 +3.6K · 석재 1곳 +3.6K로 확인했습니다. 깃발을 더 세우거나 스크린샷이 새로 오면 `resFlags`·`building`·`rates`를 고치고 다시 돌리세요.
 - 게시본: `GET/PUT /api/sgd/layout`(KV `sgd`, 직전본 `sgd_previous`). 첫 게시 전에는 `layouts/sgd.json`을 보여 줍니다. 아직 `/sgd/admin` 편집기는 없어서, 바꾼 파일을 다시 배포하거나 로그인 토큰으로 `PUT /api/sgd/layout`에 올립니다.
 
 ### 관리자 계정
