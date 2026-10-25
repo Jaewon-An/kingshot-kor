@@ -3,7 +3,8 @@
  * 배치는 node tools/make-sgd-layout.mjs 로 만듭니다. 좌표는 게임 좌표(건물의 최소 X·Y 칸), 줄·거리 계산은 v2/plan.js(KSPlan)와 같습니다.
  * 자리 번호: 곰덫1 기준 줄 → 곰덫까지 거리 → 배치 목록 순서. 닉네임이 "빈자리 N"이거나 비어 있으면 빈자리, 그 밖은 연맹원.
  * 깃발 번호는 설치 순서: 번호대로 지으면 매번 본부와 이어지고 곰덫 → 앞 번호 자리 순으로 영토가 됩니다.
- * 자원 깃발(layouts/sgd-resource.json, tools/plan-sgd-resources.mjs): 연맹 자원지를 영토에 넣는 깃발 경로 (나무 우선). "자원 깃발" 버튼으로 켜고 끔. */
+ * 자원 깃발(layouts/sgd-resource.json, tools/plan-sgd-resources.mjs): 연맹 자원지를 영토에 넣는 깃발 경로 (빵·나무 균형). 짓는 중 깃발이 1번부터, 이미 세운 자원 깃발(built)은 번호 없이 표시.
+ *   rates(연맹 창고 생산량)가 있으면 깃발마다 그 깃발까지 세웠을 때 예상 생산량(rate). "자원 깃발" 버튼으로 켜고 끔. */
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -34,8 +35,9 @@
   function fail(msg) { const n = $('notice'); n.textContent = msg; n.className = 'notice err'; n.hidden = false; }
 
   let HQ, T, seats, banners, area, blocks, oldFlags, CX, CY, CW, CH, kind, terrStep;
-  let rplan = null, rflags = [], rTerr = new Set(), rNodes = new Map();   // 자원 깃발 경로 (layouts/sgd-resource.json) · 그 영토 · 연맹 자원이 되는 자원지
+  let rplan = null, rflags = [], rBuilt = [], rTerr = new Set(), rNodes = new Map();   // 자원 깃발 경로 (layouts/sgd-resource.json) · 세운 자원 깃발 · 그 영토 · 연맹 자원이 되는 자원지
   const NODE_NAMES = ['빵', '나무', '석재', '철'];
+  const rateText = f => f.rate ? `빵 ${f.rate[0]}K · 나무 ${f.rate[1]}K/h` : `나무 ${f.wood} · 자원 ${f.total}`;   // 그 자원 깃발까지 세웠을 때
   async function load() {
     let cur, map;
     try { cur = await getJSON('/api/sgd/layout', '/layouts/sgd.json'); } catch (_) { fail('SGD 배치도를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.'); return; }
@@ -76,14 +78,15 @@
     });
     // 자원 깃발: 번호 = 설치 순서. 그 깃발로 새로 연맹 자원이 되는 자원지(4칸 중 3칸 이상 영토)는 rNodes에 (몇 번 깃발로 얻는지)
     if (rplan) {
-      rflags = rplan.flags.map((f, i) => ({ ...f, n: `자원 깃발 ${f.no}번`, id: 'r' + i, kind: 'rflag' }));
+      rflags = rplan.flags.map((f, i) => ({ ...f, n: `자원 깃발 ${f.no}번${f.building ? ' (짓는 중)' : ''}`, id: 'r' + i, kind: 'rflag' }));
+      rBuilt = (rplan.built || []).map(([x, y], i) => ({ x, y, n: '세운 자원 깃발', id: 'rb' + i, kind: 'rbuilt' }));
       for (const n of rplan.base || []) rNodes.set(`${n[0]},${n[1]}`, { x: n[0], y: n[1], t: n[2], by: 0 });
       for (const f of rflags) for (const n of f.nodes) rNodes.set(`${n[0]},${n[1]}`, { x: n[0], y: n[1], t: n[2], by: f.no });
-      for (const f of rflags) for (let y = f.y - K.BN_COV; y <= f.y + K.BN_COV; y++) for (let x = f.x - K.BN_COV; x <= f.x + K.BN_COV; x++) if (!terrStep.has(y * G + x)) rTerr.add(y * G + x);
+      for (const f of [...rBuilt, ...rflags]) for (let y = f.y - K.BN_COV; y <= f.y + K.BN_COV; y++) for (let x = f.x - K.BN_COV; x <= f.x + K.BN_COV; x++) if (!terrStep.has(y * G + x)) rTerr.add(y * G + x);
     }
 
     // 지형 잘라내기 — kind 0 땅 1 산 2 호수 3~6 자원지(빵·나무·석재·철) 7 구조물
-    const pts = [HQ, T, ...seats, ...banners, ...oldFlags, ...rflags];
+    const pts = [HQ, T, ...seats, ...banners, ...oldFlags, ...rBuilt, ...rflags];
     const x0 = Math.max(0, Math.min(...pts.map(p => p.x)) - 30), x1 = Math.min(G - 1, Math.max(...pts.map(p => p.x)) + 32);
     const y0 = Math.max(0, Math.min(...pts.map(p => p.y)) - 30), y1 = Math.min(G - 1, Math.max(...pts.map(p => p.y)) + 32);
     CX = x0; CY = y0; CW = x1 - x0 + 1; CH = y1 - y0 + 1;
@@ -108,15 +111,15 @@
   function start() {
     oldFlags.forEach(f => put(f, 1));
     put({ ...HQ, n: area && area.hq.name ? `본부 (${area.hq.name})` : '본부', kind: 'hq' }, 3); put({ ...T, n: '곰덫1 (사냥 함정 1)', kind: 'trap' }, 3);
-    banners.forEach(b => put(b, 1)); seats.forEach(s => put(s, 2)); rflags.forEach(f => put(f, 1));
+    banners.forEach(b => put(b, 1)); seats.forEach(s => put(s, 2)); rBuilt.forEach(f => put(f, 1)); rflags.forEach(f => put(f, 1));
     const members = seats.filter(s => s.kind === 'city'), spare = seats.filter(s => s.kind === 'spare');
-    const woodAll = [...rNodes.values()].filter(n => n.t === 1).length;
+    const rLast = rflags[rflags.length - 1], R = rplan && rplan.rates;
 
     // ---------- 요약 ----------
     $('facts').innerHTML = [
       ['--c-hq', '본부', xy(HQ)], ['--c-t1', '곰덫1', xy(T)], ['--c-banner', '깃발', banners.length + '개'],
       ['--c-city2', '자리', members.length ? `${seats.length} · 연맹원 ${members.length}` : `${seats.length}`],
-      ...(rflags.length ? [['--c-rflag', '자원 깃발', `${rflags.length}개 · 나무 ${woodAll}`]] : []),
+      ...(rflags.length ? [['--c-rflag', '자원 깃발', `${rflags.length}개 → ${rateText(rLast)}`]] : []),
     ].map(([c, k, v]) => `<div><dt><i style="background:var(${c})"></i>${k}</dt><dd>${v}</dd></div>`).join('');
 
     // ---------- 명단: 곰덫1 줄별 (번호 순) ----------
@@ -150,17 +153,21 @@
       $('foreign').hidden = false;
     }
 
-    // ---------- 자원 깃발 경로 (나무 우선) ----------
+    // ---------- 자원 깃발 경로 (빵·나무 균형) ----------
     if (rflags.length) {
-      const base = [...rNodes.values()].filter(n => !n.by);
-      const woodDone = rflags.find(f => f.wood === woodAll);
-      $('ressum').textContent = `${rflags.length}개 · 자원 ${rNodes.size}곳 (나무 ${woodAll})`;
+      const nb = rflags.filter(f => f.building).length, kindsOf = f => f.nodes.length ? f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') : '연결';
+      const gain = t => rflags.reduce((a, f) => a + f.nodes.filter(n => n[2] === t).length, 0);
+      $('ressum').textContent = `${rflags.length}개 · 빵 +${gain(0)} · 나무 +${gain(1)}곳`;
       const first = rflags.find(f => f.needs && f.needs.length);
-      $('reshint').textContent = `배치 영토만으로 연맹 자원 ${base.length}곳 (${NODE_NAMES.map((nm, t) => `${nm} ${base.filter(n => n.t === t).length}`).join(' · ')}).` +
-        (first ? ` 자원 깃발 ${first.no}번은 배치 ${first.link}번에 붙으니 배치 깃발 ${first.needs.map(n => n.replace('깃발 ', '') + '번').join(' → ')}을 먼저 세우세요.` : '') +
-        (woodDone ? ` 자원 깃발 ${woodDone.no}번까지 세우면 나무 ${woodAll}곳을 모두 얻습니다.` : '');
-      const kindsOf = f => f.nodes.length ? f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') : '연결';
-      $('reslist').innerHTML = rflags.map(f => `<li${f.nodes.some(n => n[2] === 1) ? ' class="wood"' : ''}><button type="button" class="lnk" data-r="${f.id}">자원 ${f.no}번</button> <span class="mono">${f.x},${f.y}</span> <span class="why">← ${esc(f.link)} · +${kindsOf(f)} · 나무 ${f.wood} · 자원 ${f.total}</span></li>`).join('');
+      $('reshint').textContent = (R ? `지금 생산 (${R.at} 연맹 창고): 빵 ${R['빵']}K · 나무 ${R['나무']}K · 석재 ${R['석재']}K · 철 ${R['철']}K/h, 자원지 1곳 = ${R.perNode}K/h. ` : '') +
+        (rBuilt.length ? `이미 세운 자원 깃발 ${rBuilt.length}개는 번호 없이 표시했습니다. ` : '') +
+        (nb ? `${nb > 1 ? `1~${nb}번` : '1번'}은 지금 짓는 중인 깃발입니다. ` : '') +
+        (first ? `자원 깃발 ${first.no}번은 배치 ${first.link}번에 붙으니 배치 깃발 ${first.needs.map(n => n.replace('깃발 ', '') + '번').join(' → ')}을 먼저 세우세요. ` : '') +
+        (rLast.rate ? `${rLast.no}번까지 세우면 빵 ${rLast.rate[0]}K · 나무 ${rLast.rate[1]}K/h입니다.` : '');
+      $('reslist').innerHTML = rflags.map(f => {
+        const cls = f.nodes.some(n => n[2] === 0) ? 'bread' : f.nodes.some(n => n[2] === 1) ? 'wood' : '';
+        return `<li${cls ? ` class="${cls}"` : ''}><button type="button" class="lnk" data-r="${f.id}">자원 ${f.no}번</button> <span class="mono">${f.x},${f.y}</span>${f.building ? ' <span class="tagb">짓는 중</span>' : ''} <span class="why">← ${esc(f.link)} · +${kindsOf(f)} · ${rateText(f)}</span></li>`;
+      }).join('');
       $('resplan').hidden = false; $('res').hidden = false;
       for (const id of ['rflaglegend', 'rterrlegend']) if ($(id)) $(id).hidden = false;
     }
@@ -238,7 +245,7 @@
     return { x: view.cx + (p + q) / 2, y: view.cy + (q - p) / 2 };
   }
   function fit(all) { // all: 자원 깃발까지 (전체 버튼), 아니면 자리 배치만 (처음 보기)
-    const pts = seats.map(m => [m.x, m.y, 2]).concat([[T.x, T.y, 3], [HQ.x, HQ.y, 3]], all && view.res ? rflags.map(f => [f.x, f.y, 1]) : []);
+    const pts = seats.map(m => [m.x, m.y, 2]).concat([[T.x, T.y, 3], [HQ.x, HQ.y, 3]], all && view.res ? [...rBuilt, ...rflags].map(f => [f.x, f.y, 1]) : []);
     const x0 = Math.min(...pts.map(p => p[0])) - 2, y0 = Math.min(...pts.map(p => p[1])) - 2;
     const x1 = Math.max(...pts.map(p => p[0] + p[2])) + 2, y1 = Math.max(...pts.map(p => p[1] + p[2])) + 2;
     const w = cv.clientWidth, h = cv.clientHeight, bw = x1 - x0, bh = y1 - y0;
@@ -275,8 +282,8 @@
     if (view.res && rflags.length) {
       gx.globalAlpha = 0.2; gx.drawImage(rovImg, CX, CY, CW, CH); gx.globalAlpha = 1;
       gx.strokeStyle = C['c-rterr']; gx.lineWidth = 1.5 / s; gx.setLineDash([5 / s, 3 / s]); gx.stroke(redges); gx.setLineDash([]);
-      // 연맹 자원이 되는 자원지 (나무는 굵게)
-      for (const n of rNodes.values()) { gx.strokeStyle = n.t === 1 ? C['n-wood'] : C['m-edge']; gx.lineWidth = (n.t === 1 ? 3.2 : 1.4) / s; gx.strokeRect(n.x - 0.15, n.y - 0.15, 2.3, 2.3); }
+      // 연맹 자원이 되는 자원지 (빵·나무는 굵게)
+      for (const n of rNodes.values()) { gx.strokeStyle = n.t === 1 ? C['n-wood'] : n.t === 0 ? C['n-bread'] : C['m-edge']; gx.lineWidth = (n.t <= 1 ? 3.2 : 1.4) / s; gx.strokeRect(n.x - 0.15, n.y - 0.15, 2.3, 2.3); }
     }
     if (s >= 7) {
       gx.beginPath();
@@ -294,7 +301,10 @@
       else box(st, 2, st.kind === 'res' ? C['c-res'] : C['c-city2'], 0.08);
     });
     banners.forEach(b => box(b, 1, C['c-banner'], 0.06));
-    if (view.res) rflags.forEach(f => box(f, 1, C['c-rflag'], 0.06));
+    if (view.res) {
+      rBuilt.forEach(f => box(f, 1, C['c-rflag'], 0.06));
+      rflags.forEach(f => { if (f.building) gx.globalAlpha = 0.5; box(f, 1, C['c-rflag'], 0.06); gx.globalAlpha = 1; if (f.building) { gx.strokeStyle = C['c-rflag']; gx.lineWidth = 2 / s; gx.setLineDash([2 / s, 2 / s]); gx.strokeRect(f.x - 0.1, f.y - 0.1, 1.2, 1.2); gx.setLineDash([]); } });
+    }
     oldFlags.forEach(f => { if (!f.reuse) { gx.strokeStyle = f.on ? C['bad'] : C['c-real']; gx.lineWidth = 2.2 / s; gx.strokeRect(f.x + 0.12, f.y + 0.12, 0.76, 0.76); } });
     box(HQ, 3, C['c-hq'], 0.05); box(T, 3, C['c-t1'], 0.05);
     if (view.flag) { // 마우스가 올라간 깃발의 영토
@@ -409,14 +419,14 @@
     const k = kindAt(x, y), hit = objAt.get(y * G + x), o = hit && hit.o, fb = foreignAt(x, y);
     // 자원지: 종류 + 연맹 자원이 되는 깃발 (자원지 2×2의 어느 칸이든)
     const rn = k >= 3 && k <= 6 ? [rNodes.get(`${x},${y}`), rNodes.get(`${x - 1},${y}`), rNodes.get(`${x},${y - 1}`), rNodes.get(`${x - 1},${y - 1}`)].find(n => n && x - n.x < 2 && y - n.y < 2) : null;
-    const kn = k >= 3 && k <= 6 ? `${NODE_NAMES[k - 3]} 자원지${rn ? (rn.by ? ` · 자원 깃발 ${rn.by}번으로 연맹 자원` : ' · 배치 영토로 연맹 자원') : ''}` : ['', '산', '호수'][k] || (k === 7 ? '구조물' : '');
+    const kn = k >= 3 && k <= 6 ? `${NODE_NAMES[k - 3]} 자원지${rn ? (rn.by ? ` · 자원 깃발 ${rn.by}번으로 연맹 자원` : ' · 지금 영토(배치·세운 깃발)로 연맹 자원') : ''}` : ['', '산', '호수'][k] || (k === 7 ? '구조물' : '');
     let info = [fb ? `다른 연맹 영토 (${fb.who || ''})` : '', kn].filter(Boolean).join(' · ');
     if (o) {
       const extra = byId.has(o.id) ? ` ${xy(o)} · 곰덫1 ${o.l}줄${o.kind === 'spare' ? ' · 빈자리' : ''} · ${needText(o.need)}` : o.kind === 'banner' ? ` ${xy(o)} · 설치 순서 ${o.no}번`
-        : o.kind === 'rflag' ? ` ${xy(o)} · ${o.link}에 붙음 · +${o.nodes.map(n => NODE_NAMES[n[2]]).join(' ') || '연결'}` : ` ${xy(o)}`;
+        : o.kind === 'rflag' ? ` ${xy(o)} · ${o.link}에 붙음 · +${o.nodes.map(n => NODE_NAMES[n[2]]).join(' ') || '연결'}${o.rate ? ` · 여기까지 ${rateText(o)}` : ''}` : ` ${xy(o)}`;
       info = (byId.has(o.id) ? seatName(o) : o.n) + extra + (info ? ' · ' + info : '');
     }
-    const fl = o && (o.kind === 'banner' || o.kind === 'old' || o.kind === 'rflag') ? { x: o.x, y: o.y, res: o.kind === 'rflag' } : null;
+    const fl = o && (o.kind === 'banner' || o.kind === 'old' || o.kind === 'rflag' || o.kind === 'rbuilt') ? { x: o.x, y: o.y, res: o.kind === 'rflag' || o.kind === 'rbuilt' } : null;
     if (fl) info += ` · 영토 X ${fl.x - K.BN_COV}~${fl.x + K.BN_COV} · Y ${fl.y - K.BN_COV}~${fl.y + K.BN_COV}`;
     if ((fl && fl.x) !== (view.flag && view.flag.x) || (fl && fl.y) !== (view.flag && view.flag.y)) { view.flag = fl; draw(); }
     $('readout').textContent = `칸 X:${x} Y:${y}${info ? ' · ' + info : ''}`;
@@ -449,7 +459,7 @@
     const btn = e.target.closest('button[data-r]'), f = btn && rflags.find(o => o.id === btn.dataset.r);
     if (!f) return;
     if (!view.res) $('res').click();   // 자원 깃발이 꺼져 있으면 켜서 보여 줌
-    goTo(f.x, f.y, `자원 깃발 ${f.no}번 · X:${f.x} Y:${f.y} · ${f.link}에 붙음 · +${f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') || '연결'} · 누적 나무 ${f.wood} · 자원 ${f.total}`);
+    goTo(f.x, f.y, `자원 깃발 ${f.no}번${f.building ? ' (짓는 중)' : ''} · X:${f.x} Y:${f.y} · ${f.link}에 붙음 · +${f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') || '연결'} · 여기까지 ${rateText(f)}`);
   });
   $('fit').addEventListener('click', () => fit(true));
   $('zin').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.35));
@@ -490,7 +500,7 @@
       const named = gr.rows.filter(m => m.named);
       if (named.length) { L.push(`■ ${gr.title}`); L.push(named.map(m => `${m.n} ${m.x},${m.y}`).join(' / ')); }
     }
-    if (rflags.length) L.push(`자원 깃발 ${rflags.length}개 (나무 우선, 설치 순서): ` + rflags.map(f => `${f.no})${f.x},${f.y}`).join(' '));
+    if (rflags.length) L.push(`자원 깃발 ${rflags.length}개 (빵·나무 균형, 설치 순서): ` + rflags.map(f => `${f.no})${f.x},${f.y}${f.building ? '(짓는 중)' : ''}`).join(' '));
     L.push(`자리 번호·좌표 보기: ${location.origin}/sgd/`);
     return L.join('\n');
   }
