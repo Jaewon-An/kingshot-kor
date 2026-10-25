@@ -118,6 +118,7 @@
 
     // ---------- 요약 ----------
     $('facts').innerHTML = [
+      ...(rflags.length ? [['--c-rflag', '다음 깃발', `${rflags[0].no}번 · X:${rflags[0].x} Y:${rflags[0].y}`]] : []),
       ['--c-hq', '본부', xy(HQ)], ['--c-t1', '곰덫1', xy(T)], ['--c-banner', '깃발', banners.length + '개'],
       ['--c-city2', '자리', members.length ? `${seats.length} · 연맹원 ${members.length}` : `${seats.length}`],
       ...(rflags.length ? [['--c-rflag', '자원 깃발', `${rflags.length}개 · 자원지 +${rflags.reduce((a, f) => a + f.nodes.length, 0)}`]] : []),
@@ -133,6 +134,7 @@
       `<tbody data-g="${gi}"><tr class="grp"><td colspan="3">${esc(gr.title)} · ${gr.rows.length}</td></tr>` +
       gr.rows.map(m => `<tr class="row" data-id="${m.id}" data-no="${m.no}" data-xy="${m.x},${m.y}" data-k="${m.named ? esc(norm(m.n)) : ''}"><td class="nm"><span class="tag" style="background:var(${tagOf(m)})"></span>${m.named ? `${esc(m.n)} <span class="sumx mono">${m.no}</span>` : `<span class="mono">${m.no}</span>`}</td><td class="mono">${xy(m)}</td><td class="mono sumx">${m.need === 0 ? '본부' : Number.isFinite(m.need) ? `깃발 ${m.need}` : '밖'}</td></tr>`).join('') + '</tbody>').join('');
     byId = new Map(seats.map(m => [m.id, m]));
+    if ($('seatsum')) $('seatsum').textContent = `${seats.length}자리` + (members.length ? ` · 연맹원 ${members.length}` : '');
 
     // ---------- 깃발 설치 순서 ----------
     // k번 깃발까지 지었을 때: 1번 자리부터 이어서 영토인 자리 수 (연맹원이 앞 번호부터 채우면 이만큼 들어감) · 영토 안 자리 전체
@@ -172,15 +174,16 @@
         (rLast.rate ? `${rLast.no}번까지 세우면 ${rateText(rLast)}입니다.` : '');
       $('reslist').innerHTML = rflags.map(f => {
         const cls = f.nodes.length ? ['bread', 'wood', 'stone', 'iron'][f.nodes[0][2]] : '';
-        return `<li${cls ? ` class="${cls}"` : ''}><button type="button" class="lnk" data-r="${f.id}">자원 ${f.no}번</button> <span class="mono">${f.x},${f.y}</span>${f.building ? ' <span class="tagb">짓는 중</span>' : ''} <span class="why">← ${esc(f.link)} · +${kindsOf(f)} · ${rateText(f)}</span></li>`;
+        return `<li data-r="${f.id}"${cls ? ` class="${cls}"` : ''}><span class="no">${f.no}</span><button type="button" class="lnk" data-r="${f.id}">X:${f.x} Y:${f.y}</button><span class="gain">+${kindsOf(f)}${f.building ? ' <span class="tagb">짓는 중</span>' : ''}</span><span class="why">← ${esc(f.link)} · ${rateText(f)}</span></li>`;
       }).join('');
-      $('resplan').hidden = false; $('res').hidden = false;
+      showFlag(rflags[0], false);
+      $('next').hidden = false; $('res').hidden = false;
       for (const id of ['rflaglegend', 'rterrlegend']) if ($(id)) $(id).hidden = false;
     }
 
     readColors(); home();
     const q0 = new URLSearchParams(location.search);
-    if (q0.get('q') && $('q')) { $('q').value = q0.get('q'); search(true); } else openFromURL();
+    if (q0.get('q') && $('q')) { $('seatbox').open = true; $('q').value = q0.get('q'); search(true); } else openFromURL();
   }
 
   // ---------- 색 ----------
@@ -250,8 +253,10 @@
     const k = view.s * SQ, p = (sx - w / 2) / k, q = -(sy - h / 2) / k;
     return { x: view.cx + (p + q) / 2, y: view.cy + (q - p) / 2 };
   }
-  function fit(all) { // all: 자원 깃발까지 (전체 버튼), 아니면 자리 배치만 (처음 보기)
-    const pts = seats.map(m => [m.x, m.y, 2]).concat([[T.x, T.y, 3], [HQ.x, HQ.y, 3]], all && view.res ? [...rBuilt, ...rflags].map(f => [f.x, f.y, 1]) : []);
+  function fit(all) { // all: 자원 깃발까지 (전체 버튼), 아니면 자리 배치만
+    fitPts(seats.map(m => [m.x, m.y, 2]).concat([[T.x, T.y, 3], [HQ.x, HQ.y, 3]], all && view.res ? [...rBuilt, ...rflags].map(f => [f.x, f.y, 1]) : []));
+  }
+  function fitPts(pts) {
     const x0 = Math.min(...pts.map(p => p[0])) - 2, y0 = Math.min(...pts.map(p => p[1])) - 2;
     const x1 = Math.max(...pts.map(p => p[0] + p[2])) + 2, y1 = Math.max(...pts.map(p => p[1] + p[2])) + 2;
     const w = cv.clientWidth, h = cv.clientHeight, bw = x1 - x0, bh = y1 - y0;
@@ -262,6 +267,11 @@
   // 처음 보기: 전체 보기에서 이름이 안 읽히면(휴대폰) 곰덫1을 가운데에 두고 번호가 보이는 배율로
   const LABEL_S = 13, HOME_S = 20;
   function home() {
+    if (rflags.length && view.res) {   // 앞으로 지을 깃발 전체 (+ 세운 자원 깃발), 번호가 안 읽히면 다음 깃발을 가운데로
+      fitPts([...rBuilt, ...rflags].map(f => [f.x, f.y, 1]));
+      if (view.s < 10) { view.cx = rflags[0].x + 0.5; view.cy = rflags[0].y + 0.5; view.s = 16; }
+      return;
+    }
     fit();
     if (view.s >= LABEL_S) return;
     view.cx = T.x + 1.5; view.cy = T.y + 1.5; view.s = HOME_S;
@@ -345,6 +355,24 @@
     label(T, 3, '덫1', big, C['on-obj']); label(HQ, 3, '본부', big, C['on-obj']);
   }
 
+  // ---------- 자원 깃발 카드 (다음 깃발 / 목록에서 고른 깃발) ----------
+  function showFlag(f, picked) {
+    if (!f) return;
+    $('nextcard').innerHTML = `<span class="nm">${picked ? '' : '다음 깃발 · '}자원 깃발 ${f.no}번${f.building ? ' <span class="tagb">짓는 중</span>' : ''}</span><span class="co">X:${f.x} Y:${f.y}</span>
+      <span class="meta">+${f.nodes.length ? f.nodes.map(n => `${NODE_NAMES[n[2]]}(${n[0]},${n[1]})`).join(' ') : '자원 없음 — 다음 깃발로 이어 주는 깃발'} · ${esc(f.link)}에 붙음</span>
+      ${f.rate ? `<span class="meta">여기까지 세우면 ${rateText(f)}</span>` : ''}
+      <span class="acts"><button class="btn" type="button" data-go="${f.id}">지도에서 보기</button><button class="btn" type="button" data-cp="${f.id}">좌표 복사</button>${f.no < rflags.length ? `<button class="btn" type="button" data-nx="${f.no}">다음 ${f.no + 1}번 →</button>` : ''}</span>`;
+    document.querySelectorAll('#reslist li.on').forEach(li => li.classList.remove('on'));
+    const li = document.querySelector(`#reslist li[data-r="${f.id}"]`); if (li) li.classList.add('on');
+  }
+  function goFlag(f) {
+    if (!f) return;
+    if (!view.res) $('res').click();   // 자원 깃발이 꺼져 있으면 켜서 보여 줌
+    showFlag(f, true);
+    goTo(f.x, f.y, `자원 깃발 ${f.no}번${f.building ? ' (짓는 중)' : ''} · X:${f.x} Y:${f.y} · ${f.link}에 붙음 · +${f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') || '연결'} · 여기까지 ${rateText(f)}`);
+    setURL('r', f.no);
+  }
+
   // ---------- 선택 ----------
   function select(m, center) {
     view.pick = m; view.mark = null;
@@ -354,7 +382,7 @@
     $('card').innerHTML = `<span class="nm">${m.named ? `${esc(m.n)} · ` : ''}자리 ${m.no}${m.kind === 'spare' ? ' <span class="badge new">빈자리</span>' : m.kind === 'res' ? ' <span class="badge new">연맹 건물</span>' : ''}</span><span class="co">${xy(m)}</span>
       <span class="meta">곰덫1 기준 ${m.l}줄 · 곰덫1까지 ${f1(m.d)}칸 · 본부까지 ${f1(Math.hypot(m.x + 1 - HQ.x - 1.5, m.y + 1 - HQ.y - 1.5))}칸</span>
       <span class="meta">${needText(m.need)}</span>`;
-    $('card').hidden = false;
+    $('card').hidden = false; $('seatbox').open = true;
     setURL('s', m.no);
     if (center) { view.cx = m.x + 1; view.cy = m.y + 1; view.s = Math.max(view.s, 22); }
     draw();
@@ -463,11 +491,16 @@
     if (btn) goTo(+btn.dataset.x, +btn.dataset.y, `${btn.textContent.trim()}`);
   });
   $('reslist').addEventListener('click', e => {
-    const btn = e.target.closest('button[data-r]'), f = btn && rflags.find(o => o.id === btn.dataset.r);
-    if (!f) return;
-    if (!view.res) $('res').click();   // 자원 깃발이 꺼져 있으면 켜서 보여 줌
-    goTo(f.x, f.y, `자원 깃발 ${f.no}번${f.building ? ' (짓는 중)' : ''} · X:${f.x} Y:${f.y} · ${f.link}에 붙음 · +${f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') || '연결'} · 여기까지 ${rateText(f)}`);
+    const li = e.target.closest('li[data-r]');
+    if (li) goFlag(rflags.find(o => o.id === li.dataset.r));
   });
+  $('nextcard').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.go) goFlag(rflags.find(o => o.id === b.dataset.go));
+    else if (b.dataset.cp) { const f = rflags.find(o => o.id === b.dataset.cp); copyTo(b, `X:${f.x} Y:${f.y}`, '좌표 복사'); }
+    else if (b.dataset.nx) goFlag(rflags.find(o => o.no === +b.dataset.nx + 1));
+  });
+  $('rescopy').addEventListener('click', () => copyTo($('rescopy'), ['[SGD 자원 깃발 설치 순서]', ...rflags.map(f => `${f.no}) X:${f.x} Y:${f.y} +${f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') || '연결'}${f.building ? ' (짓는 중)' : ''}`), `지도: ${location.origin}/sgd/`].join('\n'), '깃발 좌표 복사 (연맹 채팅용)'));
   $('fit').addEventListener('click', () => fit(true));
   $('zin').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.35));
   $('zout').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.35));
@@ -475,7 +508,7 @@
   // ---------- 주소: ?s=자리번호 · ?at=X,Y · ?q=닉네임 ----------
   function setURL(k, v) {
     const u = new URL(location.href);
-    for (const p of ['s', 'at', 'q']) u.searchParams.delete(p);
+    for (const p of ['s', 'at', 'q', 'r']) u.searchParams.delete(p);
     const qs = [u.searchParams.toString(), k ? `${k}=${v}` : ''].filter(Boolean).join('&');
     history.replaceState(null, '', u.pathname + (qs ? `?${qs}` : ''));
   }
@@ -488,7 +521,8 @@
   }
   function openFromURL() {
     const q = new URLSearchParams(location.search);
-    const s = +q.get('s'), at = /^(\d+),(\d+)$/.exec(q.get('at') || '');
+    const s = +q.get('s'), at = /^(\d+),(\d+)$/.exec(q.get('at') || ''), r = +q.get('r');
+    if (r) { const f = rflags.find(o => o.no === r); if (f) { goFlag(f); return; } }
     if (s) { const m = seats.find(o => o.no === s); if (m) { select(m, true); return; } }
     if (at) { const x = +at[1], y = +at[2]; view.cx = x + 0.5; view.cy = y + 0.5; view.s = Math.max(view.s, 18); markAt(x, y); }
   }

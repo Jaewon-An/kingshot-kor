@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
-<title>SGD 자리 배치도</title>
+<title>SGD 깃발·자리 배치도</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
@@ -28,12 +28,27 @@
   .legend i.line { border-top-color: var(--c-t1); }
   .legend i.rterr { background: color-mix(in srgb, var(--c-rterr) 25%, transparent); outline: 1.5px dashed var(--c-rterr); outline-offset: -1.5px; }
   .legend i.got { background: transparent; outline: 2px solid var(--ink); outline-offset: -2px; }
-  ol.bn.sgd li.wood .lnk { color: var(--n-wood); }
-  ol.bn.sgd li.bread .lnk { color: var(--n-bread); }
-  ol.bn.sgd li.stone .lnk { color: color-mix(in srgb, var(--n-stone) 60%, var(--ink)); }
-  ol.bn.sgd li.iron .lnk { color: var(--n-iron); }
+  ol.bn.sgd li.wood .gain { color: var(--n-wood); }
+  ol.bn.sgd li.bread .gain { color: var(--n-bread); }
+  ol.bn.sgd li.stone .gain { color: color-mix(in srgb, var(--n-stone) 60%, var(--ink)); }
+  ol.bn.sgd li.iron .gain { color: var(--n-iron); }
   .tagb { font-size: .7rem; font-weight: 600; padding: 0 5px; border-radius: 4px; border: 1px dashed var(--c-rflag); color: var(--c-rflag); white-space: nowrap; }
-  @media (max-width: 900px) { #link { order: 6; } }
+  /* 앞으로 지을 깃발: 패널 맨 위, 다음 깃발 카드 + 좌표 목록 */
+  .nexth { font-family: var(--f-display); font-size: 1.15rem; font-weight: 700; margin: 0; }
+  .nexth .sumx { display: block; font-family: var(--f-body); font-size: .76rem; font-weight: 400; margin-top: 2px; }
+  .nextcard { border-color: var(--c-rflag); }
+  .nextcard .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .nextcard .acts .btn { min-height: 32px; padding: 5px 10px; font-size: .8rem; }
+  ol.bn.sgd.flags { max-height: 46vh; margin: 0; overflow-x: hidden; overflow-y: auto; }
+  ol.bn.sgd.flags li { display: grid; grid-template-columns: 2.1em auto 1fr; column-gap: 8px; align-items: baseline; padding: 5px 4px; border-bottom: 1px solid var(--line); }
+  ol.bn.sgd.flags li.on { background: color-mix(in srgb, var(--c-rflag) 14%, transparent); }
+  ol.bn.sgd.flags .no { font-family: var(--f-mono); font-weight: 600; color: var(--muted); text-align: right; }
+  ol.bn.sgd.flags .lnk { font-family: var(--f-mono); font-size: 1rem; text-decoration: none; }
+  ol.bn.sgd.flags .gain { font-size: .8rem; font-weight: 600; }
+  ol.bn.sgd.flags .why { grid-column: 2 / 4; min-width: 0; overflow-wrap: anywhere; }
+  #seatbox .finder { margin-top: 8px; }
+  #seatbox .tbl { margin-top: 8px; }
+  @media (max-width: 900px) { #link { order: 6; } #next { order: 1; } #seatbox { order: 4; } ol.bn.sgd.flags { max-height: 40vh; max-height: 40svh; } }
 </style>
 </head>
 <body>
@@ -42,7 +57,7 @@
   <header class="top">
     <div>
       <p class="eyebrow">KINGSHOT · 2382 SGD</p>
-      <h1>SGD 자리 배치도</h1>
+      <h1>SGD 깃발·자리 배치도</h1>
       <p class="stamp" id="stamp"></p>
     </div>
     <dl class="facts" id="facts"></dl>
@@ -52,32 +67,40 @@
 
   <div class="grid" id="main" hidden>
     <aside class="panel">
-      <div class="finder">
-        <label for="q">자리 찾기</label>
-        <input id="q" type="search" enterkeyhint="search" placeholder="자리 번호 · 닉네임 · 좌표" autocomplete="off" spellcheck="false">
-        <p class="hint" id="qhint" role="status"></p>
-      </div>
-      <div class="card" id="card" hidden></div>
-      <div class="tbl"><table id="list"></table></div>
-      <p class="hint">자리 번호: 곰덫1에 가까운 줄 → 가까운 순. 영토 = 그 자리가 연맹 영토 안이 되는 깃발 번호</p>
-      <details open>
-        <summary>깃발 설치 순서 <span class="sumx" id="bnsum"></span></summary>
+      <section class="next" id="next" hidden>
+        <h2 class="nexth">앞으로 지을 깃발 <span class="sumx" id="ressum"></span></h2>
+        <div class="card nextcard" id="nextcard"></div>
+        <ol class="bn sgd flags" id="reslist"></ol>
+        <button class="btn" id="rescopy" type="button">깃발 좌표 복사 (연맹 채팅용)</button>
+        <details id="resbasis">
+          <summary>계산 기준</summary>
+          <p class="hint" id="reshint"></p>
+          <p class="hint">번호 = 설치 순서 (짓는 중인 깃발 먼저, 그다음 생산이 연맹 기술 연구·후반 깃발 비용 비율에 가까워지도록 모자란 자원부터, 깃발 하나가 자원지를 되도록 많이 잡도록 최적화). + 는 그 깃발로 새로 연맹 자원이 되는 자원지(4칸 중 3칸 이상 영토), ← 는 붙는 영토, 뒤 숫자는 그 깃발까지 세웠을 때 예상 생산량(빵·나무·석재·철 K/h). 스크린샷으로 확인한 땅 안에서만 계산했습니다.</p>
+        </details>
+      </section>
+      <details id="seatbox">
+        <summary>자리 찾기 · 자리 명단 <span class="sumx" id="seatsum"></span></summary>
+        <div class="finder">
+          <label for="q">자리 찾기</label>
+          <input id="q" type="search" enterkeyhint="search" placeholder="자리 번호 · 닉네임 · 좌표" autocomplete="off" spellcheck="false">
+          <p class="hint" id="qhint" role="status"></p>
+        </div>
+        <div class="card" id="card" hidden></div>
+        <div class="tbl"><table id="list"></table></div>
+        <p class="hint">자리 번호: 곰덫1에 가까운 줄 → 가까운 순. 영토 = 그 자리가 연맹 영토 안이 되는 깃발 번호</p>
+      </details>
+      <details>
+        <summary>배치 깃발 (곰덫·자리용) <span class="sumx" id="bnsum"></span></summary>
         <p class="hint" id="trapneed"></p>
         <p class="hint">번호 순서대로 설치하면 항상 본부 영토와 이어지고, 곰덫1 → 앞 번호 자리부터 영토가 됩니다. "1~N번 자리" = 그 깃발까지 지으면 1번부터 N번 자리까지 모두 영토 안.</p>
         <ol class="bn sgd" id="bn"></ol>
-      </details>
-      <details id="resplan" open hidden>
-        <summary>자원 깃발 경로 · 연구·깃발 비용 비율 <span class="sumx" id="ressum"></span></summary>
-        <p class="hint" id="reshint"></p>
-        <p class="hint">번호 = 설치 순서 (짓는 중인 깃발 먼저, 그다음 생산이 연맹 기술 연구·후반 깃발 비용 비율에 가까워지도록 모자란 자원부터, 깃발 하나가 자원지를 되도록 많이 잡도록 최적화). ← 는 붙는 영토, + 는 그 깃발로 새로 연맹 자원이 되는 자원지(4칸 중 3칸 이상 영토), 뒤 숫자는 그 깃발까지 세웠을 때 예상 생산량. 스크린샷으로 확인한 땅 안에서만 계산했습니다.</p>
-        <ol class="bn sgd" id="reslist"></ol>
       </details>
       <details id="foreign" hidden>
         <summary>다른 연맹 영토 · 지금 깃발 <span class="sumx" id="forsum"></span></summary>
         <p class="hint" id="forsrc"></p>
         <ul class="real" id="forlist"></ul>
       </details>
-      <button class="btn copy" id="copy" type="button">연맹 채팅용 텍스트 복사</button>
+      <button class="btn copy" id="copy" type="button">연맹 채팅용 텍스트 복사 (자리 포함)</button>
       <textarea id="copytext" readonly hidden aria-label="복사용 텍스트"></textarea>
     </aside>
 
