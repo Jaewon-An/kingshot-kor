@@ -1,6 +1,8 @@
 /* /banner/v1/·/banner/v2/ 공용 — KOR 깃발·영토 지도. 데이터 주소는 <script data-src="…/data.json">.
  * v1/data.json: 2026-10-29 스크린샷을 다시 이어 붙여 읽은 KOR 깃발(flags)·다른 연맹 깃발(others)·본부·확인된 범위(coverage, [y, x0, x1] 줄; 휴대폰 캡처 포함).
- * v2/data.json: 재배치안 — flags[].fixed(곰덫 주변 고정)·keep(그대로), remove(철거할 자리), plan(곰덫2 중심 t, 적 최근접 거리 r·방향별 dir, 지금 값 r1·dir1, 옛 본부 hq1).
+ * v2/data.json: 재배치안 — flags[].fixed(곰덫 주변·본부 위쪽 고정)·keep(그대로), remove(철거할 자리), extra(여분 깃발: 점선, 깃발이 더 늘면),
+ *   plan(곰덫2 중심 t, 적 최근접 거리 r·방향별 dir, 지금 값 r1·dir1, 여분까지 rx·dirx, 옛 본부 hq1, 지금 깃발 수 nNow),
+ *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지, why, n 깃발 수, r 곰덫2 최근접}]; 진행은 이 브라우저 localStorage).
  * 영토: 본부 15×15(KSCore.HQ_COV) + 깃발마다 7×7(BN_COV). 다른 연맹은 본부·깃발 영역에서 KOR 땅을 뺀 칸. 지형은 mapdata.js.
  */
 (function () {
@@ -20,8 +22,9 @@
   function fail(msg) { const n = $('notice'); n.textContent = msg; n.className = 'notice err'; n.hidden = false; }
 
   // ---------- 불러오기 ----------
-  let D, HQ, traps, flags, others, othHQ, ALLY, CX, CY, CW, CH, kind, cov, korSet, othSet, korOf, removed = [], PLAN = null;
-  const flagTag = f => (!PLAN ? '' : f.fixed ? '고정' : f.keep ? '그대로' : '새로');
+  let D, HQ, traps, flags, others, othHQ, ALLY, CX, CY, CW, CH, kind, cov, korSet, othSet, korOf, removed = [], extras = [], PLAN = null;
+  const flagTag = f => (f.ex ? '여분' : !PLAN ? '' : f.fixed ? '고정' : f.keep ? '그대로' : '새로');
+  const byNo = no => (no > flags.length ? extras[no - flags.length - 1] : flags[no - 1]);   // 여분 깃발은 번호를 이어서
   // 다른 연맹마다 색: [깃발·본부, 영토] CSS 변수 (모르는 연맹은 SGD 색)
   const ALLY_COL = { SGD: ['c-fflag', 'c-fterr'], EoB: ['c-eflag', 'c-eterr'], TWN: ['c-tflag', 'c-tterr'] };
   const colOf = a => ALLY_COL[a] || ALLY_COL.SGD;
@@ -34,6 +37,7 @@
     HQ = D.hq; traps = D.traps || [];
     flags = D.flags.map((f, i) => ({ x: f.x, y: f.y, no: i + 1, fixed: !!f.fixed, keep: !!f.keep }));
     removed = D.remove || []; PLAN = D.plan || null;
+    extras = (D.extra || []).map((f, i) => ({ x: f.x, y: f.y, no: flags.length + i + 1, ex: true }));
     others = (D.others || []).map((f, i) => ({ x: f.x, y: f.y, no: i + 1, a: f.a || '다른 연맹', note: f.note || '' }));
     othHQ = (D.otherHQ || []).map(h => ({ x: h.x, y: h.y, a: h.a || '다른 연맹' }));
     ALLY = [...new Set(othHQ.map(h => h.a).concat(others.map(f => f.a)))];
@@ -71,19 +75,20 @@
   const inFertile = (x, y) => x >= F0 && x <= F1 && y >= F0 && y <= F1;
   const flagAt = new Map();
   function start() {
-    flags.forEach(f => flagAt.set(f.y * G + f.x, f)); others.forEach(f => flagAt.set(f.y * G + f.x, { ...f, oth: true }));
+    flags.concat(extras).forEach(f => flagAt.set(f.y * G + f.x, f)); others.forEach(f => flagAt.set(f.y * G + f.x, { ...f, oth: true }));
     // ---------- 요약 ----------
     let korTiles = 0; const othTiles = ALLY.map(() => 0);
     for (let i = 0; i < korSet.length; i++) { korTiles += korSet[i]; if (othSet[i]) othTiles[othSet[i] - 1]++; }
     const flagsOf = a => others.filter(f => f.a === a), hqOf = a => othHQ.filter(h => h.a === a);
     $('facts').innerHTML = [
       ...(PLAN ? [['--c-t2', '적 최근접 거리', `${PLAN.r}칸 (지금 ${PLAN.r1})`]] : []),
+      ...(PLAN && PLAN.rx ? [['--c-banner', `여분 ${extras.length}개까지`, `${PLAN.rx}칸`]] : []),
       ['--c-banner', 'KOR 깃발', `${flags.length}개`], ['--c-terr', 'KOR 영토', `${korTiles.toLocaleString('ko-KR')}칸`],
       ['--c-hq', '평원 본부', xy(HQ)], ...ALLY.map(a => [`--${colOf(a)[0]}`, `${a} 깃발`, `${flagsOf(a).length}개`]),
     ].map(([c, k, v]) => `<div><dt><i style="background:var(${c})"></i>${k}</dt><dd>${v}</dd></div>`).join('');
     // ---------- 목록 ----------
-    $('bnsum').textContent = PLAN ? `${flags.length}개 · 새로 ${flags.filter(f => !f.fixed && !f.keep).length} · 고정 ${flags.filter(f => f.fixed).length}` : `${flags.length}개`;
-    $('bn').innerHTML = flags.map(f => `<li data-no="${f.no}"><button type="button" class="lnk" data-no="${f.no}">X:${f.x} Y:${f.y}</button>${flagTag(f) && flagTag(f) !== '새로' ? `<span class="tagn">${flagTag(f)}</span>` : ''}</li>`).join('');
+    $('bnsum').textContent = PLAN ? `${flags.length}개 · 새로 ${flags.filter(f => !f.fixed && !f.keep).length} · 고정 ${flags.filter(f => f.fixed).length}${extras.length ? ` · 여분 ${extras.length}` : ''}` : `${flags.length}개`;
+    $('bn').innerHTML = flags.concat(extras).map(f => `<li data-no="${f.no}"><button type="button" class="lnk" data-no="${f.no}">X:${f.x} Y:${f.y}</button>${flagTag(f) && flagTag(f) !== '새로' ? `<span class="tagn">${flagTag(f)}</span>` : ''}</li>`).join('');
     if ($('rm')) {
       $('rmsum').textContent = `${removed.length}개`;
       $('rm').innerHTML = removed.map(f => `<li><button type="button" class="lnk" data-x="${f.x}" data-y="${f.y}">X:${f.x} Y:${f.y}</button></li>`).join('');
@@ -96,10 +101,14 @@
     if (PLAN) {
       const DIRS = ['북', '동', '남', '서'];
       $('check').innerHTML = [
-        `곰덫 주변 깃발 ${flags.filter(f => f.fixed).length}개(v2 배치도 계획분)는 고정, 나머지를 옮겼습니다. 깃발 수는 ${flags.length}개 그대로입니다.`,
+        PLAN.nUp ? `곰덫 주변 깃발 ${PLAN.nTrap}개(v2 배치도 계획분)와 본부 위쪽 깃발 ${PLAN.nUp}개(거점과 이어짐)는 고정, 나머지 ${flags.filter(f => !f.fixed).length}개를 옮기거나 새로 세웠습니다. ` +
+          (PLAN.nNow && flags.length > PLAN.nNow ? `깃발 수는 지금 ${PLAN.nNow}개에 남은 건설 가능 ${flags.length - PLAN.nNow}개를 더한 ${flags.length}개입니다.` : `깃발 수는 ${flags.length}개 그대로입니다.`)
+          : `곰덫 주변 깃발 ${flags.filter(f => f.fixed).length}개(v2 배치도 계획분)는 고정, 나머지를 옮겼습니다. 깃발 수는 ${flags.length}개 그대로입니다.`,
+        ...(PLAN.overlap != null ? [`옮긴 깃발끼리 영역이 겹치는 칸은 ${PLAN.overlap}칸입니다. 줄마다 엇갈리게(벽돌 모양) 폭 1칸 틈을 두고 놓아 깃발 하나가 막는 땅을 늘렸습니다.`] : []),
         `곰덫2에서 적이 도시를 옮길 수 있는 가장 가까운 2×2 빈자리: 지금 ${PLAN.r1}칸 → 재배치 ${PLAN.r}칸.`,
         '방향별(화면 기준): ' + DIRS.map(k => `${k} ${PLAN.dir1[k].d}→${PLAN.dir[k].d}칸`).join(' · '),
-        '모든 깃발이 본부와 이어지고(꼭짓점만 닿아도 연결), 영토 안에 도시를 옮길 수 있는 2×2 구멍이 없습니다. 폭 1칸 틈은 도시가 못 들어가서 남겨 두었습니다.',
+        ...(extras.length && PLAN.rx ? [`여분 깃발 ${extras.length}개(점선)는 깃발이 더 늘면 세울 곳입니다. 모두 세우면 가장 가까운 적 자리가 ${PLAN.r}칸 → ${PLAN.rx}칸(` + DIRS.map(k => `${k} ${PLAN.dirx[k].d}`).join(' · ') + ')이 됩니다. 이 계획의 깃발은 그대로 두고 더하는 자리입니다.'] : []),
+        `모든 깃발이 본부와 이어지고(꼭짓점만 닿아도 연결${PLAN.nUp ? ', 본부 위쪽 깃발은 거점으로 이어짐' : ''}), 영토 안에 도시를 옮길 수 있는 2×2 구멍이 없습니다. 폭 1칸 틈은 도시가 못 들어가서 남겨 두었습니다.`,
         `평원 본부는 ${xy(HQ)}로 이전한 것으로 계산했습니다(지금 ${xy(PLAN.hq1)}).`,
         'SGD 영토는 우호 연맹으로 보고 적이 쓸 수 없는 곳으로, EoB·TWN 영토는 적이 쓸 수 있는 곳으로 계산했습니다. 연맹원 도시·곰덫·연맹 건물은 v2 배치도 위치 기준입니다.',
       ].map(s => `<li>${s}</li>`).join('');
@@ -110,9 +119,10 @@
       `v2 배치도에 기록된 깃발 19개 중 ${ck.v2_flags_matched || 0}개가 같은 자리에 있습니다. 단 v2.json의 깃발 좌표는 실제보다 X·Y가 ${ck.v2_offset || 3}칸씩 작게 저장돼 있습니다(본부는 6칸).`,
       '좌표 팝업 2장, 위치를 확정하지 못한 2장(깃발 없음)은 지도에서 뺐습니다.',
     ].map(s => `<li>${s}</li>`).join('');
+    if (D.steps && D.steps.length && $('stepbox')) setupSteps(D.steps);
     readColors();
     const u = new URLSearchParams(location.search), fno = +u.get('f'), at = /^(\d+),(\d+)$/.exec(u.get('at') || '');
-    if (fno && flags[fno - 1]) pick(flags[fno - 1], true);
+    if (fno && byNo(fno)) pick(byNo(fno), true);
     else if (at) { fit(); goTo(+at[1], +at[2]); }
     else fit();
   }
@@ -154,7 +164,7 @@
   }
 
   // ---------- 보기 ----------
-  const view = { cx: 0, cy: 0, s: 8, rot: true, names: true, each: true, oth: true, rm: true, sel: null, mark: null, cur: null };
+  const view = { cx: 0, cy: 0, s: 8, rot: true, names: true, each: true, oth: true, rm: true, sel: null, mark: null, cur: null, step: null };
   const SQ = Math.SQRT1_2;
   function mat(w, h) {
     const s = view.s, cx = view.cx, cy = view.cy;
@@ -169,7 +179,7 @@
     return { x: view.cx + (p + q) / 2, y: view.cy + (q - p) / 2 };
   }
   function fit() {
-    const pts = flags.concat(others, othHQ, [HQ]).map(f => [f.x, f.y]);
+    const pts = flags.concat(extras, others, othHQ, [HQ]).map(f => [f.x, f.y]);
     const x0 = Math.min(...pts.map(p => p[0])) - 4, y0 = Math.min(...pts.map(p => p[1])) - 4;
     const x1 = Math.max(...pts.map(p => p[0])) + 5, y1 = Math.max(...pts.map(p => p[1])) + 5;
     const w = cv.clientWidth, h = cv.clientHeight, bw = x1 - x0, bh = y1 - y0;
@@ -213,6 +223,7 @@
       gx.strokeStyle = C['c-t2']; gx.lineWidth = 2 / s; gx.setLineDash([6 / s, 4 / s]);
       gx.beginPath(); gx.arc(tx, ty, PLAN.r, 0, Math.PI * 2); gx.stroke(); gx.setLineDash([]);
       for (const k in PLAN.dir) { const p = PLAN.dir[k]; gx.lineWidth = 3 / s; gx.strokeRect(p.x, p.y, 2, 2); }
+      if (PLAN.rx) { gx.globalAlpha = 0.5; gx.lineWidth = 1.4 / s; gx.setLineDash([2 / s, 4 / s]); gx.beginPath(); gx.arc(tx, ty, PLAN.rx, 0, Math.PI * 2); gx.stroke(); gx.setLineDash([]); gx.globalAlpha = 1; }
       if (PLAN.hq1) { gx.strokeStyle = C['c-hq']; gx.lineWidth = 1.6 / s; gx.setLineDash([3 / s, 2 / s]); gx.strokeRect(PLAN.hq1.x, PLAN.hq1.y, 3, 3); gx.setLineDash([]); }
     }
     if (view.rm && removed.length) { // 철거할 깃발 자리
@@ -223,9 +234,15 @@
     traps.forEach(t => { gx.strokeStyle = C['c-t2']; gx.lineWidth = 2 / s; gx.strokeRect(t.x + 0.1, t.y + 0.1, 2.8, 2.8); });
     box(HQ, 3, C['c-hq'], 0.05);
     flags.forEach(f => box(f, 1, f.fixed ? C['c-fixed'] : C['c-banner'], 0.04));
+    if (extras.length) { // 여분 깃발: 깃발 칸과 영역(7×7)을 점선으로
+      const r = K.BN_COV; gx.strokeStyle = C['c-banner']; gx.setLineDash([3 / s, 2 / s]);
+      gx.lineWidth = 1.8 / s; extras.forEach(f => gx.strokeRect(f.x - r, f.y - r, 1 + 2 * r, 1 + 2 * r));
+      gx.lineWidth = 2.2 / s; extras.forEach(f => gx.strokeRect(f.x + 0.1, f.y + 0.1, 0.8, 0.8)); gx.setLineDash([]);
+    }
     if (view.oth) { others.forEach(f => box(f, 1, C[colOf(f.a)[0]], 0.04)); othHQ.forEach(h => box(h, 3, C[colOf(h.a)[0]], 0.05)); }
     if (view.sel) { const f = view.sel, r = K.BN_COV; gx.strokeStyle = C['c-pick']; gx.lineWidth = 3.5 / s; gx.strokeRect(f.x - r, f.y - r, 1 + 2 * r, 1 + 2 * r); gx.strokeRect(f.x - 0.25, f.y - 0.25, 1.5, 1.5); }
     if (view.mark) { const p = view.mark; gx.strokeStyle = C['c-pick']; gx.lineWidth = 3.5 / s; gx.beginPath(); gx.arc(p.x + 0.5, p.y + 0.5, 1.6, 0, Math.PI * 2); gx.stroke(); gx.strokeRect(p.x, p.y, 1, 1); }
+    if (view.step) { const p = view.step, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = C['c-t2']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 1.8, 0, Math.PI * 2); gx.stroke(); }
     if (view.cur) { gx.strokeStyle = C['m-edge']; gx.lineWidth = 2 / s; gx.strokeRect(view.cur.x, view.cur.y, 1, 1); }
     // 글자
     gx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -238,6 +255,7 @@
       gx.fillStyle = color; gx.fillText(text, p.x, p.y + 0.5);
     };
     if (view.names && s >= 9) flags.forEach(f => label(f, 1, String(f.no), Math.min(12, Math.max(8, s * 0.55)), C['on-obj']));
+    if (view.names && s >= 9) extras.forEach(f => label(f, 1, String(f.no), Math.min(12, Math.max(8, s * 0.55)), C['c-banner'], C['m-ground']));
     const big = Math.min(15, Math.max(10, s * 0.75));
     label(HQ, 3, '본부', big, C['on-obj']);
     if (view.oth) othHQ.forEach(h => label(h, 3, h.a, big * 0.9, C['on-obj']));
@@ -277,6 +295,8 @@
     const f = flagAt.get(y * G + x), parts = [];
     if (f) parts.push(f.oth ? `${f.a} 깃발${f.note ? ` (${f.note})` : ''}` : `KOR 깃발 ${f.no}번${flagTag(f) ? ` (${flagTag(f)})` : ''}`);
     if (removed.some(r => r.x === x && r.y === y)) parts.push('철거할 깃발 자리');
+    const ex = extras.filter(e => e !== f && Math.abs(e.x - x) <= K.BN_COV && Math.abs(e.y - y) <= K.BN_COV);
+    if (ex.length) parts.push(`여분 깃발 ${ex.map(e => e.no).join('·')}번 영역(점선)`);
     if (x >= HQ.x && x < HQ.x + 3 && y >= HQ.y && y < HQ.y + 3) parts.push('KOR 평원 본부');
     if (PLAN && PLAN.hq1 && x >= PLAN.hq1.x && x < PLAN.hq1.x + 3 && y >= PLAN.hq1.y && y < PLAN.hq1.y + 3) parts.push('옛 본부 자리');
     for (const h of othHQ) if (x >= h.x && x < h.x + 3 && y >= h.y && y < h.y + 3) parts.push(`${h.a} 평원 본부`);
@@ -292,7 +312,7 @@
     const text = parts.join(' · ') || (inFertile(x, y) ? '옥토' : '빈 땅');
     return { text, line: `칸 X:${x} Y:${y} · ${text}`, flag: f };
   }
-  $('bn').addEventListener('click', e => { const b = e.target.closest('button[data-no]'); if (b) pick(flags[+b.dataset.no - 1], true); });
+  $('bn').addEventListener('click', e => { const b = e.target.closest('button[data-no]'); if (b) pick(byNo(+b.dataset.no), true); });
   $('oth').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x, +b.dataset.y); });
   if ($('rm')) $('rm').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x, +b.dataset.y); });
 
@@ -347,6 +367,57 @@
   $('zin').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.35));
   $('zout').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.35));
 
+  // ---------- 작업 순서 (v2): 지금 작업 · 좌표 복사 · 작업완료(다음 좌표 복사) · 완료 취소 ----------
+  function setupSteps(steps) {
+    const OP = { build: '깃발 건설', remove: '깃발 철거', hq: '평원 본부 이전' };
+    const PHASE = { 1: '① 본부 이전 준비 (먼저)', 2: '② 평원 본부 이전', 3: '③ 나머지 깃발 재배치' };
+    const KEY = 'banner-v2-steps';
+    let h = 5381; for (const st of steps) for (const c of `${st.op}${st.x},${st.y};`) h = (h * 33 + c.charCodeAt(0)) | 0;
+    const sig = String(h >>> 0);   // 순서가 바뀌면 진행 기록을 새로
+    let done = 0;
+    try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && v.sig === sig) done = Math.min(steps.length, Math.max(0, v.done | 0)); } catch (_) { /* 저장소 못 씀 */ }
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ sig, done })); } catch (_) { /* 저장소 못 씀 */ } };
+    const where = st => (st.op === 'hq' ? `X:${st.from[0]} Y:${st.from[1]} → X:${st.x} Y:${st.y}` : `X:${st.x} Y:${st.y}`);
+    const msg = t => { $('stepmsg').textContent = t; };
+    const copyXY = (st, pre) => {
+      const text = `X:${st.x} Y:${st.y}`;
+      const fallback = () => { const t = $('copytext'); t.value = text; t.hidden = false; t.select(); msg(`복사가 막혀 있어요. 맨 아래 칸의 ${text}를 직접 복사하세요`); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => msg(`${pre}${text} 복사했습니다`), fallback);
+      else fallback();
+    };
+    let ph = 0;
+    $('stepl').innerHTML = steps.map((st, i) => {
+      const head = st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : '';
+      return `${head}<li value="${i + 1}" data-k="${i}"><button type="button" class="lnk" data-k="${i}">${OP[st.op]} ${where(st)}</button><span class="tagn">깃발 ${st.n} · ${st.r}칸</span></li>`;
+    }).join('');
+    function render() {
+      const st = steps[done];
+      $('stepsum').textContent = `${done}/${steps.length} 완료`;
+      $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
+      $('stepop').textContent = st ? OP[st.op] : '';
+      $('stepxy').textContent = st ? where(st) : '';
+      $('stepwhy').textContent = st ? [st.why, `이 작업 뒤 깃발 ${st.n}개 · 곰덫2에서 가장 가까운 적 도시 자리 ${st.r}칸`].filter(Boolean).join(' · ')
+        : `여분 깃발 ${extras.length}개(점선)는 깃발이 더 늘면 세울 곳이라 순서에 넣지 않았습니다.`;
+      for (const id of ['stepcopy', 'stepdone', 'stepmap']) $(id).disabled = !st;
+      $('stepundo').disabled = !done;
+      document.querySelectorAll('#stepl li[data-k]').forEach(li => { const k = +li.dataset.k; li.classList.toggle('done', k < done); li.classList.toggle('cur', k === done); });
+      const cur = document.querySelector('#stepl li.cur'), box = $('stepl');
+      if (cur) box.scrollTop = Math.max(0, cur.offsetTop - box.clientHeight / 3);
+      view.step = st || null; draw();
+    }
+    $('stepcopy').addEventListener('click', () => { if (steps[done]) copyXY(steps[done], ''); });
+    $('stepdone').addEventListener('click', () => {   // 다음 작업 좌표를 바로 복사 (지도는 움직이지 않음)
+      if (done >= steps.length) return;
+      done++; save(); render();
+      if (steps[done]) copyXY(steps[done], `${done}번 완료 · 다음 작업 좌표 `); else msg('모든 작업을 마쳤습니다');
+    });
+    $('stepundo').addEventListener('click', () => { if (!done) return; done--; save(); render(); msg(`${done + 1}번 작업완료를 취소했습니다`); });
+    $('stepmap').addEventListener('click', () => { const st = steps[done]; if (st) goTo(st.x, st.y); });
+    $('stepl').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { const st = steps[+b.dataset.k]; goTo(st.x, st.y); } });
+    $('stepbox').hidden = false;
+    render();
+  }
+
   // ---------- 복사 ----------
   function copyText() {
     const chg = D.changes || [];
@@ -355,7 +426,8 @@
     if (PLAN) {
       const add = flags.filter(f => !f.fixed && !f.keep);
       L = [`[KOR 깃발 재배치안] 서버 2382 · 곰덫2에서 적 최근접 ${PLAN.r1}칸 → ${PLAN.r}칸`, `평원 본부 이전 ${PLAN.hq1.x},${PLAN.hq1.y} → ${HQ.x},${HQ.y}`,
-        `새로 세울 곳 ${add.length}개:`, ...rows(add, false), `철거할 곳 ${removed.length}개:`, ...rows(removed, false)];
+        `새로 세울 곳 ${add.length}개:`, ...rows(add, false), `철거할 곳 ${removed.length}개:`, ...rows(removed, false),
+        ...(extras.length ? [`여분 깃발 ${extras.length}개(깃발이 더 늘면, ${PLAN.r}칸 → ${PLAN.rx}칸):`, ...rows(extras, false)] : [])];
     } else {
       L = [`[KOR 깃발 좌표] 서버 2382 · ${D.updated} 스크린샷 기준${chg.length ? '(이후 변경 반영)' : ''} · ${flags.length}개`, `평원 본부 ${HQ.x},${HQ.y}`, ...rows(flags, true)];
     }

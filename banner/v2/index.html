@@ -30,16 +30,33 @@
   details.chg { border-left: 3px solid var(--c-pick); border-top: 0; padding: 2px 0 2px 8px; }
   details.chg .check { color: var(--ink); }
   .tagn { font-size: .72rem; color: var(--muted); margin-left: 4px; }
-  :root { --c-fixed: #1d3f73; }   /* 곰덫 주변 고정 깃발 */
+  :root { --c-fixed: #1d3f73; }   /* 고정 깃발(곰덫 주변·본부 위쪽) */
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-fixed: #a9c7f5; } }
   :root[data-theme="dark"] { --c-fixed: #a9c7f5; }
   .legend i.ring { background: transparent; border-radius: 50%; outline: 1.5px dashed var(--c-t2); outline-offset: -1.5px; }
   .legend i.rm { background: transparent; outline: 1.5px dashed var(--m-edge); outline-offset: -3px; opacity: .7; }
   .legend i.old { background: transparent; outline: 1.5px dashed var(--c-hq); outline-offset: -1.5px; }
+  .legend i.ex { background: transparent; outline: 1.5px dashed var(--c-banner); outline-offset: -1.5px; }
+  .legend i.ring2 { background: transparent; border-radius: 50%; outline: 1.5px dotted var(--c-t2); outline-offset: -1.5px; opacity: .6; }
+  /* 작업 순서 */
+  .stepnow { margin: 8px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; background: var(--bg); }
+  .stepph { margin: 0; font-size: .74rem; color: var(--muted); }
+  .stepop { margin: 4px 0 2px; font-size: .95rem; }
+  .stepop b { font-size: 1.2rem; margin-left: 4px; }
+  .stepwhy { margin: 0; font-size: .76rem; color: var(--muted); line-height: 1.5; }
+  .stepbtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .stepbtns .btn:disabled { opacity: .45; cursor: default; }
+  .stepmsg { margin: 6px 0 0; font-size: .78rem; color: var(--ok); min-height: 1.2em; }
+  ol.stepl { position: relative; max-height: 300px; overflow: auto; margin: 8px 0 0; padding-left: 2.8em; font-size: .8rem; line-height: 1.6; }
+  ol.stepl li.grp { list-style: none; margin: 6px 0 2px -2.8em; font-weight: 600; }
+  ol.stepl li.done .lnk { color: var(--muted); text-decoration: line-through; }
+  ol.stepl li.cur { background: color-mix(in srgb, var(--c-pick) 28%, transparent); border-radius: 3px; }
+  ol.stepl .lnk { font: inherit; background: none; border: 0; padding: 0 2px; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  @media (max-width: 900px) { #stepbox { order: 1; } }
 </style>
 </head>
 <body>
-<!-- /banner/v2/ — KOR 깃발 재배치안. 곰덫 주변 깃발은 고정하고 나머지를 옮겨 곰덫2 중심으로 적이 도시를 옮겨 올 수 있는 가장 가까운 자리를 최대한 멀게(banner/v2/data.json, screenshot/banner_v2/optimize.py). 지형은 mapdata.js. -->
+<!-- /banner/v2/ — KOR 깃발 재배치안. 곰덫 주변·본부 위쪽(거점 연결) 깃발은 고정하고 나머지를 옮겨 곰덫2 중심으로 적이 도시를 옮겨 올 수 있는 가장 가까운 자리를 최대한 멀게(banner/v2/data.json, screenshot/banner_v2/optimize4.py·write_v2.py). 지형은 mapdata.js. -->
 <div class="page">
   <header class="top">
     <div>
@@ -54,7 +71,23 @@
 
   <div class="grid" id="main" hidden>
     <aside class="panel">
-      <p class="lead">곰덫 주변 깃발은 그대로 두고 나머지 깃발을 옮겨, 곰덫2에서 적이 도시를 옮겨 올 수 있는 가장 가까운 자리를 최대한 멀게 한 안입니다. 빨간 점선 원 안에는 적이 도시를 놓을 수 있는 2×2 빈자리가 없습니다. 지금 배치는 <a href="/banner/v1/">/banner/v1/</a>.</p>
+      <p class="lead">곰덫 주변 깃발과 본부 위쪽(거점과 이어진) 깃발은 그대로 두고 나머지 깃발을 옮겨, 곰덫2에서 적이 도시를 옮겨 올 수 있는 가장 가까운 자리를 최대한 멀게 한 안입니다. 빨간 점선 원 안에는 적이 도시를 놓을 수 있는 2×2 빈자리가 없습니다. 지금 배치는 <a href="/banner/v1/">/banner/v1/</a>.</p>
+      <details open id="stepbox" hidden>
+        <summary>작업 순서 <span class="sumx" id="stepsum"></span></summary>
+        <div class="stepnow">
+          <p class="stepph" id="stepph"></p>
+          <p class="stepop"><span id="stepop"></span><b class="mono" id="stepxy"></b></p>
+          <p class="stepwhy" id="stepwhy"></p>
+          <div class="stepbtns">
+            <button class="btn copy" id="stepcopy" type="button">좌표 복사</button>
+            <button class="btn" id="stepdone" type="button">작업완료 · 다음 좌표 복사</button>
+            <button class="btn" id="stepundo" type="button">완료 취소 (이전으로)</button>
+            <button class="btn" id="stepmap" type="button">지도에서 보기</button>
+          </div>
+          <p class="stepmsg" id="stepmsg" role="status"></p>
+        </div>
+        <ol class="stepl" id="stepl"></ol>
+      </details>
       <details open>
         <summary>재배치 기준과 결과</summary>
         <ul class="check" id="check"></ul>
@@ -96,10 +129,13 @@
       <details class="legend" id="legend" open>
         <summary>범례</summary>
         <div class="keys">
+          <span><i style="background:transparent;border-radius:50%;outline:3px solid var(--c-t2);outline-offset:-3px"></i>작업 순서의 지금 작업 자리</span>
           <span><i class="ring"></i>곰덫2 중심 안전 반경 (원 안에 적 도시 자리 없음)</span>
+          <span><i class="ring2"></i>여분 깃발까지 세웠을 때 안전 반경</span>
           <span><i style="background:transparent;outline:2px solid var(--c-t2);outline-offset:-2px"></i>방향별 가장 가까운 적 도시 자리 (2×2)</span>
           <span><i style="background:var(--c-banner)"></i>KOR 깃발 (새로·그대로)</span>
-          <span><i style="background:var(--c-fixed)"></i>곰덫 주변 고정 깃발</span>
+          <span><i style="background:var(--c-fixed)"></i>고정 깃발 (곰덫 주변·본부 위쪽 거점 연결)</span>
+          <span><i class="ex"></i>여분 깃발과 영역 (점선 · 깃발이 더 늘면 세울 곳)</span>
           <span><i class="rm"></i>철거할 깃발 자리 (지금 배치)</span>
           <span><i class="old"></i>옛 본부 자리 X:523 Y:759</span>
           <span><i class="kor"></i>KOR 영토 (본부 15×15 + 깃발마다 7×7)</span>
