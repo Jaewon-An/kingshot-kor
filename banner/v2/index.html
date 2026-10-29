@@ -11,7 +11,6 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/v2/guide.css">
 <style>
-  .lead { margin: 0; font-size: .84rem; color: var(--muted); line-height: 1.55; }
   ol.bn { columns: 2; }
   ol.bn li { break-inside: avoid; }
   ol.bn li.on .lnk { background: color-mix(in srgb, var(--c-pick) 30%, transparent); }
@@ -43,16 +42,42 @@
   .stepph { margin: 0; font-size: .74rem; color: var(--muted); }
   .stepop { margin: 4px 0 2px; font-size: .95rem; }
   .stepop b { font-size: 1.2rem; margin-left: 4px; }
-  .stepwhy { margin: 0; font-size: .76rem; color: var(--muted); line-height: 1.5; }
-  .stepbtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .stepbtns .btn:disabled { opacity: .45; cursor: default; }
+  .stepbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .stepbtns .btn:disabled, .stepbar .btn:disabled { opacity: .45; cursor: default; }
+  .btn.strong { border-color: var(--accent); color: var(--accent); }
+  #stepdone small { display: block; font-size: .72rem; font-weight: 500; opacity: .85; }
+  #stepbox { border-top: 0; padding-top: 0; }
+  details.stepall { border-top: 0; padding-top: 4px; }
+  details.stepall > summary { font-size: .8rem; }
+  .stepbar { display: none; }
   .stepmsg { margin: 6px 0 0; font-size: .78rem; color: var(--ok); min-height: 1.2em; }
   ol.stepl { position: relative; max-height: 300px; overflow: auto; margin: 8px 0 0; padding-left: 2.8em; font-size: .8rem; line-height: 1.6; }
   ol.stepl li.grp { list-style: none; margin: 6px 0 2px -2.8em; font-weight: 600; }
   ol.stepl li.done .lnk { color: var(--muted); text-decoration: line-through; }
   ol.stepl li.cur { background: color-mix(in srgb, var(--c-pick) 28%, transparent); border-radius: 3px; }
   ol.stepl .lnk { font: inherit; background: none; border: 0; padding: 0 2px; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-  @media (max-width: 900px) { #stepbox { order: 1; } }
+  @media (max-width: 900px) {   /* 휴대폰 (갤럭시 S24+ 384×832 기준) */
+    #stepbox { order: 1; }
+    .stepnow { padding: 10px; }
+    .stepop { font-size: .9rem; }
+    .stepop b { display: block; margin: 2px 0 0; font-size: 1.5rem; letter-spacing: .02em; }
+    .stepbtns { gap: 8px; }
+    .stepbtns .btn { min-height: 50px; font-size: .95rem; padding: 6px 8px; }
+    .stepbtns #stepundo, .stepbtns #stepmap { min-height: 42px; font-size: .85rem; }
+    ol.stepl { max-height: 45vh; max-height: 45svh; font-size: .88rem; line-height: 1.9; }
+    .mapbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .mapbar::-webkit-scrollbar { display: none; }
+    .mapbar .btn { flex: 0 0 auto; min-height: 36px; padding: 6px 10px; font-size: .8rem; }
+    /* 작업 카드가 화면 밖이면 아래 고정 바 */
+    body.stepoff .stepbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; gap: 8px; align-items: center;
+      padding: 8px max(12px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+      background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -2px 10px var(--shadow); }
+    body.stepoff .page { padding-bottom: 96px; }
+    .stepbar .sbt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+    .stepbar .sbn { font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stepbar .sbxy { font-size: 1.05rem; font-weight: 600; white-space: nowrap; }
+    .stepbar .btn { flex: 0 0 auto; min-height: 46px; padding: 6px 12px; font-size: .9rem; }
+  }
 </style>
 </head>
 <body>
@@ -71,28 +96,29 @@
 
   <div class="grid" id="main" hidden>
     <aside class="panel">
-      <p class="lead">곰덫 주변 깃발과 본부 위쪽(거점과 이어진) 깃발은 그대로 두고 나머지 깃발을 옮겨, 곰덫2에서 적이 도시를 옮겨 올 수 있는 가장 가까운 자리를 최대한 멀게 한 안입니다. 빨간 점선 원 안에는 적이 도시를 놓을 수 있는 2×2 빈자리가 없습니다. 지금 배치는 <a href="/banner/v1/">/banner/v1/</a>.</p>
       <details open id="stepbox" hidden>
         <summary>작업 순서 <span class="sumx" id="stepsum"></span></summary>
         <div class="stepnow">
           <p class="stepph" id="stepph"></p>
           <p class="stepop"><span id="stepop"></span><b class="mono" id="stepxy"></b></p>
-          <p class="stepwhy" id="stepwhy"></p>
           <div class="stepbtns">
-            <button class="btn copy" id="stepcopy" type="button">좌표 복사</button>
-            <button class="btn" id="stepdone" type="button">작업완료 · 다음 좌표 복사</button>
+            <button class="btn strong" id="stepcopy" type="button">좌표 복사</button>
+            <button class="btn copy" id="stepdone" type="button">작업완료<small>다음 좌표 복사</small></button>
             <button class="btn" id="stepundo" type="button">완료 취소 (이전으로)</button>
             <button class="btn" id="stepmap" type="button">지도에서 보기</button>
           </div>
           <p class="stepmsg" id="stepmsg" role="status"></p>
         </div>
-        <ol class="stepl" id="stepl"></ol>
+        <details class="stepall" id="steplbox" open>
+          <summary>전체 순서</summary>
+          <ol class="stepl" id="stepl"></ol>
+        </details>
       </details>
-      <details open>
+      <details id="chkbox">
         <summary>재배치 기준과 결과</summary>
         <ul class="check" id="check"></ul>
       </details>
-      <details open>
+      <details open id="bnbox">
         <summary>KOR 깃발 (재배치 후) <span class="sumx" id="bnsum"></span></summary>
         <ol class="bn" id="bn"></ol>
       </details>
@@ -157,7 +183,13 @@
     </section>
   </div>
 
-  <footer>
+  <div class="stepbar" id="stepbar">
+    <div class="sbt"><span class="sbn" id="sbn"></span><span class="sbxy mono" id="sbxy"></span></div>
+    <button class="btn strong" id="sbcopy" type="button">복사</button>
+    <button class="btn copy" id="sbdone" type="button">완료 · 다음</button>
+  </div>
+
+  <footer hidden>
     <span class="hint" id="src"></span>
     <span class="hint">지형: mapdata.js. 다른 연맹 깃발·본부와 어둡게 덮인 곳(스크린샷 밖)은 /banner/v1/과 같습니다. 연맹원 도시는 v2 배치도 위치로 계산했습니다.</span>
   </footer>

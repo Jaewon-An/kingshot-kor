@@ -14,7 +14,7 @@
   const cv = $('cv'), gx = cv.getContext('2d'), tip = $('tip');
   const xy = o => `X:${o.x} Y:${o.y}`;
   const PHONE = matchMedia('(max-width: 900px)');
-  if (PHONE.matches) for (const id of ['legend', 'othbox']) if ($(id)) $(id).open = false;
+  if (PHONE.matches) for (const id of ['legend', 'othbox', 'chkbox', 'bnbox', 'steplbox']) if ($(id)) $(id).open = false;   // 휴대폰: 긴 목록은 접어 둠
   const factsHome = $('facts').parentNode;
   const placeFacts = () => (PHONE.matches ? $('legend').before($('facts')) : factsHome.append($('facts')));
   PHONE.addEventListener('change', placeFacts); placeFacts();
@@ -378,41 +378,51 @@
     try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && v.sig === sig) done = Math.min(steps.length, Math.max(0, v.done | 0)); } catch (_) { /* 저장소 못 씀 */ }
     const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ sig, done })); } catch (_) { /* 저장소 못 씀 */ } };
     const where = st => (st.op === 'hq' ? `X:${st.from[0]} Y:${st.from[1]} → X:${st.x} Y:${st.y}` : `X:${st.x} Y:${st.y}`);
-    const msg = t => { $('stepmsg').textContent = t; };
+    let msgT = 0;
+    const msg = t => { $('stepmsg').textContent = t; if ($('sbn')) { $('sbn').textContent = t; clearTimeout(msgT); msgT = setTimeout(render, 2500); } };
     const copyXY = (st, pre) => {
       const text = `X:${st.x} Y:${st.y}`;
-      const fallback = () => { const t = $('copytext'); t.value = text; t.hidden = false; t.select(); msg(`복사가 막혀 있어요. 맨 아래 칸의 ${text}를 직접 복사하세요`); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => msg(`${pre}${text} 복사했습니다`), fallback);
+      const fallback = () => { const t = $('copytext'); t.value = text; t.hidden = false; t.select(); msg(`복사 안 됨 · 맨 아래 칸에서 ${text} 복사`); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => msg(`${pre}${text} 복사됨`), fallback);
       else fallback();
     };
     let ph = 0;
     $('stepl').innerHTML = steps.map((st, i) => {
       const head = st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : '';
-      return `${head}<li value="${i + 1}" data-k="${i}"><button type="button" class="lnk" data-k="${i}">${OP[st.op]} ${where(st)}</button><span class="tagn">깃발 ${st.n} · ${st.r}칸</span></li>`;
+      return `${head}<li value="${i + 1}" data-k="${i}"><button type="button" class="lnk" data-k="${i}">${OP[st.op]} ${where(st)}</button></li>`;
     }).join('');
+    let shown = null;   // '지도에서 보기'로 찍은 자리: 다른 작업으로 넘어가면 지움
     function render() {
       const st = steps[done];
+      if (shown && shown !== st && view.mark && view.mark.x === shown.x && view.mark.y === shown.y) { view.mark = null; $('readout').textContent = ''; shown = null; }
       $('stepsum').textContent = `${done}/${steps.length} 완료`;
       $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
       $('stepop').textContent = st ? OP[st.op] : '';
       $('stepxy').textContent = st ? where(st) : '';
-      $('stepwhy').textContent = st ? [st.why, `이 작업 뒤 깃발 ${st.n}개 · 곰덫2에서 가장 가까운 적 도시 자리 ${st.r}칸`].filter(Boolean).join(' · ')
-        : `여분 깃발 ${extras.length}개(점선)는 깃발이 더 늘면 세울 곳이라 순서에 넣지 않았습니다.`;
-      for (const id of ['stepcopy', 'stepdone', 'stepmap']) $(id).disabled = !st;
+      for (const id of ['stepcopy', 'stepdone', 'stepmap', 'sbcopy', 'sbdone']) if ($(id)) $(id).disabled = !st;
+      if ($('sbn')) { $('sbn').textContent = st ? `${done + 1}/${steps.length} · ${OP[st.op]}` : '모든 작업을 마쳤습니다'; $('sbxy').textContent = st ? `X:${st.x} Y:${st.y}` : ''; }
       $('stepundo').disabled = !done;
       document.querySelectorAll('#stepl li[data-k]').forEach(li => { const k = +li.dataset.k; li.classList.toggle('done', k < done); li.classList.toggle('cur', k === done); });
       const cur = document.querySelector('#stepl li.cur'), box = $('stepl');
       if (cur) box.scrollTop = Math.max(0, cur.offsetTop - box.clientHeight / 3);
       view.step = st || null; draw();
     }
-    $('stepcopy').addEventListener('click', () => { if (steps[done]) copyXY(steps[done], ''); });
-    $('stepdone').addEventListener('click', () => {   // 다음 작업 좌표를 바로 복사 (지도는 움직이지 않음)
-      if (done >= steps.length) return;
-      done++; save(); render();
-      if (steps[done]) copyXY(steps[done], `${done}번 완료 · 다음 작업 좌표 `); else msg('모든 작업을 마쳤습니다');
-    });
-    $('stepundo').addEventListener('click', () => { if (!done) return; done--; save(); render(); msg(`${done + 1}번 작업완료를 취소했습니다`); });
-    $('stepmap').addEventListener('click', () => { const st = steps[done]; if (st) goTo(st.x, st.y); });
+    const doCopy = () => { if (steps[done]) copyXY(steps[done], ''); };
+    let lastDone = 0;
+    const doDone = () => {   // 다음 작업 좌표를 바로 복사 (지도는 움직이지 않음). 두 번 눌림 방지 0.6초
+      if (done >= steps.length || Date.now() - lastDone < 600) return;
+      lastDone = Date.now(); done++; save(); render();
+      if (steps[done]) copyXY(steps[done], `${done}번 완료 · `); else msg('모든 작업을 마쳤습니다');
+    };
+    $('stepcopy').addEventListener('click', doCopy); $('stepdone').addEventListener('click', doDone);
+    if ($('stepbar')) {   // 휴대폰: 작업 카드가 화면 밖이면 아래 고정 바
+      $('sbcopy').addEventListener('click', doCopy); $('sbdone').addEventListener('click', doDone);
+      // 작업완료 버튼이 다 보이지 않으면(아래 바 자리 80px는 가린 것으로 침) 바를 띄움
+      if ('IntersectionObserver' in window) new IntersectionObserver(es => { const e = es[es.length - 1]; document.body.classList.toggle('stepoff', !(e.isIntersecting && e.intersectionRatio > 0.99)); },
+        { threshold: [0, 1], rootMargin: '0px 0px -80px 0px' }).observe($('stepdone'));
+    }
+    $('stepundo').addEventListener('click', () => { if (!done) return; done--; save(); render(); msg(`${done + 1}번 완료 취소`); });
+    $('stepmap').addEventListener('click', () => { const st = steps[done]; if (st) { goTo(st.x, st.y); shown = st; } });
     $('stepl').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { const st = steps[+b.dataset.k]; goTo(st.x, st.y); } });
     $('stepbox').hidden = false;
     render();
