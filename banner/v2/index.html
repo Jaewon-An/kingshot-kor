@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
+<title>KOR 깃발 재배치안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/v2/guide.css">
+<style>
+  .lead { margin: 0; font-size: .84rem; color: var(--muted); line-height: 1.55; }
+  ol.bn { columns: 2; }
+  ol.bn li { break-inside: avoid; }
+  ol.bn li.on .lnk { background: color-mix(in srgb, var(--c-pick) 30%, transparent); }
+  ol.bn .lnk, ul.real .lnk { font: inherit; background: none; border: 0; padding: 0 2px; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; border-radius: 3px; }
+  ul.real.oth .lnk { color: var(--c-fflag); }
+  .legend i.kor { background: color-mix(in srgb, var(--c-terr) 25%, transparent); outline: 1.5px solid var(--c-terr); outline-offset: -1.5px; }
+  .legend i.each { background: transparent; outline: 1px solid color-mix(in srgb, var(--c-terr) 60%, transparent); outline-offset: -1px; }
+  :root { --c-eflag: #a5521b; --c-eterr: #c0662a; --c-tflag: #b8327c; --c-tterr: #c9448e; }   /* EoB 주황·TWN 분홍 (SGD는 guide.css의 --c-fflag/--c-fterr) */
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-eflag: #e8955a; --c-eterr: #d9823f; --c-tflag: #f07cbc; --c-tterr: #e066a8; } }
+  :root[data-theme="dark"] { --c-eflag: #e8955a; --c-eterr: #d9823f; --c-tflag: #f07cbc; --c-tterr: #e066a8; }
+  .legend i.oth { background: color-mix(in srgb, var(--c-fterr) 25%, transparent); outline: 1.5px dashed var(--c-fterr); outline-offset: -1.5px; }
+  .legend i.oth2 { background: color-mix(in srgb, var(--c-eterr) 25%, transparent); outline: 1.5px dashed var(--c-eterr); outline-offset: -1.5px; }
+  .legend i.oth3 { background: color-mix(in srgb, var(--c-tterr) 25%, transparent); outline: 1.5px dashed var(--c-tterr); outline-offset: -1.5px; }
+  .legend i.unk { background: color-mix(in srgb, var(--m-void) 70%, var(--m-ground)); outline: 1px solid var(--line); outline-offset: -1px; }
+  .check { margin: 6px 0 0; padding-left: 1.2em; font-size: .8rem; color: var(--muted); line-height: 1.55; }
+  details.chg { border-left: 3px solid var(--c-pick); border-top: 0; padding: 2px 0 2px 8px; }
+  details.chg .check { color: var(--ink); }
+  .tagn { font-size: .72rem; color: var(--muted); margin-left: 4px; }
+  :root { --c-fixed: #1d3f73; }   /* 곰덫 주변 고정 깃발 */
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-fixed: #a9c7f5; } }
+  :root[data-theme="dark"] { --c-fixed: #a9c7f5; }
+  .legend i.ring { background: transparent; border-radius: 50%; outline: 1.5px dashed var(--c-t2); outline-offset: -1.5px; }
+  .legend i.rm { background: transparent; outline: 1.5px dashed var(--m-edge); outline-offset: -3px; opacity: .7; }
+  .legend i.old { background: transparent; outline: 1.5px dashed var(--c-hq); outline-offset: -1.5px; }
+</style>
+</head>
+<body>
+<!-- /banner/v2/ — KOR 깃발 재배치안. 곰덫 주변 깃발은 고정하고 나머지를 옮겨 곰덫2 중심으로 적이 도시를 옮겨 올 수 있는 가장 가까운 자리를 최대한 멀게(banner/v2/data.json, screenshot/banner_v2/optimize.py). 지형은 mapdata.js. -->
+<div class="page">
+  <header class="top">
+    <div>
+      <p class="eyebrow">KINGSHOT · 2382 KOR</p>
+      <h1>KOR 깃발 재배치안</h1>
+      <p class="stamp" id="stamp"></p>
+    </div>
+    <dl class="facts" id="facts"></dl>
+  </header>
+
+  <p class="notice" id="notice" role="status">불러오는 중…</p>
+
+  <div class="grid" id="main" hidden>
+    <aside class="panel">
+      <p class="lead">곰덫 주변 깃발은 그대로 두고 나머지 깃발을 옮겨, 곰덫2에서 적이 도시를 옮겨 올 수 있는 가장 가까운 자리를 최대한 멀게 한 안입니다. 빨간 점선 원 안에는 적이 도시를 놓을 수 있는 2×2 빈자리가 없습니다. 지금 배치는 <a href="/banner/v1/">/banner/v1/</a>.</p>
+      <details open>
+        <summary>재배치 기준과 결과</summary>
+        <ul class="check" id="check"></ul>
+      </details>
+      <details open>
+        <summary>KOR 깃발 (재배치 후) <span class="sumx" id="bnsum"></span></summary>
+        <ol class="bn" id="bn"></ol>
+      </details>
+      <details id="rmbox">
+        <summary>철거할 깃발 (지금 자리) <span class="sumx" id="rmsum"></span></summary>
+        <ul class="real" id="rm"></ul>
+      </details>
+      <details id="othbox">
+        <summary>다른 연맹 <span class="sumx" id="othsum"></span></summary>
+        <ul class="real oth" id="oth"></ul>
+      </details>
+      <button class="btn copy" id="copy" type="button">재배치안 복사 (새로 세울 곳·철거할 곳)</button>
+      <textarea id="copytext" readonly hidden aria-label="복사용 텍스트"></textarea>
+    </aside>
+
+    <section class="mapcol">
+      <div class="mapbar">
+        <button class="btn" id="rot" type="button" aria-pressed="true">게임 시점</button>
+        <button class="btn" id="lbl" type="button" aria-pressed="true">번호</button>
+        <button class="btn" id="each" type="button" aria-pressed="true">깃발별 영역</button>
+        <button class="btn" id="othb" type="button" aria-pressed="true">다른 연맹</button>
+        <button class="btn" id="rmb" type="button" aria-pressed="true">철거 위치</button>
+      </div>
+      <div class="mapwrap">
+        <canvas id="cv"></canvas>
+        <div class="tip" id="tip" hidden></div>
+        <div class="zoom">
+          <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
+          <button class="btn" id="zout" type="button" aria-label="축소">－</button>
+          <button class="btn" id="fit" type="button" aria-label="전체 보기">전체</button>
+        </div>
+        <div class="readout" id="readout" role="status"></div>
+      </div>
+      <details class="legend" id="legend" open>
+        <summary>범례</summary>
+        <div class="keys">
+          <span><i class="ring"></i>곰덫2 중심 안전 반경 (원 안에 적 도시 자리 없음)</span>
+          <span><i style="background:transparent;outline:2px solid var(--c-t2);outline-offset:-2px"></i>방향별 가장 가까운 적 도시 자리 (2×2)</span>
+          <span><i style="background:var(--c-banner)"></i>KOR 깃발 (새로·그대로)</span>
+          <span><i style="background:var(--c-fixed)"></i>곰덫 주변 고정 깃발</span>
+          <span><i class="rm"></i>철거할 깃발 자리 (지금 배치)</span>
+          <span><i class="old"></i>옛 본부 자리 X:523 Y:759</span>
+          <span><i class="kor"></i>KOR 영토 (본부 15×15 + 깃발마다 7×7)</span>
+          <span><i class="each"></i>깃발 하나의 영역 (7×7)</span>
+          <span><i style="background:var(--c-hq)"></i>평원 본부 X:521 Y:753 (이전)</span>
+          <span><i style="background:var(--c-fflag)"></i>SGD 깃발·본부 X:550 Y:753</span>
+          <span><i class="oth"></i>SGD 영토</span>
+          <span><i style="background:var(--c-eflag)"></i>EoB 깃발·본부 X:459 Y:751</span>
+          <span><i class="oth2"></i>EoB 영토</span>
+          <span><i style="background:var(--c-tflag)"></i>TWN 깃발·본부 X:608 Y:753</span>
+          <span><i class="oth3"></i>TWN 영토 (다른 연맹: 본부 15×15 + 깃발마다 7×7, KOR 땅 제외)</span>
+          <span><i style="background:transparent;outline:1.5px solid var(--c-t2);outline-offset:-1.5px"></i>곰덫 (참고)</span>
+          <span><i class="unk"></i>스크린샷 밖 (확인 안 된 곳)</span>
+          <span><i style="background:var(--m-node)"></i>자원지</span>
+          <span><i style="background:var(--m-mount)"></i>산</span>
+          <span><i style="background:var(--m-lake)"></i>호수</span>
+        </div>
+      </details>
+    </section>
+  </div>
+
+  <footer>
+    <span class="hint" id="src"></span>
+    <span class="hint">지형: mapdata.js. 다른 연맹 깃발·본부와 어둡게 덮인 곳(스크린샷 밖)은 /banner/v1/과 같습니다. 연맹원 도시는 v2 배치도 위치로 계산했습니다.</span>
+  </footer>
+</div>
+<script src="/mapdata.js"></script>
+<script src="/v2/core.js"></script>
+<script src="/v2/plan.js"></script>
+<script src="/banner/banner.js" data-src="/banner/v2/data.json"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
+<title>KOR 깃발 영토 지도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/v2/guide.css">
+<style>
+  .lead { margin: 0; font-size: .84rem; color: var(--muted); line-height: 1.55; }
+  ol.bn { columns: 2; }
+  ol.bn li { break-inside: avoid; }
+  ol.bn li.on .lnk { background: color-mix(in srgb, var(--c-pick) 30%, transparent); }
+  ol.bn .lnk, ul.real .lnk { font: inherit; background: none; border: 0; padding: 0 2px; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; border-radius: 3px; }
+  ul.real.oth .lnk { color: var(--c-fflag); }
+  .legend i.kor { background: color-mix(in srgb, var(--c-terr) 25%, transparent); outline: 1.5px solid var(--c-terr); outline-offset: -1.5px; }
+  .legend i.each { background: transparent; outline: 1px solid color-mix(in srgb, var(--c-terr) 60%, transparent); outline-offset: -1px; }
+  :root { --c-eflag: #a5521b; --c-eterr: #c0662a; --c-tflag: #b8327c; --c-tterr: #c9448e; }   /* EoB 주황·TWN 분홍 (SGD는 guide.css의 --c-fflag/--c-fterr) */
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-eflag: #e8955a; --c-eterr: #d9823f; --c-tflag: #f07cbc; --c-tterr: #e066a8; } }
+  :root[data-theme="dark"] { --c-eflag: #e8955a; --c-eterr: #d9823f; --c-tflag: #f07cbc; --c-tterr: #e066a8; }
+  .legend i.oth { background: color-mix(in srgb, var(--c-fterr) 25%, transparent); outline: 1.5px dashed var(--c-fterr); outline-offset: -1.5px; }
+  .legend i.oth2 { background: color-mix(in srgb, var(--c-eterr) 25%, transparent); outline: 1.5px dashed var(--c-eterr); outline-offset: -1.5px; }
+  .legend i.oth3 { background: color-mix(in srgb, var(--c-tterr) 25%, transparent); outline: 1.5px dashed var(--c-tterr); outline-offset: -1.5px; }
+  .legend i.unk { background: color-mix(in srgb, var(--m-void) 70%, var(--m-ground)); outline: 1px solid var(--line); outline-offset: -1px; }
+  .check { margin: 6px 0 0; padding-left: 1.2em; font-size: .8rem; color: var(--muted); line-height: 1.55; }
+  details.chg { border-left: 3px solid var(--c-pick); border-top: 0; padding: 2px 0 2px 8px; }
+  details.chg .check { color: var(--ink); }
+  .tagn { font-size: .72rem; color: var(--muted); margin-left: 4px; }
+</style>
+</head>
+<body>
+<!-- /banner/v1/ — KOR 깃발·영토 지도. 2026-10-29 스크린샷을 다시 이어 붙여 읽은 깃발 좌표(banner/v1/data.json)로 그림. 지형은 mapdata.js. -->
+<div class="page">
+  <header class="top">
+    <div>
+      <p class="eyebrow">KINGSHOT · 2382 KOR</p>
+      <h1>KOR 깃발 · 영토 지도</h1>
+      <p class="stamp" id="stamp"></p>
+    </div>
+    <dl class="facts" id="facts"></dl>
+  </header>
+
+  <p class="notice" id="notice" role="status">불러오는 중…</p>
+
+  <div class="grid" id="main" hidden>
+    <aside class="panel">
+      <p class="lead">스크린샷을 이어 붙여 깃발마다 칸 좌표를 읽었습니다. 좌표를 누르면 지도에서 그 깃발과 영역(7×7)을 보여 줍니다. 번호는 지도 위쪽부터 매긴 순서입니다.</p>
+      <details class="chg" id="chgbox" hidden>
+        <summary>스크린샷 이후 변경 <span class="sumx" id="chgsum"></span></summary>
+        <ul class="check" id="chg"></ul>
+      </details>
+      <details open>
+        <summary>KOR 깃발 <span class="sumx" id="bnsum"></span></summary>
+        <ol class="bn" id="bn"></ol>
+      </details>
+      <details id="othbox">
+        <summary>다른 연맹 <span class="sumx" id="othsum"></span></summary>
+        <ul class="real oth" id="oth"></ul>
+      </details>
+      <button class="btn copy" id="copy" type="button">깃발 좌표 복사</button>
+      <textarea id="copytext" readonly hidden aria-label="복사용 텍스트"></textarea>
+      <details>
+        <summary>좌표를 어떻게 확인했나</summary>
+        <ul class="check" id="check"></ul>
+      </details>
+    </aside>
+
+    <section class="mapcol">
+      <div class="mapbar">
+        <button class="btn" id="rot" type="button" aria-pressed="true">게임 시점</button>
+        <button class="btn" id="lbl" type="button" aria-pressed="true">번호</button>
+        <button class="btn" id="each" type="button" aria-pressed="true">깃발별 영역</button>
+        <button class="btn" id="othb" type="button" aria-pressed="true">다른 연맹</button>
+      </div>
+      <div class="mapwrap">
+        <canvas id="cv"></canvas>
+        <div class="tip" id="tip" hidden></div>
+        <div class="zoom">
+          <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
+          <button class="btn" id="zout" type="button" aria-label="축소">－</button>
+          <button class="btn" id="fit" type="button" aria-label="전체 보기">전체</button>
+        </div>
+        <div class="readout" id="readout" role="status"></div>
+      </div>
+      <details class="legend" id="legend" open>
+        <summary>범례</summary>
+        <div class="keys">
+          <span><i style="background:var(--c-banner)"></i>KOR 깃발 (번호)</span>
+          <span><i class="kor"></i>KOR 영토 (본부 15×15 + 깃발마다 7×7)</span>
+          <span><i class="each"></i>깃발 하나의 영역 (7×7)</span>
+          <span><i style="background:var(--c-hq)"></i>평원 본부 X:523 Y:759</span>
+          <span><i style="background:var(--c-fflag)"></i>SGD 깃발·본부 X:550 Y:753</span>
+          <span><i class="oth"></i>SGD 영토</span>
+          <span><i style="background:var(--c-eflag)"></i>EoB 깃발·본부 X:459 Y:751</span>
+          <span><i class="oth2"></i>EoB 영토</span>
+          <span><i style="background:var(--c-tflag)"></i>TWN 깃발·본부 X:608 Y:753</span>
+          <span><i class="oth3"></i>TWN 영토 (다른 연맹: 본부 15×15 + 깃발마다 7×7, KOR 땅 제외)</span>
+          <span><i style="background:transparent;outline:1.5px solid var(--c-t2);outline-offset:-1.5px"></i>곰덫 (참고)</span>
+          <span><i class="unk"></i>스크린샷 밖 (확인 안 된 곳)</span>
+          <span><i style="background:var(--m-node)"></i>자원지</span>
+          <span><i style="background:var(--m-mount)"></i>산</span>
+          <span><i style="background:var(--m-lake)"></i>호수</span>
+        </div>
+      </details>
+    </section>
+  </div>
+
+  <footer>
+    <span class="hint" id="src"></span>
+    <span class="hint">지형: mapdata.js. 스크린샷 밖(어둡게 덮인 곳)에 있는 깃발은 이 지도에 없습니다.</span>
+  </footer>
+</div>
+<script src="/mapdata.js"></script>
+<script src="/v2/core.js"></script>
+<script src="/v2/plan.js"></script>
+<script src="/banner/banner.js" data-src="/banner/v1/data.json"></script>
+</body>
+</html>

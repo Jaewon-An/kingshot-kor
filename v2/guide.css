@@ -6,6 +6,7 @@
   --m-foreign: #cbbcdc; --m-grid: rgba(27,35,30,.10); --m-edge: #1b231e;
   --c-hq: #b07d1a; --c-t2: #b4322b; --c-t1: #c96f1c; --c-banner: #2f5fa8; --c-city2: #2f8277; --c-city1: #8a6d2f;
   --c-res: #2d5a36; --c-spare: #7d8a80; --c-terr: #3d7fd1; --c-real: #0e8f80; --c-pick: #e0a400; --on-obj: #ffffff; --shadow: rgba(27,35,30,.18);
+  --c-fflag: #8a3f9e; --c-fterr: #9b4fb0;
   --f-display: "Gowun Batang", "Nanum Myeongjo", "Batang", serif;
   --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -19,6 +20,7 @@
     --m-foreign: #352b45; --m-grid: rgba(226,231,223,.08); --m-edge: #e2e7df;
     --c-hq: #e0b04a; --c-t2: #e5574e; --c-t1: #e8913e; --c-banner: #5f95e6; --c-city2: #3aa594; --c-city1: #b8954a;
     --c-res: #4f8a5a; --c-spare: #6c776f; --c-terr: #4f8fe6; --c-real: #3fd9c4; --c-pick: #ffd24a; --on-obj: #ffffff; --shadow: rgba(0,0,0,.5);
+    --c-fflag: #d08fe0; --c-fterr: #c276d4;
     color-scheme: dark;
   }
 }
@@ -29,6 +31,7 @@
   --m-foreign: #352b45; --m-grid: rgba(226,231,223,.08); --m-edge: #e2e7df;
   --c-hq: #e0b04a; --c-t2: #e5574e; --c-t1: #e8913e; --c-banner: #5f95e6; --c-city2: #3aa594; --c-city1: #b8954a;
   --c-res: #4f8a5a; --c-spare: #6c776f; --c-terr: #4f8fe6; --c-real: #3fd9c4; --c-pick: #ffd24a; --on-obj: #ffffff; --shadow: rgba(0,0,0,.5);
+  --c-fflag: #d08fe0; --c-fterr: #c276d4;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
