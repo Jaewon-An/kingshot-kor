@@ -97,7 +97,7 @@
   "color": "#EFFFF3",
   "tx": 479,
   "ty": 684,
-  "nickname": "빈자리 8"
+  "nickname": "빈자리 7"
  },
  {
   "name": "Player",
@@ -117,7 +117,7 @@
   "color": "#EFFFF3",
   "tx": 475,
   "ty": 690,
-  "nickname": "빈자리 9"
+  "nickname": "시아엄마"
  },
  {
   "name": "Player",
@@ -397,7 +397,7 @@
   "color": "#EFFFF3",
   "tx": 475,
   "ty": 688,
-  "nickname": "onetwo"
+  "nickname": "Bb P77"
  },
  {
   "name": "Player",
@@ -487,7 +487,7 @@
   "color": "#EFFFF3",
   "tx": 475,
   "ty": 668,
-  "nickname": "Vyra"
+  "nickname": "Sweetvine"
  },
  {
   "name": "Player",
@@ -507,7 +507,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 674,
-  "nickname": "Ssaul2Aby"
+  "nickname": "빈자리 1"
  },
  {
   "name": "Player",
@@ -537,7 +537,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 668,
-  "nickname": "Navarre Corey"
+  "nickname": "Vyra"
  },
  {
   "name": "Player",
@@ -547,7 +547,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 672,
-  "nickname": "몰라알고싶지않아"
+  "nickname": "빈자리 2"
  },
  {
   "name": "Player",
@@ -557,7 +557,7 @@
   "color": "#EFFFF3",
   "tx": 475,
   "ty": 682,
-  "nickname": "MILK"
+  "nickname": "ZaBKoR"
  },
  {
   "name": "Player",
@@ -567,7 +567,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 678,
-  "nickname": "Sayden Ironside"
+  "nickname": "Santi47"
  },
  {
   "name": "Player",
@@ -577,7 +577,7 @@
   "color": "#EFFFF3",
   "tx": 481,
   "ty": 682,
-  "nickname": "Sweetvine"
+  "nickname": "Sayden Ironside"
  },
  {
   "name": "Player",
@@ -587,7 +587,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 680,
-  "nickname": "빈자리 1"
+  "nickname": "빈자리 3"
  },
  {
   "name": "Player",
@@ -595,9 +595,9 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 473,
+  "tx": 472,
   "ty": 682,
-  "nickname": "쿵&쿵"
+  "nickname": "ishwor2"
  },
  {
   "name": "Player",
@@ -617,7 +617,7 @@
   "color": "#EFFFF3",
   "tx": 471,
   "ty": 668,
-  "nickname": "빈자리 2"
+  "nickname": "빈자리 4"
  },
  {
   "name": "Player",
@@ -627,7 +627,7 @@
   "color": "#EFFFF3",
   "tx": 483,
   "ty": 682,
-  "nickname": "빈자리 3"
+  "nickname": "몰라알고싶지않아"
  },
  {
   "name": "Player",
@@ -637,17 +637,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 680,
-  "nickname": "빈자리 4"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 471,
-  "ty": 682,
-  "nickname": "빈자리 5"
+  "nickname": "Ssaul2Aby"
  },
  {
   "name": "Player",
@@ -657,7 +647,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 668,
-  "nickname": "빈자리 6"
+  "nickname": "빈자리 5"
  },
  {
   "name": "Player",
@@ -667,7 +657,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 682,
-  "nickname": "빈자리 7"
+  "nickname": "TxkTx"
  },
  {
   "name": "Player",
@@ -677,7 +667,7 @@
   "color": "#EFFFF3",
   "tx": 477,
   "ty": 684,
-  "nickname": "산군76"
+  "nickname": "빈자리 6"
  },
  {
   "name": "Player",
@@ -687,7 +677,7 @@
   "color": "#EFFFF3",
   "tx": 479,
   "ty": 690,
-  "nickname": "moonshine"
+  "nickname": "xOreo"
  },
  {
   "name": "Player",
@@ -697,7 +687,7 @@
   "color": "#EFFFF3",
   "tx": 481,
   "ty": 684,
-  "nickname": "kinashot888"
+  "nickname": "sj0525"
  },
  {
   "name": "Player",
@@ -707,7 +697,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 688,
-  "nickname": "빈자리 11"
+  "nickname": "삼성라이온즈"
  },
  {
   "name": "Player",
@@ -717,7 +707,7 @@
   "color": "#EFFFF3",
   "tx": 477,
   "ty": 692,
-  "nickname": "빈자리 12"
+  "nickname": "빈자리 8"
  },
  {
   "name": "Player",
@@ -726,8 +716,8 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 482,
-  "ty": 686,
-  "nickname": "빈자리 10"
+  "ty": 687,
+  "nickname": "邊緣人"
  },
  {
   "name": "Player",
@@ -737,7 +727,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 690,
-  "nickname": "빈자리 13"
+  "nickname": "하늘깨기"
  },
  {
   "name": "Player",
@@ -747,7 +737,7 @@
   "color": "#EFFFF3",
   "tx": 479,
   "ty": 692,
-  "nickname": "빈자리 14"
+  "nickname": "빈자리 9"
  },
  {
   "name": "Player",
@@ -767,7 +757,7 @@
   "color": "#EFFFF3",
   "tx": 475,
   "ty": 692,
-  "nickname": "빈자리 15"
+  "nickname": "Dunkin Donuts"
  },
  {
   "name": "Player",
@@ -777,7 +767,7 @@
   "color": "#EFFFF3",
   "tx": 483,
   "ty": 684,
-  "nickname": "KIM1228"
+  "nickname": "빈자리 10"
  },
  {
   "name": "Player",
@@ -787,7 +777,7 @@
   "color": "#EFFFF3",
   "tx": 481,
   "ty": 692,
-  "nickname": "빈자리 16"
+  "nickname": "빈자리 11"
  },
  {
   "name": "Player",
@@ -797,7 +787,7 @@
   "color": "#EFFFF3",
   "tx": 473,
   "ty": 692,
-  "nickname": "빈자리 17"
+  "nickname": "빈자리 12"
  },
  {
   "name": "Player",
@@ -807,7 +797,7 @@
   "color": "#EFFFF3",
   "tx": 483,
   "ty": 692,
-  "nickname": "빈자리 18"
+  "nickname": "빈자리 13"
  },
  {
   "name": "Player",
@@ -816,6 +806,66 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 477,
+  "ty": 666,
+  "nickname": "빈자리 14"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 469,
+  "ty": 674,
+  "nickname": "빈자리 15"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 479,
+  "ty": 666,
+  "nickname": "빈자리 16"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 469,
+  "ty": 676,
+  "nickname": "쿵&쿵"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 475,
+  "ty": 666,
+  "nickname": "빈자리 17"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 469,
+  "ty": 672,
+  "nickname": "빈자리 18"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 481,
   "ty": 666,
   "nickname": "빈자리 19"
  },
@@ -826,6 +876,16 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 469,
+  "ty": 678,
+  "nickname": "Privateer"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 487,
   "ty": 674,
   "nickname": "빈자리 20"
  },
@@ -835,8 +895,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 479,
-  "ty": 666,
+  "tx": 487,
+  "ty": 678,
   "nickname": "빈자리 21"
  },
  {
@@ -845,8 +905,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 469,
-  "ty": 676,
+  "tx": 483,
+  "ty": 666,
   "nickname": "빈자리 22"
  },
  {
@@ -855,8 +915,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 475,
-  "ty": 666,
+  "tx": 469,
+  "ty": 680,
   "nickname": "빈자리 23"
  },
  {
@@ -865,8 +925,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 469,
-  "ty": 672,
+  "tx": 487,
+  "ty": 680,
   "nickname": "빈자리 24"
  },
  {
@@ -875,7 +935,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 481,
+  "tx": 485,
   "ty": 666,
   "nickname": "빈자리 25"
  },
@@ -886,7 +946,7 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 469,
-  "ty": 678,
+  "ty": 682,
   "nickname": "빈자리 26"
  },
  {
@@ -895,7 +955,7 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 487,
+  "tx": 467,
   "ty": 674,
   "nickname": "빈자리 27"
  },
@@ -905,8 +965,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 487,
-  "ty": 678,
+  "tx": 467,
+  "ty": 670,
   "nickname": "빈자리 28"
  },
  {
@@ -915,8 +975,8 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 483,
-  "ty": 666,
+  "tx": 471,
+  "ty": 686,
   "nickname": "빈자리 29"
  },
  {
@@ -925,79 +985,9 @@
   "h": 2,
   "type": "one-tone",
   "color": "#EFFFF3",
-  "tx": 469,
-  "ty": 680,
-  "nickname": "빈자리 30"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 487,
-  "ty": 680,
-  "nickname": "빈자리 31"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 485,
-  "ty": 666,
-  "nickname": "빈자리 32"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 469,
-  "ty": 682,
-  "nickname": "빈자리 33"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 467,
-  "ty": 674,
-  "nickname": "빈자리 34"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 467,
-  "ty": 670,
-  "nickname": "빈자리 35"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
-  "tx": 471,
-  "ty": 686,
-  "nickname": "빈자리 36"
- },
- {
-  "name": "Player",
-  "w": 2,
-  "h": 2,
-  "type": "one-tone",
-  "color": "#EFFFF3",
   "tx": 471,
   "ty": 684,
-  "nickname": "빈자리 38"
+  "nickname": "Darin"
  },
  {
   "name": "Player",
@@ -1006,8 +996,8 @@
   "type": "one-tone",
   "color": "#EFFFF3",
   "tx": 484,
-  "ty": 686,
-  "nickname": "빈자리 37"
+  "ty": 687,
+  "nickname": "Ruben"
  },
  {
   "name": "Player",
@@ -1017,7 +1007,7 @@
   "color": "#EFFFF3",
   "tx": 485,
   "ty": 684,
-  "nickname": "빈자리 39"
+  "nickname": "Heevie"
  },
  {
   "name": "깃발 1",
@@ -1025,8 +1015,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 471,
-  "ty": 681,
+  "tx": 408,
+  "ty": 641,
   "nickname": "깃발 1"
  },
  {
@@ -1035,8 +1025,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 475,
-  "ty": 686,
+  "tx": 407,
+  "ty": 648,
   "nickname": "깃발 2"
  },
  {
@@ -1045,8 +1035,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 474,
-  "ty": 666,
+  "tx": 407,
+  "ty": 655,
   "nickname": "깃발 3"
  },
  {
@@ -1055,8 +1045,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 481,
-  "ty": 666,
+  "tx": 394,
+  "ty": 669,
   "nickname": "깃발 4"
  },
  {
@@ -1065,8 +1055,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 477,
-  "ty": 680,
+  "tx": 414,
+  "ty": 652,
   "nickname": "깃발 5"
  },
  {
@@ -1075,8 +1065,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 468,
-  "ty": 675,
+  "tx": 401,
+  "ty": 669,
   "nickname": "깃발 6"
  },
  {
@@ -1085,8 +1075,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 482,
-  "ty": 687,
+  "tx": 408,
+  "ty": 662,
   "nickname": "깃발 7"
  },
  {
@@ -1095,8 +1085,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 469,
-  "ty": 688,
+  "tx": 394,
+  "ty": 677,
   "nickname": "깃발 8"
  },
  {
@@ -1105,8 +1095,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 484,
-  "ty": 680,
+  "tx": 414,
+  "ty": 659,
   "nickname": "깃발 9"
  },
  {
@@ -1115,8 +1105,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 482,
-  "ty": 673,
+  "tx": 408,
+  "ty": 669,
   "nickname": "깃발 10"
  },
  {
@@ -1125,8 +1115,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 471,
-  "ty": 668,
+  "tx": 404,
+  "ty": 676,
   "nickname": "깃발 11"
  },
  {
@@ -1135,8 +1125,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 467,
-  "ty": 681,
+  "tx": 410,
+  "ty": 677,
   "nickname": "깃발 12"
  },
  {
@@ -1145,8 +1135,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 475,
-  "ty": 693,
+  "tx": 418,
+  "ty": 673,
   "nickname": "깃발 13"
  },
  {
@@ -1155,8 +1145,8 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 477,
-  "ty": 673,
+  "tx": 416,
+  "ty": 676,
   "nickname": "깃발 14"
  },
  {
@@ -1165,9 +1155,149 @@
   "h": 7,
   "type": "two-tone",
   "color": "rgba(52, 152, 219, 0.5)",
-  "tx": 464,
-  "ty": 670,
+  "tx": 415,
+  "ty": 683,
   "nickname": "깃발 15"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 425,
+  "ty": 675,
+  "nickname": "깃발 16"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 411,
+  "ty": 690,
+  "nickname": "깃발 17"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 421,
+  "ty": 681,
+  "nickname": "깃발 18"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 419,
+  "ty": 685,
+  "nickname": "깃발 19"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 425,
+  "ty": 682,
+  "nickname": "깃발 20"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 418,
+  "ty": 692,
+  "nickname": "깃발 21"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 453,
+  "ty": 657,
+  "nickname": "깃발 22"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 460,
+  "ty": 656,
+  "nickname": "깃발 23"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 453,
+  "ty": 667,
+  "nickname": "깃발 24"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 467,
+  "ty": 653,
+  "nickname": "깃발 25"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 440,
+  "ty": 683,
+  "nickname": "깃발 26"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 460,
+  "ty": 663,
+  "nickname": "깃발 27"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 452,
+  "ty": 674,
+  "nickname": "깃발 28"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 474,
+  "ty": 652,
+  "nickname": "깃발 29"
  },
  {
   "name": "깃발 1",
@@ -1177,7 +1307,37 @@
   "color": "rgba(52, 152, 219, 0.5)",
   "tx": 446,
   "ty": 681,
-  "nickname": "깃발 16"
+  "nickname": "깃발 30"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 467,
+  "ty": 660,
+  "nickname": "깃발 31"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 474,
+  "ty": 659,
+  "nickname": "깃발 32"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 481,
+  "ty": 652,
+  "nickname": "깃발 33"
  },
  {
   "name": "깃발 1",
@@ -1187,7 +1347,7 @@
   "color": "rgba(52, 152, 219, 0.5)",
   "tx": 453,
   "ty": 681,
-  "nickname": "깃발 17"
+  "nickname": "깃발 34"
  },
  {
   "name": "깃발 1",
@@ -1197,7 +1357,157 @@
   "color": "rgba(52, 152, 219, 0.5)",
   "tx": 460,
   "ty": 674,
-  "nickname": "깃발 18"
+  "nickname": "깃발 35"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 464,
+  "ty": 670,
+  "nickname": "깃발 36"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 467,
+  "ty": 667,
+  "nickname": "깃발 37"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 447,
+  "ty": 689,
+  "nickname": "깃발 38"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 471,
+  "ty": 668,
+  "nickname": "깃발 39"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 489,
+  "ty": 650,
+  "nickname": "깃발 40"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 474,
+  "ty": 666,
+  "nickname": "깃발 41"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 481,
+  "ty": 659,
+  "nickname": "깃발 42"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 460,
+  "ty": 681,
+  "nickname": "깃발 43"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 446,
+  "ty": 696,
+  "nickname": "깃발 44"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 468,
+  "ty": 675,
+  "nickname": "깃발 45"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 456,
+  "ty": 688,
+  "nickname": "깃발 46"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 488,
+  "ty": 657,
+  "nickname": "깃발 47"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 481,
+  "ty": 666,
+  "nickname": "깃발 48"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 453,
+  "ty": 695,
+  "nickname": "깃발 49"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 467,
+  "ty": 681,
+  "nickname": "깃발 50"
  },
  {
   "name": "깃발 1",
@@ -1207,6 +1517,636 @@
   "color": "rgba(52, 152, 219, 0.5)",
   "tx": 474,
   "ty": 674,
-  "nickname": "깃발 19"
+  "nickname": "깃발 51"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 462,
+  "ty": 688,
+  "nickname": "깃발 52"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 477,
+  "ty": 673,
+  "nickname": "깃발 53"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 471,
+  "ty": 681,
+  "nickname": "깃발 54"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 488,
+  "ty": 664,
+  "nickname": "깃발 55"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 496,
+  "ty": 656,
+  "nickname": "깃발 56"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 451,
+  "ty": 702,
+  "nickname": "깃발 57"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 459,
+  "ty": 695,
+  "nickname": "깃발 58"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 482,
+  "ty": 673,
+  "nickname": "깃발 59"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 469,
+  "ty": 688,
+  "nickname": "깃발 60"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 477,
+  "ty": 680,
+  "nickname": "깃발 61"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 488,
+  "ty": 671,
+  "nickname": "깃발 62"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 503,
+  "ty": 656,
+  "nickname": "깃발 63"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 458,
+  "ty": 702,
+  "nickname": "깃발 64"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 497,
+  "ty": 663,
+  "nickname": "깃발 65"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 466,
+  "ty": 695,
+  "nickname": "깃발 66"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 475,
+  "ty": 686,
+  "nickname": "깃발 67"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 484,
+  "ty": 680,
+  "nickname": "깃발 68"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 495,
+  "ty": 670,
+  "nickname": "깃발 69"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 488,
+  "ty": 678,
+  "nickname": "깃발 70"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 510,
+  "ty": 656,
+  "nickname": "깃발 71"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 504,
+  "ty": 663,
+  "nickname": "깃발 72"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 459,
+  "ty": 709,
+  "nickname": "깃발 73"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 475,
+  "ty": 693,
+  "nickname": "깃발 74"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 466,
+  "ty": 703,
+  "nickname": "깃발 75"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 482,
+  "ty": 687,
+  "nickname": "깃발 76"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 473,
+  "ty": 697,
+  "nickname": "깃발 77"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 517,
+  "ty": 654,
+  "nickname": "깃발 78"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 495,
+  "ty": 677,
+  "nickname": "깃발 79"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 502,
+  "ty": 670,
+  "nickname": "깃발 80"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 509,
+  "ty": 666,
+  "nickname": "깃발 81"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 466,
+  "ty": 710,
+  "nickname": "깃발 82"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 482,
+  "ty": 694,
+  "nickname": "깃발 83"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 491,
+  "ty": 685,
+  "nickname": "깃발 84"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 500,
+  "ty": 678,
+  "nickname": "깃발 85"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 489,
+  "ty": 692,
+  "nickname": "깃발 86"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 516,
+  "ty": 665,
+  "nickname": "깃발 87"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 474,
+  "ty": 708,
+  "nickname": "깃발 88"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 498,
+  "ty": 684,
+  "nickname": "깃발 89"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 480,
+  "ty": 703,
+  "nickname": "깃발 90"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 507,
+  "ty": 677,
+  "nickname": "깃발 91"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 516,
+  "ty": 672,
+  "nickname": "깃발 92"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 487,
+  "ty": 702,
+  "nickname": "깃발 93"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 506,
+  "ty": 684,
+  "nickname": "깃발 94"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 499,
+  "ty": 693,
+  "nickname": "깃발 95"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 514,
+  "ty": 679,
+  "nickname": "깃발 96"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 494,
+  "ty": 700,
+  "nickname": "깃발 97"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 487,
+  "ty": 709,
+  "nickname": "깃발 98"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 505,
+  "ty": 691,
+  "nickname": "깃발 99"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 521,
+  "ty": 679,
+  "nickname": "깃발 100"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 528,
+  "ty": 672,
+  "nickname": "깃발 101"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 501,
+  "ty": 700,
+  "nickname": "깃발 102"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 495,
+  "ty": 707,
+  "nickname": "깃발 103"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 512,
+  "ty": 691,
+  "nickname": "깃발 104"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 508,
+  "ty": 698,
+  "nickname": "깃발 105"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 535,
+  "ty": 671,
+  "nickname": "깃발 106"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 502,
+  "ty": 707,
+  "nickname": "깃발 107"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 515,
+  "ty": 698,
+  "nickname": "깃발 108"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 500,
+  "ty": 714,
+  "nickname": "깃발 109"
+ },
+ {
+  "name": "깃발 1",
+  "w": 7,
+  "h": 7,
+  "type": "two-tone",
+  "color": "rgba(52, 152, 219, 0.5)",
+  "tx": 535,
+  "ty": 679,
+  "nickname": "깃발 110"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 486,
+  "ty": 687,
+  "nickname": "Maurice432"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 471,
+  "ty": 666,
+  "nickname": "i no like curry"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 473,
+  "ty": 666,
+  "nickname": "max 0605"
+ },
+ {
+  "name": "Player",
+  "w": 2,
+  "h": 2,
+  "type": "one-tone",
+  "color": "#EFFFF3",
+  "tx": 491,
+  "ty": 683,
+  "nickname": "juanncuokkkk"
  }
 ]
