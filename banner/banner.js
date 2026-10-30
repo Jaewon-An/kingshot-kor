@@ -103,7 +103,7 @@
       const DIRS = ['북', '동', '남', '서'];
       $('check').innerHTML = [
         PLAN.nUp ? `곰덫 주변 깃발 ${PLAN.nTrap}개(v2 배치도 계획분)와 본부 위쪽 깃발 ${PLAN.nUp}개(거점과 이어짐)는 고정, 나머지 ${flags.filter(f => !f.fixed).length}개를 옮기거나 새로 세웠습니다. ` +
-          (PLAN.nNow && flags.length > PLAN.nNow ? `깃발 수는 지금 ${PLAN.nNow}개에 남은 건설 가능 ${flags.length - PLAN.nNow}개를 더한 ${flags.length}개입니다.` : `깃발 수는 ${flags.length}개 그대로입니다.`)
+          (PLAN.nNow && flags.length > PLAN.nNow ? `깃발 수는 지금 ${PLAN.nNow}개에 새로 ${flags.length - PLAN.nNow}개를 더한 ${flags.length}개입니다.` : `깃발 수는 ${flags.length}개 그대로입니다.`)
           : `곰덫 주변 깃발 ${flags.filter(f => f.fixed).length}개(v2 배치도 계획분)는 고정, 나머지를 옮겼습니다. 깃발 수는 ${flags.length}개 그대로입니다.`,
         ...(PLAN.overlap != null ? [`옮긴 깃발끼리 영역이 겹치는 칸은 ${PLAN.overlap}칸입니다. 줄마다 엇갈리게(벽돌 모양) 폭 1칸 틈을 두고 놓아 깃발 하나가 막는 땅을 늘렸습니다.`] : []),
         `곰덫2에서 적이 도시를 옮길 수 있는 가장 가까운 2×2 빈자리: 지금 ${PLAN.r1}칸 → 재배치 ${PLAN.r}칸.`,
