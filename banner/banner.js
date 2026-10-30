@@ -2,7 +2,8 @@
  * v1/data.json: 2026-10-29 스크린샷을 다시 이어 붙여 읽은 KOR 깃발(flags)·다른 연맹 깃발(others)·본부·확인된 범위(coverage, [y, x0, x1] 줄; 휴대폰 캡처 포함).
  * v2/data.json: 재배치안 — flags[].fixed(곰덫 주변·본부 위쪽 고정)·keep(그대로), remove(철거할 자리), extra(여분 깃발: 점선, 깃발이 더 늘면),
  *   plan(곰덫2 중심 t, 적 최근접 거리 r·방향별 dir, 지금 값 r1·dir1, 여분까지 rx·dirx, 옛 본부 hq1, 지금 깃발 수 nNow),
- *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지, why, n 깃발 수, r 곰덫2 최근접}]; 진행은 이 브라우저 localStorage).
+ *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지, why, n 깃발 수, r 곰덫2 최근접}]; 진행은 이 브라우저 localStorage),
+ *   stepsPrev(바로 전 순서의 서명 sig·앞부분이 같은 단계 수 same — 옛 형식 진행 기록 이어받기).
  * 영토: 본부 15×15(KSCore.HQ_COV) + 깃발마다 7×7(BN_COV). 다른 연맹은 본부·깃발 영역에서 KOR 땅을 뺀 칸. 지형은 mapdata.js.
  */
 (function () {
@@ -371,12 +372,19 @@
   function setupSteps(steps) {
     const OP = { build: '깃발 건설', remove: '깃발 철거', hq: '평원 본부 이전' };
     const PHASE = { 1: '① 본부 이전 준비 (먼저)', 2: '② 평원 본부 이전', 3: '③ 나머지 깃발 재배치' };
-    const KEY = 'banner-v2-steps';
-    let h = 5381; for (const st of steps) for (const c of `${st.op}${st.x},${st.y};`) h = (h * 33 + c.charCodeAt(0)) | 0;
-    const sig = String(h >>> 0);   // 순서가 바뀌면 진행 기록을 새로
+    // 진행 기록: 끝낸 작업 목록. 순서가 바뀌어도 앞부분이 같은 만큼은 이어짐
+    const KEY = 'banner-v2-steps', keyOf = st => `${st.op}${st.x},${st.y}`;
     let done = 0;
-    try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && v.sig === sig) done = Math.min(steps.length, Math.max(0, v.done | 0)); } catch (_) { /* 저장소 못 씀 */ }
-    const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ sig, done })); } catch (_) { /* 저장소 못 씀 */ } };
+    try {
+      const v = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (v && Array.isArray(v.keys)) while (done < steps.length && done < v.keys.length && v.keys[done] === keyOf(steps[done])) done++;
+      else if (v && v.sig) {   // 10-29 형식 {sig, done}: 그때 순서(D.stepsPrev.sig)와 같으면 앞부분이 같은 만큼
+        let h = 5381; for (const st of steps) for (const c of `${keyOf(st)};`) h = (h * 33 + c.charCodeAt(0)) | 0;
+        if (v.sig === String(h >>> 0)) done = Math.min(steps.length, v.done | 0);
+        else if (D.stepsPrev && v.sig === D.stepsPrev.sig) done = Math.min(v.done | 0, D.stepsPrev.same);
+      }
+    } catch (_) { /* 저장소 못 씀 */ }
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf) })); } catch (_) { /* 저장소 못 씀 */ } };
     const where = st => (st.op === 'hq' ? `X:${st.from[0]} Y:${st.from[1]} → X:${st.x} Y:${st.y}` : `X:${st.x} Y:${st.y}`);
     let msgT = 0;
     const msg = t => { $('stepmsg').textContent = t; if ($('sbn')) { $('sbn').textContent = t; clearTimeout(msgT); msgT = setTimeout(render, 2500); } };
