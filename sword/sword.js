@@ -36,6 +36,7 @@
     stable: { w: 27, e: 9, gh: 13, c: 'buff', img: [45, -45, 21] },
     camp: { w: 25, e: 10, gh: 24, c: 'buff', img: [48, -50, 23] },
     hall: { w: 28, e: 9, gh: 11, c: 'buff', img: [41, -32, 17] },
+    cellar: { w: 11, e: 5, gh: 0, c: 'cellar', img: [30, -25, 12] },   // 지하 저장고 채집지 하나 (자리 하나 = 두 곳)
   };
   const PTS = { shrine: [9000, 4500, 1800, 900], sanctum: [6000, 3000, 1200, 600], abbey: [3000, 1500, 600, 300], buff: [1200, 600, 240, 120] };   // 첫 점령 연맹·개인, 분당 연맹·개인
   const POSTS = [
@@ -50,21 +51,23 @@
     { id: 'shrine', nm: '성검 제단', tag: '성검 제단', en: 'Swordshrine', k: 'shrine', x: 0, y: 0, open: 15, pts: PTS.shrine, fx: '건물 하나로는 분당 점수가 가장 많음' },
     { id: 'merc', nm: '용병 캠프', tag: '용병 캠프', en: 'Mercenary Camp', k: 'camp', x: -10, y: -160, open: 15, pts: PTS.buff, fx: '적이 점령한 건물에 용병을 보내 적 주둔군의 공격·방어를 약화' },
     { id: 'reform', nm: '개혁의 전당', tag: '개혁의 전당', en: 'Hall of Reformation', k: 'hall', x: -2, y: 150, open: 15, pts: PTS.buff, fx: '우리 부대가 주는 피해 15% 증가 · 받는 피해 15% 감소' },
+    // 지하 저장고: 성검 제단 둘레에 두 곳씩 네 자리, 시계 방향으로 부름 (x, y = 두 곳 가운데)
+    ...[['cellar11', '11시', [[-160, -165], [-100, -113]]], ['cellar1', '1시', [[138, -165], [202, -113]]], ['cellar5', '5시', [[108, 99], [165, 150]]], ['cellar7', '7시', [[-178, 97], [-110, 147]]]]
+      .map(([id, at, nodes]) => ({ id, nm: `${at} 지하 저장고`, tag: `${at} 저장고`, en: 'Undercellars', k: 'cellar', nodes, x: (nodes[0][0] + nodes[1][0]) / 2, y: (nodes[0][1] + nodes[1][1]) / 2, open: 15,
+        fx: '15분·20분에 두 번 나타나는 채집지 (미니맵 돋보기로 위치 확인), 채집하면 연맹·개인 점수' })),
   ];
   const GROUPS = [
     { id: 'attack', nm: '게릴라', en: 'Guerrilla', fx: '흩어져 다니며 적 주둔군·도시를 치고 빈 건물을 먼저 잡음 → 잡은 건물은 수비 인원에게 넘김', corner: 'tl' },
-    { id: 'cellar', nm: '지하 저장고', en: 'Undercellars', open: 15, fx: '15분·20분에 두 번 나타나는 채집지 (미니맵 돋보기로 위치 확인)', corner: 'br' },
     { id: 'sub', nm: '후보', en: 'Substitutes', fx: '교체 인원 (최대 10명)', corner: 'bl' },
   ];
-  const CELLARS = [[-160, -165], [-100, -113], [138, -165], [202, -113], [-178, 97], [-110, 147], [108, 99], [165, 150]];
   const CELL_IMG = [30, -25, 12];                      // 사진 속 지하 저장고 범위 [반너비, 위, 아래]
   const SPAWNS = [{ side: 'blue', x: -351, y: 4, nm: '파랑' }, { side: 'red', x: 342, y: 4, nm: '빨강' }];
   const SPAWN_W = 62;
   const DECOR = [[35, -290], [-90, 35], [40, 270]];    // 사진 속 작은 장식물 (도시 칸을 놓지 않음)
   const BY = new Map([...POSTS, ...GROUPS].map(p => [p.id, p]));
-  const ORDER = ['sanctumL', 'sanctumR', 'abbeyL', 'abbeyB', 'abbeyT', 'abbeyR', 'bell', 'stables', 'shrine', 'merc', 'reform', 'attack', 'cellar', 'sub'];
-  const SECTIONS = [['시작부터 열린 건물', 0, 8], ['15분 뒤 열리는 건물', 8, 11], ['역할', 11, 14]];
-  const ALIASES = { 마굿간: 'stables', 마구간: 'stables', 종탑: 'bell', 용병: 'merc', 개혁: 'reform', 제단: 'shrine', 성검: 'shrine', 지하: 'cellar', 저장고: 'cellar', 게릴라: 'attack', 공격: 'attack', 공격조: 'attack', 후보: 'sub' };
+  const ORDER = ['sanctumL', 'sanctumR', 'abbeyL', 'abbeyB', 'abbeyT', 'abbeyR', 'bell', 'stables', 'shrine', 'merc', 'reform', 'cellar11', 'cellar1', 'cellar5', 'cellar7', 'attack', 'sub'];
+  const SECTIONS = [['시작부터 열린 건물', 0, 8], ['15분 뒤 열리는 곳', 8, 15], ['역할', 15, 17]];
+  const ALIASES = { 마굿간: 'stables', 마구간: 'stables', 종탑: 'bell', 용병: 'merc', 개혁: 'reform', 제단: 'shrine', 성검: 'shrine', ...Object.fromEntries(['11', '1', '5', '7'].flatMap(h => [`${h}시 지하저장고`, `${h}시 저장고`, `${h}시저장고`].map(a => [a, 'cellar' + h]))), 게릴라: 'attack', 공격: 'attack', 공격조: 'attack', 후보: 'sub' };
   const LIMIT = { main: 30, sub: 10 };
   const postName = id => (BY.get(id) || { nm: '미배치' }).nm;
 
@@ -226,10 +229,10 @@
     }
     for (const [x, y] of DECOR) block.push([x - 22, y - 18, x + 22, y + 12]);
 
-    const cellOn = ph === 2;   // 지하 저장고는 15분부터
-    for (const [x, y] of CELLARS) {
-      const r = photo ? [x - CELL_IMG[0], y + CELL_IMG[1], x + CELL_IMG[0], y + CELL_IMG[2]] : [x - 12, y - 14, x + 12, y + 9], on = o.sel === 'cellar';
-      ground.push(`<g data-post="cellar"${!photo && !cellOn ? ' opacity=".4"' : ''}>` + (photo
+    const cellOn = ph === 2, CPOSTS = POSTS.filter(p => p.k === 'cellar');   // 지하 저장고는 15분부터
+    for (const cp of CPOSTS) for (const [x, y] of cp.nodes) {
+      const r = photo ? [x - CELL_IMG[0], y + CELL_IMG[1], x + CELL_IMG[0], y + CELL_IMG[2]] : [x - 12, y - 14, x + 12, y + 9], on = o.sel === cp.id;
+      ground.push(`<g data-post="${cp.id}"${!photo && !cellOn ? ' opacity=".4"' : ''}>` + (photo
         ? rect(r, 'fill="transparent"') + (on ? rect([r[0] - 3, r[1] - 3, r[2] + 3, r[3] + 3], `rx="${px(5)}" ${dash(2.5)}`) : '')
         : (on ? `<polygon points="${diamond(x, y, 19)}" fill="none" stroke="${P.sel}" stroke-width="${px(2.5)}"/>` : '') + `<polygon points="${diamond(x, y, 18)}" fill="transparent"/>${box(x, y, 11, 5, P.cellar)}`) + '</g>');
       obst.push([...r, 0.15]); block.push(r);
@@ -237,6 +240,7 @@
 
     const labels = [], badges = [];   // 이름표·메모 범위 (배지 자리 고를 때) · 나중에 놓을 인원 수 배지
     for (const p of POSTS) {
+      if (p.k === 'cellar') continue;   // 지하 저장고는 아래에서 이름표만
       const K = KIND[p.k], c = P[K.c], h = K.w * ISO, locked = ph === 1 && p.open, on = o.sel === p.id;
       const mem = membersAt(L, p.id, ph), note = noteOf(L, p.id);
       const bb = photo ? [p.x - K.img[0], p.y + K.img[1], p.x + K.img[0], p.y + K.img[2]] : [p.x - K.w, p.y - K.e - Math.max(h, K.gh), p.x + K.w, p.y + h];
@@ -272,24 +276,24 @@
       obst.push([bx - br, by - br, bx + br, by + br, 1]); labels.push([bx - br, by - br, bx + br, by + br]);
     }
 
-    // 지하 저장고 이름표: 공략 그림처럼 두 곳씩 짝지은 가운데에 하나씩 (그림 지도는 시작 ~ 15분에 흐리게).
+    // 지하 저장고 이름표: 공략 그림처럼 두 곳씩 짝지은 가운데에 하나씩 + 인원 수 (그림 지도는 시작 ~ 15분에 흐리게).
     // 지도가 작아 다른 이름표와 겹치면 옆(바깥·안쪽)이나 위·아래 상자 쪽으로 비킴
     const fits = r => obst.reduce((t, b) => t + overlap(r, b) * b[4], 0) + ((r[2] - r[0]) * (r[3] - r[1]) - overlap(r, VBR)) * 3;
-    for (let i = 0; i < CELLARS.length; i += 2) {
-      const [a, b] = CELLARS[i][1] < CELLARS[i + 1][1] ? [CELLARS[i], CELLARS[i + 1]] : [CELLARS[i + 1], CELLARS[i]];
-      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, out = Math.sign(mx), on = o.sel === 'cellar';
-      const th = px(17), w = tw('지하 저장고', 11.5, 600, font) * kk + px(10);
+    for (const cp of CPOSTS) {
+      const [a, b] = cp.nodes[0][1] < cp.nodes[1][1] ? cp.nodes : [cp.nodes[1], cp.nodes[0]];
+      const mx = cp.x, my = cp.y, out = Math.sign(mx), on = o.sel === cp.id, n = membersAt(L, cp.id, ph).length;
+      const th = px(17), w = tw(cp.tag, 11.5, 600, font) * kk + px(10) + (n ? px(20) : 0);
       const cands = [[mx, my], [mx + out * w * 0.35, my], [mx - out * w * 0.35, my], [mx + out * w * 0.7, my], [mx - out * w * 0.7, my],
         [a[0], a[1] + (photo ? CELL_IMG[1] : -14) - px(4) - th / 2], [b[0], b[1] + (photo ? CELL_IMG[2] : 9) + px(4) + th / 2]];
       let cx = mx, cy = my, best = Infinity;
       cands.forEach(([x, y], j) => { const sc = fits([x - w / 2, y - th / 2, x + w / 2, y + th / 2]) + j * 1e-3; if (sc < best) { best = sc; cx = x; cy = y; } });
-      over.push(`<g data-post="cellar"${cellOn || photo ? '' : ' opacity=".6"'}>` + rect([cx - w / 2, cy - th / 2, cx + w / 2, cy + th / 2], `rx="${px(4)}" fill="${P.tagbg}" stroke="${on ? P.sel : P.cellar}" stroke-width="${px(on ? 2 : 1)}"`) +
-        T(cx, cy, '지하 저장고', 11.5) + '</g>');
+      over.push(`<g data-post="${cp.id}"${cellOn || photo || n ? '' : ' opacity=".6"'}>` + rect([cx - w / 2, cy - th / 2, cx + w / 2, cy + th / 2], `rx="${px(4)}" fill="${P.tagbg}" stroke="${on ? P.sel : P.cellar}" stroke-width="${px(on ? 2 : 1)}"`) +
+        T(cx - (n ? px(10) : 0), cy, esc(cp.tag), 11.5) + (n ? `<circle cx="${f(cx + w / 2 - px(10))}" cy="${f(cy)}" r="${px(7)}" fill="${P.ink}"/>` + T(cx + w / 2 - px(10), cy, n, 10, { fill: P.tagbg, wt: 700 }) : '') + '</g>');
       obst.push([cx - w / 2, cy - th / 2, cx + w / 2, cy + th / 2, 1]);
       block.push([mx - 36, my - 9, mx + 36, my + 9]);
     }
 
-    // 역할(게릴라·지하 저장고·후보)은 지도 모서리 상자 (자리 메모 + 이름) — 오른쪽 위는 확대 버튼 자리
+    // 역할(게릴라·후보)은 지도 모서리 상자 (자리 메모 + 이름) — 오른쪽 위는 확대 버튼 자리
     const boxes = [], zoomedIn = o.view && o.view.w < VB.w - 1;   // 확대 중에는 모서리 상자가 도시를 가려서 숨김 (명단은 지도 아래 목록)
     for (const gr of zoomedIn ? [] : GROUPS) {
       const mem = membersAt(L, gr.id, ph), on = o.sel === gr.id, note = noteOf(L, gr.id);
@@ -303,7 +307,7 @@
       const x = gr.corner[1] === 'r' ? V.x + V.w - px(8) - bw : V.x + px(8);
       const y = gr.corner[0] === 'b' ? V.y + V.h - px(8) - bh : V.y + px(8);
       let s = `<g data-post="${gr.id}" tabindex="0" role="button" aria-label="${esc(gr.nm)} ${mem.length}명">` + rect([x, y, x + bw, y + bh], `rx="${px(5)}" fill="${P.tagbg}" fill-opacity=".94" stroke="${on ? P.sel : P.tagline}" stroke-width="${px(on ? 2.5 : 1)}"`);
-      s += rect([x + pad, y + pad + px(3.5), x + pad + px(9), y + pad + px(12.5)], `rx="${px(2)}" fill="${gr.id === 'cellar' ? P.cellar : gr.id === 'attack' ? P.red : P.muted}"`);
+      s += rect([x + pad, y + pad + px(3.5), x + pad + px(9), y + pad + px(12.5)], `rx="${px(2)}" fill="${gr.id === 'attack' ? P.red : P.muted}"`);
       s += T(x + pad + px(13), y + pad + px(8.5), esc(title), 13, { anchor: 'start' });
       if (lockW) {
         const lx = x + pad + px(17) + titleW;
@@ -368,10 +372,15 @@
   }
 
   const svg = $('map');
-  // 지금 보이는 지도 범위 (viewBox, VB 안에서 같은 비율). 확대·이동은 이것만 바꾸고, 손을 뗀 뒤 다시 그려 글자·도시 이름 크기를 맞춤
-  const ZMAX = 4;
-  let view = { ...VB }, suppressClick = 0, gesture = false, rtimer = 0;
-  const zoomOf = () => VB.w / view.w;
+  // 지금 보이는 지도 범위 (viewBox = svg 칸과 같은 비율, 1배 = 지도 전체가 들어가는 크기). 확대·이동은 이것만 바꾸고, 손을 뗀 뒤 다시 그려 글자·도시 이름 크기를 맞춤
+  const ZMAX = 4, wrapEl = svg.closest('.swwrap');
+  let view = { ...VB, z: 1 }, suppressClick = 0, gesture = false, rtimer = 0;
+  const zoomOf = () => view.z;
+  const isFull = () => wrapEl.classList.contains('full');
+  function sizeAt(z) {   // z배일 때 보이는 범위 크기 (지도 단위)
+    const r = svg.getBoundingClientRect(), cw = r.width || VB.w, ch = r.height || VB.h, sc = Math.min(cw / VB.w, ch / VB.h) * z;
+    return { w: cw / sc, h: ch / sc };
+  }
   function drawnRect() {   // svg 안에서 지도가 실제로 그려진 범위 (preserveAspectRatio meet)
     const r = svg.getBoundingClientRect(), s = Math.min(r.width / view.w, r.height / view.h) || 1;
     return { left: r.left + (r.width - view.w * s) / 2, top: r.top + (r.height - view.h * s) / 2, width: view.w * s, height: view.h * s };
@@ -387,10 +396,11 @@
   // (cx, cy) = 가운데 둘 지도 좌표, quick = viewBox만 바꾸고 다시 그리기는 나중에 (손가락으로 움직이는 중)
   function setView(cx, cy, z, quick) {
     z = Math.min(ZMAX, Math.max(1, z));
-    const w = VB.w / z, h = VB.h / z;
-    view = { x: Math.min(VB.x + VB.w - w, Math.max(VB.x, cx - w / 2)), y: Math.min(VB.y + VB.h - h, Math.max(VB.y, cy - h / 2)), w, h };
+    const { w, h } = sizeAt(z);
+    const fit = (c, size, lo, span) => (size >= span ? lo + (span - size) / 2 : Math.min(lo + span - size, Math.max(lo, c - size / 2)));   // 지도보다 넓으면 가운데, 아니면 지도 안에서만
+    view = { x: fit(cx, w, VB.x, VB.w), y: fit(cy, h, VB.y, VB.h), w, h, z };
     svg.setAttribute('viewBox', `${r1(view.x)} ${r1(view.y)} ${r1(w)} ${r1(h)}`);
-    svg.style.touchAction = z > 1.01 ? 'none' : 'pan-y';   // 1배에서는 한 손가락으로 페이지를 넘길 수 있게
+    svg.style.touchAction = z > 1.01 || isFull() ? 'none' : 'pan-y';   // 1배에서는 한 손가락으로 페이지를 넘길 수 있게
     svg.classList.toggle('zoomed', z > 1.01);
     if (!quick) { if (data) renderMap(); } else if (!gesture) { clearTimeout(rtimer); rtimer = setTimeout(() => data && renderMap(), 150); }
   }
@@ -398,14 +408,25 @@
   function zoomTo(px, py, z, quick) {
     const p = toMap(px, py);
     z = Math.min(ZMAX, Math.max(1, z));
-    const w = VB.w / z, h = VB.h / z;
+    const { w, h } = sizeAt(z);
     setView(p.x - p.fx * w + w / 2, p.y - p.fy * h + h / 2, z, quick);
   }
   const center = () => { const r = drawnRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
   $('zin').onclick = () => zoomTo(...center(), zoomOf() * 1.6);
   $('zout').onclick = () => zoomTo(...center(), zoomOf() / 1.6);
   $('fit').onclick = () => setView(0, 0, 1);
-  new ResizeObserver(() => { if (data && Math.abs(measureK() - k) / k > 0.01) renderMap(); }).observe(svg);
+  function setFull(on, fromPop) {
+    if (on === isFull()) return;
+    wrapEl.classList.toggle('full', on); document.body.classList.toggle('swfull', on);
+    $('full').textContent = on ? '닫기' : '크게'; $('full').setAttribute('aria-pressed', on);
+    if (on) history.pushState({ ...(history.state || {}), swfull: 1 }, '');
+    if (on && view.z < 2) setView(view.x + view.w / 2, view.y + view.h / 2, 2);   // 세로 화면이 비지 않고 도시 이름이 보이게 2배로 열기
+    else if (!fromPop && history.state && history.state.swfull) history.back();
+  }
+  $('full').onclick = () => setFull(!isFull());
+  window.addEventListener('popstate', () => { if (isFull()) setFull(false, true); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && isFull()) setFull(false); });
+  new ResizeObserver(() => { if (data) setView(view.x + view.w / 2, view.y + view.h / 2, view.z); }).observe(svg);   // 칸 크기·비율이 바뀌면 (크게·화면 회전) 다시 맞춤
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => data && renderMap());
   if (document.fonts) document.fonts.ready.then(() => data && renderMap());
 
@@ -453,7 +474,7 @@
       e.preventDefault();
       const [a, b] = e.touches, z = Math.min(ZMAX, Math.max(1, tch.z0 * tdist(a, b) / tch.d0));
       const r = drawnRect(), fx = ((a.clientX + b.clientX) / 2 - r.left) / r.width, fy = ((a.clientY + b.clientY) / 2 - r.top) / r.height;
-      const w = VB.w / z, h = VB.h / z;
+      const { w, h } = sizeAt(z);
       setView(tch.p.x - fx * w + w / 2, tch.p.y - fy * h + h / 2, z, true);
     } else if (tch.mode === 'pan' && e.touches.length === 1 && zoomOf() > 1.01) {
       const t = e.touches[0], dx = t.clientX - tch.x, dy = t.clientY - tch.y;
@@ -489,7 +510,7 @@
     if (p && PHONE.matches) setView(p.x, p.y, 2.6);
   }
   $('maphint').textContent = matchMedia('(pointer: coarse)').matches
-    ? '두 손가락으로 벌리거나 두 번 누르면 확대 (확대하면 도시 이름이 보임) · 확대 중엔 한 손가락으로 이동'
+    ? '두 손가락으로 벌리거나 두 번 누르면 확대 (확대하면 도시 이름이 보임) · 확대 중엔 한 손가락으로 이동 · ‘크게’는 화면 가득'
     : 'Ctrl + 휠(터치패드는 두 손가락 벌리기)이나 ＋ 버튼으로 확대 · 확대 중엔 끌어서 이동';
   setView(0, 0, 1, true);
 
@@ -533,12 +554,14 @@
     }).join(' · ');
   }
   function renderPosts() {
-    const L = cur(), out = [];
+    const L = cur(), out = [], empties = [], compact = PHONE.matches && !editing;   // 휴대폰 보기: 배치 없는 곳은 맨 아래 한 줄로
     for (const [title, a, b] of SECTIONS) {
+      const ids = ORDER.slice(a, b).filter(id => !compact || membersAt(L, id, phase).length || noteOf(L, id) || !empties.push(id));
+      if (!ids.length) continue;
       out.push(`<div class="gh">${title}</div>`);
-      for (const id of ORDER.slice(a, b)) {
+      for (const id of ids) {
         const p = BY.get(id), mem = membersAt(L, id, phase);
-        const color = p.k ? `var(--sw-${KIND[p.k].c})` : id === 'cellar' ? 'var(--sw-cellar)' : id === 'attack' ? 'var(--sw-red)' : 'var(--sw-muted)';
+        const color = p.k ? `var(--sw-${KIND[p.k].c})` : id === 'attack' ? 'var(--sw-red)' : 'var(--sw-muted)';
         out.push(`<div class="post${sel === id ? ' on' : ''}${mem.length || noteOf(L, id) ? '' : ' empty'}" data-post="${id}" role="button" tabindex="0">` +
           `<span class="pn"><i class="kd" style="background:${color}"></i>${esc(p.nm)}${p.open && phase === 1 ? ' <span class="pill15">15분</span>' : ''}</span>` +
           `<span class="ct${mem.length ? '' : ' zero'}">${mem.length}</span>` +
@@ -546,6 +569,7 @@
           (mem.length ? `<span class="who">${whoHTML(mem, phase)}</span>` : '') + '</div>');
       }
     }
+    if (empties.length) out.push(`<div class="emptyline"><span class="sumx">배치 없음</span> ${empties.map(id => `<button class="lnk" type="button" data-post="${id}">${esc(postName(id))}</button>`).join(' · ')}</div>`);
     const none = L.members.filter(m => !postOf(m, phase));
     if (none.length) {
       out.push(`<div class="gh">미배치 (${phase === 1 ? '시작' : '15분 후'})</div>`);
@@ -564,7 +588,7 @@
     const box = $('info');
     if (!sel || !BY.has(sel)) { box.hidden = true; return; }
     const p = BY.get(sel), mem = membersAt(cur(), sel, phase);
-    const when = p.open ? (p.k ? '15분 뒤 열림' : '15분·20분 등장') : p.k ? '시작부터' : '';
+    const when = p.open ? (p.k === 'cellar' ? '15분·20분 등장' : '15분 뒤 열림') : p.k ? '시작부터' : '';
     const meta = [when, sideOf(p), p.pts ? `첫 점령 ${num(p.pts[0])} / ${num(p.pts[1])} · 점령 중 분당 +${num(p.pts[2])} / +${num(p.pts[3])} (연맹 / 개인)` : ''].filter(Boolean).join(' · ');
     box.innerHTML = `<button class="btn x" type="button" id="infox" aria-label="닫기">✕</button>` +
       `<h3>${esc(p.nm)} <small>${esc(p.en)}</small></h3>` + (meta ? `<p class="meta">${meta}</p>` : '') + (p.fx ? `<p>${esc(p.fx)}</p>` : '') +
@@ -609,6 +633,8 @@
     card.hidden = false;
   }
   $('q').addEventListener('input', () => { search(); renderAll(); if (found) focusPost(sel); });   // 휴대폰은 찾은 건물로 확대
+  $('q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) $('q').blur(); });
+  $('q').addEventListener('change', () => { if (found && PHONE.matches && POSTS.some(p => p.id === sel)) wrapEl.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
   $('qhint').addEventListener('click', ev => { const b = ev.target.closest('[data-pick]'); if (b) { $('q').value = b.dataset.pick; search(); renderAll(); if (found) focusPost(sel); } });
 
   // ---------- 연맹 채팅용 텍스트 · 링크 · 이미지 ----------
@@ -721,6 +747,7 @@
   function setPhase(p) { phase = p; if (found) { const m = findIn(data.legions[found.li], found.n); if (m) sel = postOf(m, phase) || sel; } renderAll(); }
   $('ph1').onclick = () => setPhase(1);
   $('ph2').onclick = () => setPhase(2);
+  $('fullph').onclick = () => setPhase(phase === 1 ? 2 : 1);   // 크게 화면 안의 시간 버튼
   $('nm').onclick = () => { showNames = !showNames; renderAll(); };
   $('bgbtn').onclick = () => { photo = !photo; try { localStorage.setItem('ks-sword-photo', photo ? '1' : '0'); } catch (_) { /* 저장 못 함 */ } renderAll(); };
 
@@ -928,7 +955,7 @@
         `<span class="enm${inRoster(m.n) ? '' : ' warnn'}"${inRoster(m.n) ? '' : ' title="배치도에 없는 닉네임"'}>${esc(m.n)}</span>${thenSelect(m)}` +
         `<button class="btn" type="button" data-out="${esc(m.n)}" aria-label="${esc(m.n)} 빼기">✕</button></div>`).join('');
     } else {
-      $('selpost').innerHTML = `<span class="hint">지도나 아래 목록에서 건물(또는 게릴라·지하 저장고·후보)을 누르면 그곳의 ${tname} 인원을 고칠 수 있습니다. 건물을 고르지 않고 넣으면 미배치로 들어갑니다.</span>`;
+      $('selpost').innerHTML = `<span class="hint">지도나 아래 목록에서 건물(또는 지하 저장고·게릴라·후보)을 누르면 그곳의 ${tname} 인원을 고칠 수 있습니다. 건물을 고르지 않고 넣으면 미배치로 들어갑니다.</span>`;
       $('erows').innerHTML = '';
     }
     const none = L.members.filter(m => !postOf(m, phase));
@@ -971,11 +998,12 @@
     const set = (key, v) => (v ? sp.set(key, v) : sp.delete(key));
     set('l', li ? String(li + 1) : ''); set('p', phase === 2 ? '2' : ''); set('b', sel); set('q', clean($('q').value));
     if (editing) sp.set('edit', ''); else sp.delete('edit');
-    history.replaceState(null, '', u.pathname + (sp.toString() ? '?' + sp.toString().replace(/edit=(&|$)/, 'edit$1') : ''));
+    history.replaceState(history.state, '', u.pathname + (sp.toString() ? '?' + sp.toString().replace(/edit=(&|$)/, 'edit$1') : ''));
   }
+  PHONE.addEventListener('change', () => data && renderAll());
   function renderAll() {
     if (!data) return;
-    $('ph1').setAttribute('aria-pressed', phase === 1); $('ph2').setAttribute('aria-pressed', phase === 2);
+    $('ph1').setAttribute('aria-pressed', phase === 1); $('ph2').setAttribute('aria-pressed', phase === 2); $('fullph').textContent = phase === 1 ? '시작' : '15분 후';
     $('nm').setAttribute('aria-pressed', showNames); $('bgbtn').setAttribute('aria-pressed', photo);
     renderTabs(); renderFacts(); renderMemo(); renderCard(); renderPosts(); renderMap(); renderInfo(); renderEditor(); syncURL();
   }

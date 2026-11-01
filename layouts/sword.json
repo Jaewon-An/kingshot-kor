@@ -43,7 +43,13 @@
     },
     {
      "n": "CIAO",
-     "at": "sanctumR"
+     "at": "sanctumR",
+     "then": "cellar1"
+    },
+    {
+     "n": "Mercury",
+     "at": "attack",
+     "then": "cellar11"
     }
    ]
   },
