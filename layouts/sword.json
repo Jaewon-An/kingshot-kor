@@ -1,0 +1,27 @@
+{
+ "legions": [
+  {
+   "name": "군단 1",
+   "side": "blue",
+   "members": [
+    {
+     "n": "tang",
+     "at": "stables"
+    },
+    {
+     "n": "ZERO",
+     "at": "stables"
+    },
+    {
+     "n": "아이쿵",
+     "at": "stables"
+    }
+   ]
+  },
+  {
+   "name": "군단 2",
+   "side": "blue",
+   "members": []
+  }
+ ]
+}

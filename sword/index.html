@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
+<title>성검 쟁탈 배치도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/v2/guide.css">
+<style>
+  /* 전장 색 (sword.js가 읽어 지도·이미지에 씀 — #rrggbb로 둘 것, grid만 rgba) */
+  :root {
+    --sw-cliff: #cdc2ab; --sw-sand: #e6cc98; --sw-edge: #a8834c; --sw-grid: rgba(120,85,40,.14);
+    --sw-blue: #2f6fd0; --sw-red: #c8372d; --sw-shrine: #c99a1e; --sw-sanctum: #7a5aa8; --sw-abbey: #2f8277; --sw-buff: #56698a; --sw-cellar: #8a5a2b;
+    --sw-tagbg: #fffdf7; --sw-tagline: #b9a888; --sw-ink: #1b231e; --sw-muted: #6b6455; --sw-sel: #e0a400; --sw-lock: #b4322b; --sw-lead: #a8720f; --sw-bg: #f6f7f3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sw-cliff: #1f1b15; --sw-sand: #4a3b22; --sw-edge: #8a6a3a; --sw-grid: rgba(255,220,160,.08);
+      --sw-blue: #5f95e6; --sw-red: #e5574e; --sw-shrine: #e0b84a; --sw-sanctum: #a184d6; --sw-abbey: #3aa594; --sw-buff: #8193b3; --sw-cellar: #b07a45;
+      --sw-tagbg: #181d1a; --sw-tagline: #4a4234; --sw-ink: #e2e7df; --sw-muted: #a39a88; --sw-sel: #ffd24a; --sw-lock: #e2675f; --sw-lead: #e0b04a; --sw-bg: #181d1a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --sw-cliff: #1f1b15; --sw-sand: #4a3b22; --sw-edge: #8a6a3a; --sw-grid: rgba(255,220,160,.08);
+    --sw-blue: #5f95e6; --sw-red: #e5574e; --sw-shrine: #e0b84a; --sw-sanctum: #a184d6; --sw-abbey: #3aa594; --sw-buff: #8193b3; --sw-cellar: #b07a45;
+    --sw-tagbg: #181d1a; --sw-tagline: #4a4234; --sw-ink: #e2e7df; --sw-muted: #a39a88; --sw-sel: #ffd24a; --sw-lock: #e2675f; --sw-lead: #e0b04a; --sw-bg: #181d1a;
+  }
+  .tabs { display: flex; gap: 6px; }
+  .tabs .btn { flex: 1; padding: 8px 10px; font-size: .9rem; }
+  .tabs .btn .n { font-family: var(--f-mono); font-weight: 500; margin-left: 6px; opacity: .75; }
+  .memo { margin: 0; white-space: pre-wrap; border-left: 3px solid var(--accent); padding: 6px 10px; background: var(--bg); font-size: .86rem; }
+  .card .co { font-family: var(--f-body); font-size: 1.3rem; }
+  .card .lead, .post .who .lead { color: var(--sw-lead); }
+  .erow .lead[aria-pressed="true"] { color: var(--sw-lead); background: color-mix(in srgb, var(--sw-lead) 18%, var(--bg)); border-color: var(--sw-lead); }
+
+  /* 지도 */
+  .swwrap { position: relative; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--sw-cliff); }
+  .swscroll { overflow: auto; max-height: max(420px, calc(100vh - 190px)); max-height: max(420px, calc(100svh - 190px)); }
+  #map { display: block; width: 100%; height: auto; max-height: max(420px, calc(100vh - 190px)); max-height: max(420px, calc(100svh - 190px)); margin: 0 auto; user-select: none; -webkit-user-select: none; font-family: var(--f-body); }
+  #map.z { max-height: none; }
+  #map [data-post] { cursor: pointer; }
+  #map [data-post]:focus { outline: none; }
+  #map [data-post]:focus-visible > :first-child { stroke: var(--focus); stroke-width: 3; }
+  .seg, .zoombar { display: inline-flex; }
+  .zoombar { margin-left: auto; gap: 4px; }
+  .zoombar .btn { min-width: 38px; }
+  .seg .btn { border-radius: 0; }
+  .seg .btn:first-child { border-radius: 4px 0 0 4px; }
+  .seg .btn:last-child { border-radius: 0 4px 4px 0; margin-left: -1px; }
+  .info { position: absolute; right: 8px; bottom: 8px; width: min(380px, calc(100% - 16px)); max-height: 46%; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 3px 12px var(--shadow); padding: 8px 34px 8px 11px; font-size: .8rem; }
+  .info.left { right: auto; left: 8px; }
+  .info h3 { margin: 0; font-size: 1rem; display: flex; flex-wrap: wrap; gap: 2px 7px; align-items: baseline; }
+  .info h3 small { font-weight: 400; font-size: .74rem; color: var(--muted); }
+  .info p { margin: 3px 0 0; }
+  .info .meta { color: var(--muted); }
+  .info .x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; padding: 0; min-height: 0; }
+  .kd { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex: none; }
+  .pill15 { display: inline-block; font-size: .66rem; font-weight: 600; line-height: 1.5; padding: 0 6px; border-radius: 999px; background: var(--sw-lock); color: #fff; white-space: nowrap; }
+
+  /* 건물별 명단 */
+  .posts { border: 1px solid var(--line); border-radius: var(--r); background: var(--bg); }
+  .posts .gh { font-size: .72rem; font-weight: 600; color: var(--muted); letter-spacing: .03em; padding: 7px 10px 3px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .posts .gh:first-child { border-radius: var(--r) var(--r) 0 0; }
+  .post { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .post:last-child { border-bottom: 0; }
+  .post:hover { background: var(--panel); }
+  .post.on { background: color-mix(in srgb, var(--sw-sel) 12%, transparent); box-shadow: inset 3px 0 0 var(--sw-sel); }
+  .post .pn { font-weight: 600; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .post .ct { font-family: var(--f-mono); font-weight: 600; }
+  .post .ct.zero { color: var(--muted); font-weight: 500; }
+  .post.empty { padding-block: 4px; }
+  .post.empty .pn { font-weight: 500; color: var(--muted); }
+  .post .who { grid-column: 1 / -1; font-size: .84rem; overflow-wrap: anywhere; }
+  .post .from { color: var(--muted); font-size: .72rem; }
+  .warnn { text-decoration: underline dotted var(--bad); text-underline-offset: 3px; }
+
+  /* 편집 */
+  .ed { border: 2px solid var(--accent); border-radius: var(--r); padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 9px; }
+  .ed h2 { font-family: var(--f-display); font-size: 1.1rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .ed h2 .sumx { font-family: var(--f-body); }
+  .ed .dirty { color: var(--accent); font-weight: 600; }
+  .ed label { font-size: .8rem; font-weight: 600; }
+  .ed select, .ed input[type=text], .ed input[type=password] { font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); min-width: 0; }
+  .ed .line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .ed .line > input[type=text] { flex: 1 1 160px; }
+  .selpost { padding: 7px 9px; border: 1px dashed var(--line); border-radius: 4px; font-size: .84rem; }
+  .selpost b { font-size: .95rem; }
+  .erows { display: flex; flex-direction: column; gap: 4px; }
+  .erow { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 9.5em) auto; gap: 6px; align-items: center; font-size: .86rem; }
+  .erow .enm { overflow-wrap: anywhere; font-weight: 600; }
+  .erow select { padding: 4px 6px; font-size: .78rem; }
+  .erow .btn { padding: 3px 8px; min-height: 30px; }
+  .erow .lead { color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; max-height: 32vh; overflow: auto; }
+  .chip { font: inherit; font-size: .8rem; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; background: var(--panel); color: var(--ink); cursor: pointer; touch-action: manipulation; }
+  .chip:hover { border-color: var(--muted); }
+  .chip.warn { border-style: dashed; border-color: var(--bad); }
+  .chip.other { color: var(--muted); }
+  .chip .rm { margin-left: 6px; color: var(--muted); }
+  .ed details { padding-top: 8px; }
+  .ed textarea { min-height: 70px; font-family: var(--f-body); font-size: .84rem; }
+  .ed .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ed .acts .copy { flex: 1 1 auto; }
+  .edmsg { font-size: .8rem; }
+  .edmsg.err { color: var(--bad); }
+  .adminbar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
+  dialog { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); color: var(--ink); padding: 16px; width: min(340px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  dialog form { display: flex; flex-direction: column; gap: 8px; }
+  dialog input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); }
+  dialog h2 { font-family: var(--f-display); font-size: 1.15rem; }
+  dialog .acts { display: flex; gap: 6px; justify-content: flex-end; }
+
+  /* 규칙 요약 */
+  #rules .tbl { margin-top: 8px; max-height: none; }
+  #rules td { white-space: normal; }
+  #rules td.n { white-space: nowrap; font-family: var(--f-mono); font-size: .76rem; }
+  #rules ul { margin: 8px 0 0; padding-left: 1.2em; font-size: .8rem; }
+  #rules li { margin: 2px 0; }
+  .legend i.sp { transform: rotate(45deg) scale(.8); }
+
+  @media (max-width: 900px) {
+    #tabs { order: 1; } #memo { order: 2; } .finder { order: 3; } #card { order: 4; } .mapcol { order: 5; } #editor { order: 6; } #posts { order: 7; }
+    #rules { order: 8; } #copy { order: 9; } #copytext { order: 10; } .adminbar { order: 11; }
+    .swscroll { max-height: 72vh; max-height: 72svh; }
+    #map { max-height: none; }
+    .info, .info.left { position: relative; left: auto; right: auto; bottom: auto; width: auto; max-height: none; border-width: 1px 0 0; border-radius: 0; box-shadow: none; }
+    .erow { grid-template-columns: auto minmax(0, 1fr) minmax(0, 8.5em) auto; }
+  }
+</style>
+</head>
+<body>
+<!-- /sword 성검 쟁탈(Swordland Showdown) 인원 배치도. 스크립트 sword/sword.js, 배치 /api/sword/layout (첫 게시 전에는 layouts/sword.json) -->
+<div class="page">
+  <header class="top">
+    <div>
+      <p class="eyebrow">KINGSHOT · 2382 KOR · SWORDLAND SHOWDOWN</p>
+      <h1>성검 쟁탈 인원 배치도</h1>
+      <p class="stamp" id="stamp"></p>
+    </div>
+    <dl class="facts" id="facts"></dl>
+  </header>
+
+  <p class="notice" id="notice" role="status">배치도를 불러오는 중…</p>
+
+  <div class="grid" id="main" hidden>
+    <aside class="panel">
+      <div class="tabs" id="tabs" role="group" aria-label="군단"></div>
+      <p class="memo" id="memo" hidden></p>
+      <div class="finder">
+        <label for="q">내 배치 찾기</label>
+        <input id="q" type="search" enterkeyhint="search" placeholder="닉네임 (일부만 써도 됨)" autocomplete="off" spellcheck="false">
+        <p class="hint" id="qhint" role="status"></p>
+      </div>
+      <div class="card" id="card" hidden></div>
+
+      <section class="ed" id="editor" hidden>
+        <h2>배치 편집 <span class="sumx" id="edstate"></span></h2>
+        <p class="hint" id="ednote"></p>
+        <div class="line">
+          <label for="side">우리 진영</label>
+          <select id="side"><option value="blue">파랑 (왼쪽)</option><option value="red">빨강 (오른쪽)</option></select>
+          <span class="hint">지도 위 시간 버튼(시작 / 15분 후)에 따라 그 시간의 자리를 고칩니다.</span>
+        </div>
+        <div class="selpost" id="selpost"></div>
+        <div class="erows" id="erows"></div>
+        <div class="line">
+          <input id="addname" type="text" list="roster" placeholder="닉네임 넣기 (여러 명은 띄어쓰기·쉼표)" autocomplete="off" spellcheck="false" enterkeyhint="done">
+          <button class="btn" id="addbtn" type="button">넣기</button>
+        </div>
+        <p class="hint">앞에 자리 이름을 쓰면 그곳에 넣습니다: <span class="mono">마구간 tang ZERO 아이쿵</span> · <span class="mono">왼쪽 성소 ○○, △△</span>. 띄어쓰기가 든 닉네임은 배치도 이름으로 알아보고, 배치도에 없는 이름은 쉼표로 나눠 주세요.</p>
+        <datalist id="roster"></datalist>
+        <p class="hint" id="addhint" role="status"></p>
+        <div>
+          <span class="sumx" id="unsum"></span>
+          <div class="chips" id="unchips"></div>
+        </div>
+        <details id="rosterbox">
+          <summary>배치도 연맹원에서 고르기 <span class="sumx" id="rossum"></span></summary>
+          <p class="hint">누르면 선택한 건물에 넣습니다 (건물을 안 골랐으면 미배치로). 위 입력칸에 쓰면 그 글자가 든 이름만 보입니다.</p>
+          <div class="chips" id="roschips"></div>
+        </details>
+        <details>
+          <summary>명단 한꺼번에 넣기</summary>
+          <p class="hint">한 줄에 한 명씩 붙여 넣으면 미배치 인원으로 들어갑니다.</p>
+          <textarea id="bulk" spellcheck="false" aria-label="명단 붙여넣기"></textarea>
+          <button class="btn" id="bulkbtn" type="button">미배치로 넣기</button>
+        </details>
+        <label for="memoin">작전 메모 (맨 위에 보임)</label>
+        <textarea id="memoin" spellcheck="false" placeholder="예: 시작하면 종탑·마구간 먼저, 성소는 두 곳 모두 지키기"></textarea>
+        <div class="acts">
+          <button class="btn copy" id="publish" type="button">게시하기 (모두에게 반영)</button>
+          <button class="btn" id="revert" type="button">게시본으로 되돌리기</button>
+          <button class="btn" id="exitedit" type="button">편집 끝내기</button>
+        </div>
+        <p class="edmsg" id="edmsg" role="status"></p>
+      </section>
+
+      <div class="posts" id="posts"></div>
+
+      <details id="rules">
+        <summary>점수·규칙 요약</summary>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>건물</th><th>열림</th><th>첫 점령<br>연맹 / 개인</th><th>점령 중 분당<br>연맹 / 개인</th></tr></thead>
+            <tbody>
+              <tr><td><b>성검 제단</b> ×1</td><td>15분</td><td class="n">9,000 / 4,500</td><td class="n">1,800 / 900</td></tr>
+              <tr><td><b>성소</b> ×2<br><span class="hint">두 곳이면 성검 제단보다 많음</span></td><td>시작</td><td class="n">6,000 / 3,000</td><td class="n">1,200 / 600</td></tr>
+              <tr><td><b>수도원</b> ×4</td><td>시작</td><td class="n">3,000 / 1,500</td><td class="n">600 / 300</td></tr>
+              <tr><td><b>종탑</b><br><span class="hint">건물 점령 시간 −50%</span></td><td>시작</td><td class="n">1,200 / 600</td><td class="n">240 / 120</td></tr>
+              <tr><td><b>왕실 마구간</b><br><span class="hint">무료 순간이동 대기 −50% (10분→5분)</span></td><td>시작</td><td class="n">1,200 / 600</td><td class="n">240 / 120</td></tr>
+              <tr><td><b>용병 캠프</b><br><span class="hint">적 주둔군 공격·방어 약화</span></td><td>15분</td><td class="n">1,200 / 600</td><td class="n">240 / 120</td></tr>
+              <tr><td><b>개혁의 전당</b><br><span class="hint">주는 피해 +15% · 받는 피해 −15%</span></td><td>15분</td><td class="n">1,200 / 600</td><td class="n">240 / 120</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>전투는 1시간. 연맹당 전투원 30명 + 후보 10명. 매칭은 전투원·후보 중 부대 전투력 상위 20명 합계 기준.</li>
+          <li>시작부터 열린 8곳(성소 2 · 수도원 4 · 종탑 · 마구간)을 모두 처음 점령하면 연맹 점수 26,400점. 첫 점령을 최대한 많이 가져가기.</li>
+          <li>성검 제단 · 용병 캠프 · 개혁의 전당은 15분 뒤에 열림.</li>
+          <li>지하 저장고: 15분·20분에 두 번 나타나는 채집지. 미니맵 돋보기로 위치 확인, 채집하면 연맹·개인 점수.</li>
+          <li>적에게서 건물을 빼앗으면 그 주변에 보급 상자가 떨어짐 (주우면 점수).</li>
+          <li>도시가 불타면 그 사람이 넣어 둔 주둔 부대도 빠짐. 도시는 진영(안전지대) 안에.</li>
+          <li>전장에서 나가면 12분 뒤에 다시 들어올 수 있음 (대신 부대가 모두 치료됨).</li>
+        </ul>
+      </details>
+
+      <button class="btn copy" id="copy" type="button">연맹 채팅용 텍스트 복사</button>
+      <textarea id="copytext" readonly hidden aria-label="복사용 텍스트"></textarea>
+      <div class="adminbar">
+        <button class="btn" id="editbtn" type="button">편집 (관리자)</button>
+        <span class="hint" id="adminhint"></span>
+      </div>
+    </aside>
+
+    <section class="mapcol">
+      <div class="mapbar">
+        <div class="seg" role="group" aria-label="시간">
+          <button class="btn" id="ph1" type="button" aria-pressed="true">시작 ~ 15분</button>
+          <button class="btn" id="ph2" type="button" aria-pressed="false">15분 후</button>
+        </div>
+        <button class="btn" id="nm" type="button" aria-pressed="true">이름</button>
+        <button class="btn" id="png" type="button">이미지 저장</button>
+        <button class="btn" id="link" type="button">링크 복사</button>
+        <span class="zoombar" role="group" aria-label="지도 크기">
+          <button class="btn" id="zout" type="button" aria-label="축소">－</button>
+          <button class="btn" id="fit" type="button">전체</button>
+          <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
+        </span>
+      </div>
+      <div class="swwrap">
+        <div class="swscroll" id="swscroll">
+          <svg id="map" viewBox="-400 -295 800 645" role="img" aria-label="성검 쟁탈 전장 지도"></svg>
+        </div>
+        <div class="info" id="info" hidden></div>
+      </div>
+      <details class="legend" id="legend" open>
+        <summary>범례</summary>
+        <div class="keys">
+          <span><i style="background:var(--sw-shrine)"></i>성검 제단</span>
+          <span><i style="background:var(--sw-sanctum)"></i>성소</span>
+          <span><i style="background:var(--sw-abbey)"></i>수도원</span>
+          <span><i style="background:var(--sw-buff)"></i>버프 건물 (종탑 · 마구간 · 용병 캠프 · 개혁의 전당)</span>
+          <span><i style="background:var(--sw-cellar)"></i>지하 저장고 (15분·20분 등장)</span>
+          <span><i class="sp" style="background:var(--sw-blue)"></i>파랑 진영</span>
+          <span><i class="sp" style="background:var(--sw-red)"></i>빨강 진영</span>
+          <span><span class="pill15">15분</span>15분 뒤 열림</span>
+          <span>숫자 = 배치 인원 · <b style="color:var(--sw-lead)">★</b> = 집결장(리더)</span>
+        </div>
+      </details>
+    </section>
+  </div>
+
+  <dialog id="login">
+    <form id="loginform">
+      <h2>관리자 로그인</h2>
+      <input id="lid" type="text" autocomplete="username" placeholder="아이디" required>
+      <input id="lpw" type="password" autocomplete="current-password" placeholder="비밀번호" required>
+      <p class="hint" id="loginerr" role="alert" style="color:var(--bad)"></p>
+      <div class="acts">
+        <button class="btn" id="logincancel" type="button">취소</button>
+        <button class="btn copy" type="submit">로그인</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer><span class="hint">전장 지도는 게임 화면과 공략 그림(kingshotguides.com · Sgt Slayer, kingshotguide.org, kingshotmastery.com)을 보고 다시 그린 것이라 위치는 대략입니다. 건물 이름 앞의 왼쪽·오른쪽·위·아래는 이 지도에서의 위치입니다 (게임 표기와 다를 수 있음). 점수는 2025년 공략 자료 기준.</span></footer>
+</div>
+<script src="/sword/sword.js"></script>
+</body>
+</html>

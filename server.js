@@ -1,6 +1,6 @@
 // Local server with the same API as _worker.js on Cloudflare:
-//   static files, /api/login, GET/PUT /api/layout, GET/PUT /api/v2/layout, GET/PUT /api/sgd/layout
-// Locally the published layouts are the files layouts/current.json, layouts/v2.json and layouts/sgd.json.
+//   static files, /api/login, GET/PUT /api/layout, GET/PUT /api/v2/layout, GET/PUT /api/sgd/layout, GET/PUT /api/sword/layout
+// Locally the published layouts are the files layouts/current.json, layouts/v2.json, layouts/sgd.json and layouts/sword.json.
 // Usage: node server.js   (PORT env var, default 8080) — no dependencies.
 const http = require('node:http');
 const fs = require('node:fs');
@@ -13,6 +13,7 @@ const LAYOUT_FILES = {
   '/api/layout': path.join(ROOT, 'layouts', 'current.json'),
   '/api/v2/layout': path.join(ROOT, 'layouts', 'v2.json'),
   '/api/sgd/layout': path.join(ROOT, 'layouts', 'sgd.json'),
+  '/api/sword/layout': path.join(ROOT, 'layouts', 'sword.json'),
 };
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 
@@ -46,6 +47,17 @@ function checkToken(req) {
 const validLayout = list => Array.isArray(list) && list.length <= 5000 && list.every(o =>
   o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
   (o.nickname === undefined || (typeof o.nickname === 'string' && o.nickname.length <= 80)));
+// /sword (성검 쟁탈 인원 배치): { legions: [{ name, side, memo?, members: [{ n, at, then?, lead? }] }] } — sword/sword.js의 normalize()와 같은 모양
+const SWORD_POST = /^[A-Za-z0-9]{0,16}$/;
+function validSword(d) {
+  return !!d && typeof d === 'object' && !Array.isArray(d) && Array.isArray(d.legions) && d.legions.length >= 1 && d.legions.length <= 4 &&
+    d.legions.every(l => l && typeof l.name === 'string' && l.name.length <= 30 && (l.side === 'blue' || l.side === 'red') &&
+      (l.memo === undefined || (typeof l.memo === 'string' && l.memo.length <= 1000)) &&
+      Array.isArray(l.members) && l.members.length <= 200 && l.members.every(m => m && typeof m.n === 'string' && m.n.trim() && m.n.length <= 40 &&
+        typeof m.at === 'string' && SWORD_POST.test(m.at) && (m.then === undefined || (typeof m.then === 'string' && SWORD_POST.test(m.then))) &&
+        (m.lead === undefined || typeof m.lead === 'boolean')));
+}
+const VALIDATORS = { '/api/sword/layout': validSword };
 // same as _worker.js: the front page is /v2/, the old layout pages live under /v1/
 const REDIRECTS = {
   '/': '/v2/', '/index.html': '/v2/',
@@ -99,10 +111,10 @@ async function api(req, res, url) {
     if (!checkToken(req)) return send(res, 401, { error: '로그인이 필요합니다' });
     let list;
     try { list = JSON.parse(await readBody(req)); } catch (_) { return send(res, 400, { error: 'JSON 형식이 아닙니다' }); }
-    if (!validLayout(list)) return send(res, 400, { error: '배치 데이터 형식이 아닙니다' });
+    if (!(VALIDATORS[url.pathname] || validLayout)(list)) return send(res, 400, { error: '배치 데이터 형식이 아닙니다' });
     try { fs.copyFileSync(layoutFile, layoutFile.replace(/\.json$/, '.previous.json')); } catch (_) { /* first publish */ }
     fs.writeFileSync(layoutFile, JSON.stringify(list, null, 1));
-    return send(res, 200, { ok: true, count: list.length });
+    return send(res, 200, { ok: true, count: Array.isArray(list) ? list.length : undefined });
   }
   return send(res, 404, { error: 'not found' });
 }
@@ -114,7 +126,7 @@ http.createServer((req, res) => {
   }
   const to = REDIRECTS[url.pathname];
   if (to) { res.writeHead(302, { Location: to + url.search }); return res.end(); }
-  const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html', '/sgd': '/sgd/index.html', '/sgd/': '/sgd/index.html', '/banner/v1': '/banner/v1/index.html', '/banner/v1/': '/banner/v1/index.html', '/banner/v2': '/banner/v2/index.html', '/banner/v2/': '/banner/v2/index.html' };
+  const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html', '/sgd': '/sgd/index.html', '/sgd/': '/sgd/index.html', '/sword': '/sword/index.html', '/sword/': '/sword/index.html', '/banner/v1': '/banner/v1/index.html', '/banner/v1/': '/banner/v1/index.html', '/banner/v2': '/banner/v2/index.html', '/banner/v2/': '/banner/v2/index.html' };
   const page = V1_PAGES.includes(url.pathname) ? '/v1/index.html' : PAGES[url.pathname] || url.pathname;
   const rel = decodeURIComponent(page);
   const file = path.normalize(path.join(ROOT, rel));
@@ -127,4 +139,4 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
     res.end(data);
   });
-}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (신규 자리: /v2, /v2/admin · 기존 배치도: /v1, /v1/admin · SGD: /sgd${ADMIN_HASH ? '' : ' — 계정 미설정'})`));
+}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (신규 자리: /v2, /v2/admin · 기존 배치도: /v1, /v1/admin · SGD: /sgd · 성검 쟁탈: /sword${ADMIN_HASH ? '' : ' — 계정 미설정'})`));

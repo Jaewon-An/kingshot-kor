@@ -2,17 +2,18 @@
 // Static files are served from env.ASSETS; /api/* is handled here.
 //
 // Bindings (Pages project ▸ Settings):
-//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2" and "sgd")
+//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2", "sgd" and "sword")
 //   ADMIN_HASH  secret "salt$sha256hex(salt:id:password)" — made by `node tools/set-admin.mjs`
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 const MAX_LAYOUT_BYTES = 1024 * 1024;
 // Published layouts: "/v1" (+ /v1/admin), "/v2" (+ /v2/admin, the new seats around the bear traps in the fertile land)
-// and "/sgd" (the SGD alliance's seats around its one bear trap).
+// "/sgd" (the SGD alliance's seats around its one bear trap) and "/sword" (who goes where in Swordland Showdown — an object, not a list, so its own check).
 // Each keeps one step of rollback in `prev`; the bundled file is served until the first publish.
 const LAYOUTS = {
   '/api/layout': { key: 'current', prev: 'previous', stamp: 'updated_at', file: '/layouts/current.json' },
   '/api/v2/layout': { key: 'v2', prev: 'v2_previous', stamp: 'v2_updated_at', file: '/layouts/v2.json' },
   '/api/sgd/layout': { key: 'sgd', prev: 'sgd_previous', stamp: 'sgd_updated_at', file: '/layouts/sgd.json' },
+  '/api/sword/layout': { key: 'sword', prev: 'sword_previous', stamp: 'sword_updated_at', file: '/layouts/sword.json', valid: d => validSword(d) },
 };
 
 const enc = new TextEncoder();
@@ -52,6 +53,16 @@ function validLayout(list) {
     o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
     (o.nickname === undefined || (typeof o.nickname === 'string' && o.nickname.length <= 80)));
 }
+// /sword (성검 쟁탈 인원 배치): { legions: [{ name, side, memo?, members: [{ n, at, then?, lead? }] }] } — sword/sword.js의 normalize()와 같은 모양
+const SWORD_POST = /^[A-Za-z0-9]{0,16}$/;
+function validSword(d) {
+  return !!d && typeof d === 'object' && !Array.isArray(d) && Array.isArray(d.legions) && d.legions.length >= 1 && d.legions.length <= 4 &&
+    d.legions.every(l => l && typeof l.name === 'string' && l.name.length <= 30 && (l.side === 'blue' || l.side === 'red') &&
+      (l.memo === undefined || (typeof l.memo === 'string' && l.memo.length <= 1000)) &&
+      Array.isArray(l.members) && l.members.length <= 200 && l.members.every(m => m && typeof m.n === 'string' && m.n.trim() && m.n.length <= 40 &&
+        typeof m.at === 'string' && SWORD_POST.test(m.at) && (m.then === undefined || (typeof m.then === 'string' && SWORD_POST.test(m.then))) &&
+        (m.lead === undefined || typeof m.lead === 'boolean')));
+}
 
 async function api(request, env, url) {
   const path = url.pathname;
@@ -75,13 +86,13 @@ async function api(request, env, url) {
     if (text.length > MAX_LAYOUT_BYTES) return json({ error: '배치 데이터가 너무 큽니다' }, 413);
     let list;
     try { list = JSON.parse(text); } catch (_) { return json({ error: 'JSON 형식이 아닙니다' }, 400); }
-    if (!validLayout(list)) return json({ error: '배치 데이터 형식이 아닙니다' }, 400);
+    if (!(L.valid || validLayout)(list)) return json({ error: '배치 데이터 형식이 아닙니다' }, 400);
     const prev = await env.LAYOUT_KV.get(L.key);
     if (prev) await env.LAYOUT_KV.put(L.prev, prev);   // one step of rollback
     const now = new Date().toISOString();
     await env.LAYOUT_KV.put(L.key, JSON.stringify(list), { metadata: { updated_at: now } });
     await env.LAYOUT_KV.put(L.stamp, now);
-    return json({ ok: true, count: list.length });
+    return json({ ok: true, count: Array.isArray(list) ? list.length : undefined });
   }
 
   if (path === '/api/login' && request.method === 'POST') {
