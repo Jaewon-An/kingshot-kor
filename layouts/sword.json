@@ -4,7 +4,6 @@
    "name": "군단 1",
    "side": "blue",
    "notes": {
-    "sanctumR": "2분 이상 지난 뒤 진입",
     "stables": "1분 지켜보고 진입 · 20분간 홀더",
     "attack": "나머지 인원 모두"
    },
