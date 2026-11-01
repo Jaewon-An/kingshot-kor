@@ -3,6 +3,11 @@
   {
    "name": "군단 1",
    "side": "blue",
+   "notes": {
+    "sanctumR": "2분 이상 지난 뒤 진입",
+    "stables": "1분 지켜보고 진입 · 20분간 홀더",
+    "attack": "나머지 인원 모두"
+   },
    "members": [
     {
      "n": "tang",
@@ -15,6 +20,30 @@
     {
      "n": "아이쿵",
      "at": "stables"
+    },
+    {
+     "n": "무명자",
+     "at": "sanctumL"
+    },
+    {
+     "n": "샹크스",
+     "at": "sanctumL"
+    },
+    {
+     "n": "예서네",
+     "at": "sanctumL"
+    },
+    {
+     "n": "ICE",
+     "at": "sanctumR"
+    },
+    {
+     "n": "Haaland",
+     "at": "sanctumR"
+    },
+    {
+     "n": "CIAO",
+     "at": "sanctumR"
     }
    ]
   },

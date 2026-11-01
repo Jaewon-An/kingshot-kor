@@ -77,6 +77,9 @@
   .post .who { grid-column: 1 / -1; font-size: .84rem; overflow-wrap: anywhere; }
   .post .from { color: var(--muted); font-size: .72rem; }
   .warnn { text-decoration: underline dotted var(--bad); text-underline-offset: 3px; }
+  .note { color: var(--sw-lead); font-size: .8rem; font-weight: 500; }
+  .post .note { grid-column: 1 / -1; }
+  .info p.note, .card .note { margin: 3px 0 0; font-size: .85rem; }
 
   /* 편집 */
   .ed { border: 2px solid var(--accent); border-radius: var(--r); padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 9px; }
@@ -123,7 +126,19 @@
   #rules li { margin: 2px 0; }
   .legend i.sp { transform: rotate(45deg) scale(.8); }
 
-  @media (max-width: 900px) {
+  @media (max-width: 900px) {   /* 휴대폰 (갤럭시 S24+ 384×832 기준) */
+    .top { gap: 8px; padding-bottom: 8px; }
+    .eyebrow { letter-spacing: .06em; }
+    .facts div { padding: 3px 8px; }
+    .mapbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin-inline: -16px; padding-inline: 16px; }
+    .mapbar::-webkit-scrollbar { display: none; }
+    .mapbar > * { flex: 0 0 auto; }
+    .mapbar .btn { flex: 0 0 auto; min-height: 38px; padding: 6px 10px; font-size: .8rem; }
+    .zoombar { margin-left: 4px; }
+    .swwrap { margin-inline: -16px; border-radius: 0; border-left: 0; border-right: 0; }
+    .tabs .btn { min-height: 44px; }
+    .post { padding: 9px 12px; }
+    .post.empty { padding-block: 7px; }
     #tabs { order: 1; } #memo { order: 2; } .finder { order: 3; } #card { order: 4; } .mapcol { order: 5; } #editor { order: 6; } #posts { order: 7; }
     #rules { order: 8; } #copy { order: 9; } #copytext { order: 10; } .adminbar { order: 11; }
     .swscroll { max-height: 72vh; max-height: 72svh; }
@@ -167,6 +182,10 @@
           <span class="hint">지도 위 시간 버튼(시작 / 15분 후)에 따라 그 시간의 자리를 고칩니다.</span>
         </div>
         <div class="selpost" id="selpost"></div>
+        <div class="line" id="noteline" hidden>
+          <label for="notein">자리 메모</label>
+          <input id="notein" type="text" maxlength="100" placeholder="예: 1분 지켜보고 진입 · 20분간 홀더" autocomplete="off" spellcheck="false">
+        </div>
         <div class="erows" id="erows"></div>
         <div class="line">
           <input id="addname" type="text" list="roster" placeholder="닉네임 넣기 (여러 명은 띄어쓰기·쉼표)" autocomplete="off" spellcheck="false" enterkeyhint="done">
@@ -244,6 +263,7 @@
           <button class="btn" id="ph2" type="button" aria-pressed="false">15분 후</button>
         </div>
         <button class="btn" id="nm" type="button" aria-pressed="true">이름</button>
+        <button class="btn" id="bgbtn" type="button" aria-pressed="true" title="실제 게임 지도 사진 / 그린 지도">지도 사진</button>
         <button class="btn" id="png" type="button">이미지 저장</button>
         <button class="btn" id="link" type="button">링크 복사</button>
         <span class="zoombar" role="group" aria-label="지도 크기">
@@ -254,18 +274,17 @@
       </div>
       <div class="swwrap">
         <div class="swscroll" id="swscroll">
-          <svg id="map" viewBox="-400 -295 800 645" role="img" aria-label="성검 쟁탈 전장 지도"></svg>
+          <svg id="map" viewBox="-410 -350 800 665" role="img" aria-label="성검 쟁탈 전장 지도"></svg>
         </div>
         <div class="info" id="info" hidden></div>
       </div>
       <details class="legend" id="legend" open>
         <summary>범례</summary>
         <div class="keys">
-          <span><i style="background:var(--sw-shrine)"></i>성검 제단</span>
-          <span><i style="background:var(--sw-sanctum)"></i>성소</span>
-          <span><i style="background:var(--sw-abbey)"></i>수도원</span>
-          <span><i style="background:var(--sw-buff)"></i>버프 건물 (종탑 · 마구간 · 용병 캠프 · 개혁의 전당)</span>
+          <span>그린 지도: <i style="background:var(--sw-shrine)"></i>성검 제단 <i style="background:var(--sw-sanctum)"></i>성소 <i style="background:var(--sw-abbey)"></i>수도원 <i style="background:var(--sw-buff)"></i>버프 건물</span>
+          <span><i style="background:var(--sw-blue)"></i>도시 = 배치 인원 (우리 진영 색, 격자 한 칸, 건물 가까운 칸부터)</span>
           <span><i style="background:var(--sw-cellar)"></i>지하 저장고 (15분·20분 등장)</span>
+          <span><b style="color:var(--sw-lead)">※</b> 자리 메모 (진입 시점·임무)</span>
           <span><i class="sp" style="background:var(--sw-blue)"></i>파랑 진영</span>
           <span><i class="sp" style="background:var(--sw-red)"></i>빨강 진영</span>
           <span><span class="pill15">15분</span>15분 뒤 열림</span>
@@ -288,7 +307,7 @@
     </form>
   </dialog>
 
-  <footer><span class="hint">전장 지도는 게임 화면과 공략 그림(kingshotguides.com · Sgt Slayer, kingshotguide.org, kingshotmastery.com)을 보고 다시 그린 것이라 위치는 대략입니다. 건물 이름 앞의 왼쪽·오른쪽·위·아래는 이 지도에서의 위치입니다 (게임 표기와 다를 수 있음). 점수는 2025년 공략 자료 기준.</span></footer>
+  <footer><span class="hint">배경 지도 사진: kingshotmastery.com 게임 화면. 그린 지도·건물 위치는 이 사진과 공략 그림(kingshotguides.com · Sgt Slayer, kingshotguide.org)을 보고 맞춘 것이고, 격자·도시 칸은 배치를 보여 주기 위한 것이라 게임 좌표와 다릅니다. 건물 이름 앞의 왼쪽·오른쪽·위·아래는 이 지도에서의 위치입니다 (게임 표기와 다를 수 있음). 점수는 2025년 공략 자료 기준.</span></footer>
 </div>
 <script src="/sword/sword.js"></script>
 </body>

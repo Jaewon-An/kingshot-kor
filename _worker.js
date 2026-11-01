@@ -53,12 +53,14 @@ function validLayout(list) {
     o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
     (o.nickname === undefined || (typeof o.nickname === 'string' && o.nickname.length <= 80)));
 }
-// /sword (성검 쟁탈 인원 배치): { legions: [{ name, side, memo?, members: [{ n, at, then?, lead? }] }] } — sword/sword.js의 normalize()와 같은 모양
+// /sword (성검 쟁탈 인원 배치): { legions: [{ name, side, memo?, notes?: { 자리 id: 메모 }, members: [{ n, at, then?, lead? }] }] } — sword/sword.js의 normalize()와 같은 모양
 const SWORD_POST = /^[A-Za-z0-9]{0,16}$/;
 function validSword(d) {
   return !!d && typeof d === 'object' && !Array.isArray(d) && Array.isArray(d.legions) && d.legions.length >= 1 && d.legions.length <= 4 &&
     d.legions.every(l => l && typeof l.name === 'string' && l.name.length <= 30 && (l.side === 'blue' || l.side === 'red') &&
       (l.memo === undefined || (typeof l.memo === 'string' && l.memo.length <= 1000)) &&
+      (l.notes === undefined || (!!l.notes && typeof l.notes === 'object' && !Array.isArray(l.notes) && Object.keys(l.notes).length <= 20 &&
+        Object.entries(l.notes).every(([id, t]) => id && SWORD_POST.test(id) && typeof t === 'string' && t.length <= 100))) &&
       Array.isArray(l.members) && l.members.length <= 200 && l.members.every(m => m && typeof m.n === 'string' && m.n.trim() && m.n.length <= 40 &&
         typeof m.at === 'string' && SWORD_POST.test(m.at) && (m.then === undefined || (typeof m.then === 'string' && SWORD_POST.test(m.then))) &&
         (m.lead === undefined || typeof m.lead === 'boolean')));
