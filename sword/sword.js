@@ -36,38 +36,41 @@
     stable: { w: 27, e: 9, gh: 13, c: 'buff', img: [45, -45, 21] },
     camp: { w: 25, e: 10, gh: 24, c: 'buff', img: [48, -50, 23] },
     hall: { w: 28, e: 9, gh: 11, c: 'buff', img: [41, -32, 17] },
-    cellar: { w: 11, e: 5, gh: 0, c: 'cellar', img: [30, -25, 12] },   // 지하 저장고 채집지 하나 (자리 하나 = 두 곳)
+    cellar: { w: 11, e: 5, gh: 0, c: 'cellar', img: [30, -25, 12] },   // 숨겨진 땅굴 채집지 하나 (자리 하나 = 두 곳)
   };
   const PTS = { shrine: [9000, 4500, 1800, 900], sanctum: [6000, 3000, 1200, 600], abbey: [3000, 1500, 600, 300], buff: [1200, 600, 240, 120] };   // 첫 점령 연맹·개인, 분당 연맹·개인
   const POSTS = [
-    { id: 'sanctumL', nm: '왼쪽 성소', tag: '성소', en: 'Sanctum', k: 'sanctum', x: -195, y: -57, pts: PTS.sanctum, fx: '성소 두 곳을 모두 잡으면 분당 점수가 성검 제단보다 많음' },
-    { id: 'sanctumR', nm: '오른쪽 성소', tag: '성소', en: 'Sanctum', k: 'sanctum', x: 202, y: 67, pts: PTS.sanctum, fx: '성소 두 곳을 모두 잡으면 분당 점수가 성검 제단보다 많음' },
-    { id: 'abbeyL', nm: '왼쪽 수도원', tag: '수도원', en: 'Abbey', k: 'abbey', x: -238, y: 42, pts: PTS.abbey },
-    { id: 'abbeyB', nm: '아래 수도원', tag: '수도원', en: 'Abbey', k: 'abbey', x: -113, y: 237, pts: PTS.abbey },
-    { id: 'abbeyT', nm: '위 수도원', tag: '수도원', en: 'Abbey', k: 'abbey', x: 94, y: -232, pts: PTS.abbey },
-    { id: 'abbeyR', nm: '오른쪽 수도원', tag: '수도원', en: 'Abbey', k: 'abbey', x: 235, y: -35, pts: PTS.abbey },
-    { id: 'bell', nm: '종탑', tag: '종탑', en: 'Bell Tower', k: 'tower', x: -115, y: -235, pts: PTS.buff, fx: '우리 연맹의 건물 점령 시간 50% 감소' },
-    { id: 'stables', nm: '왕실 마구간', tag: '마구간', en: 'Royal Stables', k: 'stable', x: 105, y: 232, pts: PTS.buff, fx: '무료 순간이동 대기 시간 50% 감소 (10분 → 5분)' },
+    { id: 'sanctumL', nm: '1호 성소', tag: '1호 성소', en: 'Sanctum', k: 'sanctum', x: -195, y: -57, pts: PTS.sanctum, fx: '성소 두 곳을 모두 잡으면 분당 점수가 성검 제단보다 많음' },
+    { id: 'sanctumR', nm: '2호 성소', tag: '2호 성소', en: 'Sanctum', k: 'sanctum', x: 202, y: 67, pts: PTS.sanctum, fx: '성소 두 곳을 모두 잡으면 분당 점수가 성검 제단보다 많음' },
+    { id: 'abbeyL', nm: '1호 수도원', tag: '1호 수도원', en: 'Abbey', k: 'abbey', x: -238, y: 42, pts: PTS.abbey },
+    { id: 'abbeyB', nm: '2호 수도원', tag: '2호 수도원', en: 'Abbey', k: 'abbey', x: -113, y: 237, pts: PTS.abbey },
+    { id: 'abbeyT', nm: '4호 수도원', tag: '4호 수도원', en: 'Abbey', k: 'abbey', x: 94, y: -232, pts: PTS.abbey },
+    { id: 'abbeyR', nm: '3호 수도원', tag: '3호 수도원', en: 'Abbey', k: 'abbey', x: 235, y: -35, pts: PTS.abbey },
+    { id: 'bell', nm: '시계탑', tag: '시계탑', en: 'Bell Tower', k: 'tower', x: -115, y: -235, pts: PTS.buff, fx: '우리 연맹의 건물 점령 시간 50% 감소' },
+    { id: 'stables', nm: '마구간', tag: '마구간', en: 'Royal Stables', k: 'stable', x: 105, y: 232, pts: PTS.buff, fx: '무료 순간이동 대기 시간 50% 감소 (10분 → 5분)' },
     { id: 'shrine', nm: '성검 제단', tag: '성검 제단', en: 'Swordshrine', k: 'shrine', x: 0, y: 0, open: 15, pts: PTS.shrine, fx: '건물 하나로는 분당 점수가 가장 많음' },
-    { id: 'merc', nm: '용병 캠프', tag: '용병 캠프', en: 'Mercenary Camp', k: 'camp', x: -10, y: -160, open: 15, pts: PTS.buff, fx: '적이 점령한 건물에 용병을 보내 적 주둔군의 공격·방어를 약화' },
-    { id: 'reform', nm: '개혁의 전당', tag: '개혁의 전당', en: 'Hall of Reformation', k: 'hall', x: -2, y: 150, open: 15, pts: PTS.buff, fx: '우리 부대가 주는 피해 15% 증가 · 받는 피해 15% 감소' },
-    // 지하 저장고: 성검 제단 둘레에 두 곳씩 네 자리, 시계 방향으로 부름 (x, y = 두 곳 가운데)
+    { id: 'merc', nm: '용병 주둔지', tag: '용병 주둔지', en: 'Mercenary Camp', k: 'camp', x: -10, y: -160, open: 15, pts: PTS.buff, fx: '적이 점령한 건물에 용병을 보내 적 주둔군의 공격·방어를 약화' },
+    { id: 'reform', nm: '교화의 홀', tag: '교화의 홀', en: 'Hall of Reformation', k: 'hall', x: -2, y: 150, open: 15, pts: PTS.buff, fx: '우리 부대가 주는 피해 15% 증가 · 받는 피해 15% 감소' },
+    // 숨겨진 땅굴: 성검 제단 둘레에 두 곳씩 네 자리, 시계 방향으로 부름 (x, y = 두 곳 가운데)
     ...[['cellar11', '11시', [[-160, -165], [-100, -113]]], ['cellar1', '1시', [[138, -165], [202, -113]]], ['cellar5', '5시', [[108, 99], [165, 150]]], ['cellar7', '7시', [[-178, 97], [-110, 147]]]]
-      .map(([id, at, nodes]) => ({ id, nm: `${at} 지하 저장고`, tag: `${at} 저장고`, en: 'Undercellars', k: 'cellar', nodes, x: (nodes[0][0] + nodes[1][0]) / 2, y: (nodes[0][1] + nodes[1][1]) / 2, open: 15,
+      .map(([id, at, nodes]) => ({ id, nm: `${at} 숨겨진 땅굴`, tag: `${at} 땅굴`, en: 'Undercellars', k: 'cellar', nodes, x: (nodes[0][0] + nodes[1][0]) / 2, y: (nodes[0][1] + nodes[1][1]) / 2, open: 15,
         fx: '15분·20분에 두 번 나타나는 채집지 (미니맵 돋보기로 위치 확인), 채집하면 연맹·개인 점수' })),
   ];
   const GROUPS = [
     { id: 'attack', nm: '게릴라', en: 'Guerrilla', fx: '흩어져 다니며 적 주둔군·도시를 치고 빈 건물을 먼저 잡음 → 잡은 건물은 수비 인원에게 넘김', corner: 'tl' },
     { id: 'sub', nm: '후보', en: 'Substitutes', fx: '교체 인원 (최대 10명)', corner: 'bl' },
   ];
-  const CELL_IMG = [30, -25, 12];                      // 사진 속 지하 저장고 범위 [반너비, 위, 아래]
-  const SPAWNS = [{ side: 'blue', x: -351, y: 4, nm: '파랑' }, { side: 'red', x: 342, y: 4, nm: '빨강' }];
+  const CELL_IMG = [30, -25, 12];                      // 사진 속 숨겨진 땅굴 범위 [반너비, 위, 아래]
+  const SPAWNS = [{ side: 'blue', x: -351, y: 4, nm: '파랑 안전지대' }, { side: 'red', x: 342, y: 4, nm: '빨강 안전지대' }];
   const SPAWN_W = 62;
   const DECOR = [[35, -290], [-90, 35], [40, 270]];    // 사진 속 작은 장식물 (도시 칸을 놓지 않음)
   const BY = new Map([...POSTS, ...GROUPS].map(p => [p.id, p]));
-  const ORDER = ['sanctumL', 'sanctumR', 'abbeyL', 'abbeyB', 'abbeyT', 'abbeyR', 'bell', 'stables', 'shrine', 'merc', 'reform', 'cellar11', 'cellar1', 'cellar5', 'cellar7', 'attack', 'sub'];
+  const ORDER = ['sanctumL', 'sanctumR', 'abbeyL', 'abbeyB', 'abbeyR', 'abbeyT', 'bell', 'stables', 'shrine', 'merc', 'reform', 'cellar11', 'cellar1', 'cellar5', 'cellar7', 'attack', 'sub'];
   const SECTIONS = [['시작부터 열린 건물', 0, 8], ['15분 뒤 열리는 곳', 8, 15], ['역할', 15, 17]];
-  const ALIASES = { 마굿간: 'stables', 마구간: 'stables', 종탑: 'bell', 용병: 'merc', 개혁: 'reform', 제단: 'shrine', 성검: 'shrine', ...Object.fromEntries(['11', '1', '5', '7'].flatMap(h => [`${h}시 지하저장고`, `${h}시 저장고`, `${h}시저장고`].map(a => [a, 'cellar' + h]))), 게릴라: 'attack', 공격: 'attack', 공격조: 'attack', 후보: 'sub' };
+  const ALIASES = { 마굿간: 'stables', 마구간: 'stables', 시계탑: 'bell', 종탑: 'bell', 용병: 'merc', 용병주둔지: 'merc', 교화: 'reform', '교화의홀': 'reform', 개혁: 'reform', 제단: 'shrine', 성검: 'shrine',
+    '1호성소': 'sanctumL', '2호성소': 'sanctumR', '1호수도원': 'abbeyL', '2호수도원': 'abbeyB', '3호수도원': 'abbeyR', '4호수도원': 'abbeyT',
+    '왼쪽 성소': 'sanctumL', '오른쪽 성소': 'sanctumR', '왼쪽 수도원': 'abbeyL', '아래 수도원': 'abbeyB', '오른쪽 수도원': 'abbeyR', '위 수도원': 'abbeyT', '왕실 마구간': 'stables', '용병 캠프': 'merc', '개혁의 전당': 'reform',   // 예전 이름
+    ...Object.fromEntries(['11', '1', '5', '7'].flatMap(h => [`${h}시 숨겨진땅굴`, `${h}시 땅굴`, `${h}시땅굴`, `${h}시 지하저장고`, `${h}시 저장고`, `${h}시저장고`].map(a => [a, 'cellar' + h]))), 게릴라: 'attack', 공격: 'attack', 공격조: 'attack', 후보: 'sub' };
   const LIMIT = { main: 30, sub: 10 };
   const postName = id => (BY.get(id) || { nm: '미배치' }).nm;
 
@@ -195,7 +198,7 @@
   /* 지도 SVG 내용. o = { k: 화면 1px당 지도 단위, P: 색, font, L: 군단, ph: 1|2, sel, names: 이름 표시, photo: 배경 사진 주소(없으면 그림), view: 보이는 범위(없으면 전체) }
    * 글자 크기는 화면 px 기준(k를 곱함)이라 지도를 키우거나 줄여도 같은 크기로 보입니다.
    * 배치 인원은 도시(격자 한 칸)로, 그 건물에서 가까운 빈칸부터 한쪽에 모아 놓습니다(사람 많은 건물부터). 자리가 화면 크기와 상관없이 같도록
-   * 건물·그 아래 이름표 자리(고정 크기)·진영·지하 저장고·장식물만 피해서 정합니다. */
+   * 건물·그 아래 이름표 자리(고정 크기)·안전지대·숨겨진 땅굴·장식물만 피해서 정합니다. */
   function mapSVG(o) {
     const { k: kk, P, L, ph, font } = o, photo = !!o.photo;
     const f = v => r1(v), px = v => r1(v * kk);
@@ -229,7 +232,7 @@
     }
     for (const [x, y] of DECOR) block.push([x - 22, y - 18, x + 22, y + 12]);
 
-    const cellOn = ph === 2, CPOSTS = POSTS.filter(p => p.k === 'cellar');   // 지하 저장고는 15분부터
+    const cellOn = ph === 2, CPOSTS = POSTS.filter(p => p.k === 'cellar');   // 숨겨진 땅굴는 15분부터
     for (const cp of CPOSTS) for (const [x, y] of cp.nodes) {
       const r = photo ? [x - CELL_IMG[0], y + CELL_IMG[1], x + CELL_IMG[0], y + CELL_IMG[2]] : [x - 12, y - 14, x + 12, y + 9], on = o.sel === cp.id;
       ground.push(`<g data-post="${cp.id}"${!photo && !cellOn ? ' opacity=".4"' : ''}>` + (photo
@@ -240,7 +243,7 @@
 
     const labels = [], badges = [];   // 이름표·메모 범위 (배지 자리 고를 때) · 나중에 놓을 인원 수 배지
     for (const p of POSTS) {
-      if (p.k === 'cellar') continue;   // 지하 저장고는 아래에서 이름표만
+      if (p.k === 'cellar') continue;   // 숨겨진 땅굴는 아래에서 이름표만
       const K = KIND[p.k], c = P[K.c], h = K.w * ISO, locked = ph === 1 && p.open, on = o.sel === p.id;
       const mem = membersAt(L, p.id, ph), note = noteOf(L, p.id);
       const bb = photo ? [p.x - K.img[0], p.y + K.img[1], p.x + K.img[0], p.y + K.img[2]] : [p.x - K.w, p.y - K.e - Math.max(h, K.gh), p.x + K.w, p.y + h];
@@ -276,7 +279,7 @@
       obst.push([bx - br, by - br, bx + br, by + br, 1]); labels.push([bx - br, by - br, bx + br, by + br]);
     }
 
-    // 지하 저장고 이름표: 공략 그림처럼 두 곳씩 짝지은 가운데에 하나씩 + 인원 수 (그림 지도는 시작 ~ 15분에 흐리게).
+    // 숨겨진 땅굴 이름표: 공략 그림처럼 두 곳씩 짝지은 가운데에 하나씩 + 인원 수 (그림 지도는 시작 ~ 15분에 흐리게).
     // 지도가 작아 다른 이름표와 겹치면 옆(바깥·안쪽)이나 위·아래 상자 쪽으로 비킴
     const fits = r => obst.reduce((t, b) => t + overlap(r, b) * b[4], 0) + ((r[2] - r[0]) * (r[3] - r[1]) - overlap(r, VBR)) * 3;
     for (const cp of CPOSTS) {
@@ -298,7 +301,7 @@
     for (const gr of zoomedIn ? [] : GROUPS) {
       const mem = membersAt(L, gr.id, ph), on = o.sel === gr.id, note = noteOf(L, gr.id);
       const title = `${gr.nm} ${mem.length}`, titleW = tw(title, 13, 600, font) * kk;
-      const lockW = gr.open && ph === 1 ? tw('15분', 10, 600, font) * kk + px(10) : 0;   // 지하 저장고: 15분부터
+      const lockW = gr.open && ph === 1 ? tw('15분', 10, 600, font) * kk + px(10) : 0;   // 숨겨진 땅굴: 15분부터
       const lines = [...(note ? [{ s: '※ ' + note, note: true }] : []), ...(roomyNote && mem.length ? wrap(mem.map(m => (m.lead ? '★' : '') + m.n), 12.5, 170, font).map(t => ({ s: t })) : [])];
       const lh = px(16), pad = px(6);
       const bw = Math.max(px(13) + titleW + (lockW ? px(4) + lockW : 0), ...lines.map(l => tw(l.s, 12.5, l.note ? 500 : 400, font) * kk)) + pad * 2;
@@ -856,7 +859,7 @@
     if (strange.length) msg += ` <span style="color:var(--bad)">배치도에 없는 이름: ${strange.map(esc).join(', ')}</span>`;
     commit(msg);
   }
-  // 입력칸 앞에 자리 이름을 쓰면 그곳에: "마구간 tang ZERO 아이쿵 배치" → 왕실 마구간에 tang, ZERO, 아이쿵
+  // 입력칸 앞에 자리 이름을 쓰면 그곳에: "마구간 tang ZERO 아이쿵 배치" → 마구간에 tang, ZERO, 아이쿵
   const TARGETS = [...[...BY.values()].map(p => [p.nm, p.id]), ...Object.entries(ALIASES)].sort((a, b) => b[0].length - a[0].length);
   function parseTarget(text) {
     const t = clean(text);
@@ -955,7 +958,7 @@
         `<span class="enm${inRoster(m.n) ? '' : ' warnn'}"${inRoster(m.n) ? '' : ' title="배치도에 없는 닉네임"'}>${esc(m.n)}</span>${thenSelect(m)}` +
         `<button class="btn" type="button" data-out="${esc(m.n)}" aria-label="${esc(m.n)} 빼기">✕</button></div>`).join('');
     } else {
-      $('selpost').innerHTML = `<span class="hint">지도나 아래 목록에서 건물(또는 지하 저장고·게릴라·후보)을 누르면 그곳의 ${tname} 인원을 고칠 수 있습니다. 건물을 고르지 않고 넣으면 미배치로 들어갑니다.</span>`;
+      $('selpost').innerHTML = `<span class="hint">지도나 아래 목록에서 건물(또는 숨겨진 땅굴·게릴라·후보)을 누르면 그곳의 ${tname} 인원을 고칠 수 있습니다. 건물을 고르지 않고 넣으면 미배치로 들어갑니다.</span>`;
       $('erows').innerHTML = '';
     }
     const none = L.members.filter(m => !postOf(m, phase));
