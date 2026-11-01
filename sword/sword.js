@@ -53,7 +53,7 @@
   ];
   const GROUPS = [
     { id: 'attack', nm: '게릴라', en: 'Guerrilla', fx: '흩어져 다니며 적 주둔군·도시를 치고 빈 건물을 먼저 잡음 → 잡은 건물은 수비 인원에게 넘김', corner: 'tl' },
-    { id: 'cellar', nm: '지하 저장고', en: 'Undercellars', open: 15, fx: '15분·20분에 두 번 나타나는 채집지 (미니맵 돋보기로 위치 확인)', corner: 'tr' },
+    { id: 'cellar', nm: '지하 저장고', en: 'Undercellars', open: 15, fx: '15분·20분에 두 번 나타나는 채집지 (미니맵 돋보기로 위치 확인)', corner: 'br' },
     { id: 'sub', nm: '후보', en: 'Substitutes', fx: '교체 인원 (최대 10명)', corner: 'bl' },
   ];
   const CELLARS = [[-160, -165], [-100, -113], [138, -165], [202, -113], [-178, 97], [-110, 147], [108, 99], [165, 150]];
@@ -70,7 +70,7 @@
 
   // ---------- 상태 ----------
   let pub = null, pubNorm = '', baseNorm = '', stamp = '';   // 게시본 · 비교용 문자열 · 편집을 시작한 게시본 · 게시 시각
-  let data = null, li = 0, phase = 1, sel = '', editing = false, showNames = true, zi = 0, k = 1;
+  let data = null, li = 0, phase = 1, sel = '', editing = false, showNames = true, k = 1;
   let photo = true;   // 배경: 실제 지도 사진(기본) / 그림 — 보는 사람 브라우저에 기억
   try { photo = localStorage.getItem('ks-sword-photo') !== '0'; } catch (_) { /* 기본값 */ }
   let roster = [], rosterMap = new Map();   // /v2 배치도 연맹원 (소문자 → 원래 이름)
@@ -189,7 +189,7 @@
     }
   }
 
-  /* 지도 SVG 내용. o = { k: 화면 1px당 지도 단위, P: 색, font, L: 군단, ph: 1|2, sel, names: 이름 표시, photo: 배경 사진 주소(없으면 그림) }
+  /* 지도 SVG 내용. o = { k: 화면 1px당 지도 단위, P: 색, font, L: 군단, ph: 1|2, sel, names: 이름 표시, photo: 배경 사진 주소(없으면 그림), view: 보이는 범위(없으면 전체) }
    * 글자 크기는 화면 px 기준(k를 곱함)이라 지도를 키우거나 줄여도 같은 크기로 보입니다.
    * 배치 인원은 도시(격자 한 칸)로, 그 건물에서 가까운 빈칸부터 한쪽에 모아 놓습니다(사람 많은 건물부터). 자리가 화면 크기와 상관없이 같도록
    * 건물·그 아래 이름표 자리(고정 크기)·진영·지하 저장고·장식물만 피해서 정합니다. */
@@ -289,9 +289,9 @@
       block.push([mx - 36, my - 9, mx + 36, my + 9]);
     }
 
-    // 역할(게릴라·지하 저장고·후보)은 지도 모서리 상자 (자리 메모 + 이름)
-    const boxes = [];
-    for (const gr of GROUPS) {
+    // 역할(게릴라·지하 저장고·후보)은 지도 모서리 상자 (자리 메모 + 이름) — 오른쪽 위는 확대 버튼 자리
+    const boxes = [], zoomedIn = o.view && o.view.w < VB.w - 1;   // 확대 중에는 모서리 상자가 도시를 가려서 숨김 (명단은 지도 아래 목록)
+    for (const gr of zoomedIn ? [] : GROUPS) {
       const mem = membersAt(L, gr.id, ph), on = o.sel === gr.id, note = noteOf(L, gr.id);
       const title = `${gr.nm} ${mem.length}`, titleW = tw(title, 13, 600, font) * kk;
       const lockW = gr.open && ph === 1 ? tw('15분', 10, 600, font) * kk + px(10) : 0;   // 지하 저장고: 15분부터
@@ -299,8 +299,9 @@
       const lh = px(16), pad = px(6);
       const bw = Math.max(px(13) + titleW + (lockW ? px(4) + lockW : 0), ...lines.map(l => tw(l.s, 12.5, l.note ? 500 : 400, font) * kk)) + pad * 2;
       const bh = px(19) + lines.length * lh + pad * (lines.length ? 1.4 : 0.6);
-      const x = gr.corner === 'tr' ? VB.x + VB.w - px(8) - bw : VB.x + px(8);
-      const y = gr.corner === 'bl' ? VB.y + VB.h - px(8) - bh : VB.y + px(8);
+      const V = o.view || VB;   // 확대해도 보이는 범위의 모서리에
+      const x = gr.corner[1] === 'r' ? V.x + V.w - px(8) - bw : V.x + px(8);
+      const y = gr.corner[0] === 'b' ? V.y + V.h - px(8) - bh : V.y + px(8);
       let s = `<g data-post="${gr.id}" tabindex="0" role="button" aria-label="${esc(gr.nm)} ${mem.length}명">` + rect([x, y, x + bw, y + bh], `rx="${px(5)}" fill="${P.tagbg}" fill-opacity=".94" stroke="${on ? P.sel : P.tagline}" stroke-width="${px(on ? 2.5 : 1)}"`);
       s += rect([x + pad, y + pad + px(3.5), x + pad + px(9), y + pad + px(12.5)], `rx="${px(2)}" fill="${gr.id === 'cellar' ? P.cellar : gr.id === 'attack' ? P.red : P.muted}"`);
       s += T(x + pad + px(13), y + pad + px(8.5), esc(title), 13, { anchor: 'start' });
@@ -366,40 +367,134 @@
     return lines;
   }
 
-  const svg = $('map'), scroller = $('swscroll');
-  function measureK() {
-    const r = svg.getBoundingClientRect();
-    return r.width && r.height ? Math.max(VB.w / r.width, VB.h / r.height) : 1;
+  const svg = $('map');
+  // 지금 보이는 지도 범위 (viewBox, VB 안에서 같은 비율). 확대·이동은 이것만 바꾸고, 손을 뗀 뒤 다시 그려 글자·도시 이름 크기를 맞춤
+  const ZMAX = 4;
+  let view = { ...VB }, suppressClick = 0, gesture = false, rtimer = 0;
+  const zoomOf = () => VB.w / view.w;
+  function drawnRect() {   // svg 안에서 지도가 실제로 그려진 범위 (preserveAspectRatio meet)
+    const r = svg.getBoundingClientRect(), s = Math.min(r.width / view.w, r.height / view.h) || 1;
+    return { left: r.left + (r.width - view.w * s) / 2, top: r.top + (r.height - view.h * s) / 2, width: view.w * s, height: view.h * s };
   }
+  function measureK() { const r = drawnRect(); return r.width ? view.w / r.width : 1; }
+  const toMap = (cx, cy) => { const r = drawnRect(); return { x: view.x + (cx - r.left) / r.width * view.w, y: view.y + (cy - r.top) / r.height * view.h, fx: (cx - r.left) / r.width, fy: (cy - r.top) / r.height }; };
   function renderMap() {
+    clearTimeout(rtimer);
     k = measureK();
     // 지도가 아주 작게 그려지면(휴대폰 1배) 글자를 조금 줄여 건물을 덜 가리게
-    svg.innerHTML = mapSVG({ k: k > 1.6 ? k * 0.82 : k, P: palette(), font: FONT, L: cur(), ph: phase, sel, names: showNames, photo: photo && BG.href });
+    svg.innerHTML = mapSVG({ k: k > 1.6 ? k * 0.82 : k, P: palette(), font: FONT, L: cur(), ph: phase, sel, names: showNames, photo: photo && BG.href, view });
   }
+  // (cx, cy) = 가운데 둘 지도 좌표, quick = viewBox만 바꾸고 다시 그리기는 나중에 (손가락으로 움직이는 중)
+  function setView(cx, cy, z, quick) {
+    z = Math.min(ZMAX, Math.max(1, z));
+    const w = VB.w / z, h = VB.h / z;
+    view = { x: Math.min(VB.x + VB.w - w, Math.max(VB.x, cx - w / 2)), y: Math.min(VB.y + VB.h - h, Math.max(VB.y, cy - h / 2)), w, h };
+    svg.setAttribute('viewBox', `${r1(view.x)} ${r1(view.y)} ${r1(w)} ${r1(h)}`);
+    svg.style.touchAction = z > 1.01 ? 'none' : 'pan-y';   // 1배에서는 한 손가락으로 페이지를 넘길 수 있게
+    svg.classList.toggle('zoomed', z > 1.01);
+    if (!quick) { if (data) renderMap(); } else if (!gesture) { clearTimeout(rtimer); rtimer = setTimeout(() => data && renderMap(), 150); }
+  }
+  // 화면 점 (px, py)의 지도 자리를 그대로 두고 z배로
+  function zoomTo(px, py, z, quick) {
+    const p = toMap(px, py);
+    z = Math.min(ZMAX, Math.max(1, z));
+    const w = VB.w / z, h = VB.h / z;
+    setView(p.x - p.fx * w + w / 2, p.y - p.fy * h + h / 2, z, quick);
+  }
+  const center = () => { const r = drawnRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  $('zin').onclick = () => zoomTo(...center(), zoomOf() * 1.6);
+  $('zout').onclick = () => zoomTo(...center(), zoomOf() / 1.6);
+  $('fit').onclick = () => setView(0, 0, 1);
   new ResizeObserver(() => { if (data && Math.abs(measureK() - k) / k > 0.01) renderMap(); }).observe(svg);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => data && renderMap());
   if (document.fonts) document.fonts.ready.then(() => data && renderMap());
 
-  // 확대: 화면에 맞춘 크기의 1배·1.6배·2.4배 (지도 칸 안에서 스크롤)
-  const ZOOMS = [1, 1.6, 2.4];
-  let fitW = 0;   // 1배일 때 지도가 그려진 폭(px)
-  function setZoom(i) {
-    i = Math.max(0, Math.min(ZOOMS.length - 1, i));
-    if (i === zi) return;
-    const cx = (scroller.scrollLeft + scroller.clientWidth / 2) / scroller.scrollWidth, cy = (scroller.scrollTop + scroller.clientHeight / 2) / scroller.scrollHeight;
-    if (zi === 0) fitW = VB.w / measureK();
-    if (i === 0) { svg.style.width = ''; svg.classList.remove('z'); } else { svg.style.width = `${Math.round(fitW * ZOOMS[i])}px`; svg.classList.add('z'); }
-    zi = i;
-    requestAnimationFrame(() => {
-      scroller.scrollLeft = cx * scroller.scrollWidth - scroller.clientWidth / 2;
-      scroller.scrollTop = cy * scroller.scrollHeight - scroller.clientHeight / 2;
-    });
+  // 데스크톱: Ctrl+휠(터치패드 확대 포함)로 확대, 확대 중 끌어서 이동
+  svg.addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    zoomTo(e.clientX, e.clientY, zoomOf() * Math.exp(-e.deltaY * 0.004), true);
+  }, { passive: false });
+  let mdrag = null;
+  svg.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0 || zoomOf() <= 1.01) return;
+    mdrag = { id: e.pointerId, x: e.clientX, y: e.clientY, cx: view.x + view.w / 2, cy: view.y + view.h / 2, moved: false };
+  });
+  window.addEventListener('pointermove', e => {
+    if (!mdrag || e.pointerId !== mdrag.id) return;
+    const dx = e.clientX - mdrag.x, dy = e.clientY - mdrag.y;
+    if (!mdrag.moved && Math.hypot(dx, dy) < 4) return;
+    mdrag.moved = gesture = true; svg.classList.add('drag');
+    const s = view.w / drawnRect().width;
+    setView(mdrag.cx - dx * s, mdrag.cy - dy * s, zoomOf(), true);
+  });
+  window.addEventListener('pointerup', e => {
+    if (!mdrag || e.pointerId !== mdrag.id) return;
+    if (mdrag.moved) { suppressClick = Date.now(); gesture = false; renderMap(); }
+    svg.classList.remove('drag'); mdrag = null;
+  });
+
+  // 휴대폰: 두 손가락 벌리기·오므리기, 두 번 눌러 확대(최대면 전체로), 확대 중 한 손가락으로 이동.
+  // 움직이는 동안은 viewBox만 바꾸고 손을 떼면 다시 그림 (그리는 중에 손가락 아래 요소가 바뀌면 터치가 끊김)
+  let tch = null, lastTap = null;
+  const tdist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  function startPan(t) { tch = { mode: 'pan', x: t.clientX, y: t.clientY, cx: view.x + view.w / 2, cy: view.y + view.h / 2, moved: false }; }
+  svg.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const [a, b] = e.touches;
+      tch = { mode: 'pinch', d0: tdist(a, b) || 1, z0: zoomOf(), p: toMap((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2), moved: true };
+      gesture = true;
+    } else if (e.touches.length === 1) startPan(e.touches[0]);
+  }, { passive: false });
+  svg.addEventListener('touchmove', e => {
+    if (!tch) return;
+    if (tch.mode === 'pinch' && e.touches.length === 2) {
+      e.preventDefault();
+      const [a, b] = e.touches, z = Math.min(ZMAX, Math.max(1, tch.z0 * tdist(a, b) / tch.d0));
+      const r = drawnRect(), fx = ((a.clientX + b.clientX) / 2 - r.left) / r.width, fy = ((a.clientY + b.clientY) / 2 - r.top) / r.height;
+      const w = VB.w / z, h = VB.h / z;
+      setView(tch.p.x - fx * w + w / 2, tch.p.y - fy * h + h / 2, z, true);
+    } else if (tch.mode === 'pan' && e.touches.length === 1 && zoomOf() > 1.01) {
+      const t = e.touches[0], dx = t.clientX - tch.x, dy = t.clientY - tch.y;
+      if (!tch.moved && Math.hypot(dx, dy) < 6) return;
+      e.preventDefault();
+      tch.moved = gesture = true;
+      const s = view.w / drawnRect().width;
+      setView(tch.cx - dx * s, tch.cy - dy * s, zoomOf(), true);
+    } else if (tch.mode === 'pan') {
+      const t = e.touches[0];
+      if (t && Math.hypot(t.clientX - tch.x, t.clientY - tch.y) >= 6) tch.moved = true;   // 1배에서 페이지 넘기는 중
+    }
+  }, { passive: false });
+  svg.addEventListener('touchend', e => {
+    if (!tch) return;
+    if (e.touches.length === 1 && tch.mode === 'pinch') { startPan(e.touches[0]); tch.moved = true; return; }   // 한 손가락만 떼면 이어서 이동
+    if (e.touches.length) return;
+    const was = tch;
+    tch = null;
+    if (was.moved) { suppressClick = Date.now(); if (gesture) { gesture = false; renderMap(); } return; }
+    // 두 번 누르기: 300ms 안에 같은 자리 근처를 다시 누르면 2배 (최대면 전체)
+    const t = e.changedTouches[0], now = Date.now();
+    if (lastTap && now - lastTap.t < 300 && Math.hypot(t.clientX - lastTap.x, t.clientY - lastTap.y) < 30) {
+      e.preventDefault();
+      suppressClick = now; lastTap = null;
+      if (zoomOf() >= ZMAX - 0.01) setView(0, 0, 1); else zoomTo(t.clientX, t.clientY, zoomOf() * 2);
+    } else lastTap = { t: now, x: t.clientX, y: t.clientY };
+  });
+  svg.addEventListener('touchcancel', () => { tch = null; if (gesture) { gesture = false; renderMap(); } });
+  // 내 배치 찾기(휴대폰): 찾은 건물로 확대
+  function focusPost(id) {
+    const p = POSTS.find(q => q.id === id);
+    if (p && PHONE.matches) setView(p.x, p.y, 2.6);
   }
-  $('zin').onclick = () => setZoom(zi + 1);
-  $('zout').onclick = () => setZoom(zi - 1);
-  $('fit').onclick = () => setZoom(0);
+  $('maphint').textContent = matchMedia('(pointer: coarse)').matches
+    ? '두 손가락으로 벌리거나 두 번 누르면 확대 (확대하면 도시 이름이 보임) · 확대 중엔 한 손가락으로 이동'
+    : 'Ctrl + 휠(터치패드는 두 손가락 벌리기)이나 ＋ 버튼으로 확대 · 확대 중엔 끌어서 이동';
+  setView(0, 0, 1, true);
 
   svg.addEventListener('click', ev => {
+    if (Date.now() - suppressClick < 400) return;   // 끌기·두 번 누르기 뒤에 오는 클릭은 무시
     const g = ev.target.closest('[data-post]');
     if (g) select(g.dataset.post); else if (!editing) select('');
   });
@@ -475,7 +570,7 @@
       `<h3>${esc(p.nm)} <small>${esc(p.en)}</small></h3>` + (meta ? `<p class="meta">${meta}</p>` : '') + (p.fx ? `<p>${esc(p.fx)}</p>` : '') +
       (noteOf(cur(), sel) ? `<p class="note">※ ${esc(noteOf(cur(), sel))}</p>` : '') +
       `<p><b>${phase === 1 ? '시작 ~ 15분' : '15분 후'} ${mem.length}명</b>${mem.length ? ' · ' + whoHTML(mem, phase) : ''}</p>`;
-    box.classList.toggle('left', (p.x || 0) > 0 || p.corner === 'tr');   // 고른 곳 반대쪽에 띄움
+    box.classList.toggle('left', (p.x || 0) > 0 || p.corner === 'br');   // 고른 곳 반대쪽에 띄움
     box.hidden = false;
     $('infox').onclick = () => select('');
   }
@@ -513,8 +608,8 @@
       `<div class="meta">${esc(L.name)} · 시작 ~ 15분${m.then ? ` → 15분 후 <b>${esc(postName(m.then))}</b>로 이동${noteOf(L, m.then) ? ` (※ ${esc(noteOf(L, m.then))})` : ''}` : m.at && m.at !== 'sub' ? ' · 15분 후에도 그대로' : ''}</div>`;
     card.hidden = false;
   }
-  $('q').addEventListener('input', () => { search(); renderAll(); });
-  $('qhint').addEventListener('click', ev => { const b = ev.target.closest('[data-pick]'); if (b) { $('q').value = b.dataset.pick; search(); renderAll(); } });
+  $('q').addEventListener('input', () => { search(); renderAll(); if (found) focusPost(sel); });   // 휴대폰은 찾은 건물로 확대
+  $('qhint').addEventListener('click', ev => { const b = ev.target.closest('[data-pick]'); if (b) { $('q').value = b.dataset.pick; search(); renderAll(); if (found) focusPost(sel); } });
 
   // ---------- 연맹 채팅용 텍스트 · 링크 · 이미지 ----------
   function planText() {

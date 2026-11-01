@@ -39,15 +39,15 @@
 
   /* 지도 */
   .swwrap { position: relative; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--sw-cliff); }
-  .swscroll { overflow: auto; max-height: max(420px, calc(100vh - 190px)); max-height: max(420px, calc(100svh - 190px)); }
+  .swscroll { overflow: hidden; }
   #map { display: block; width: 100%; height: auto; max-height: max(420px, calc(100vh - 190px)); max-height: max(420px, calc(100svh - 190px)); margin: 0 auto; user-select: none; -webkit-user-select: none; font-family: var(--f-body); }
-  #map.z { max-height: none; }
+  #map.zoomed { cursor: grab; }
+  #map.drag { cursor: grabbing; }
+  .zoom .btn { box-shadow: 0 1px 4px var(--shadow); }
   #map [data-post] { cursor: pointer; }
   #map [data-post]:focus { outline: none; }
   #map [data-post]:focus-visible > :first-child { stroke: var(--focus); stroke-width: 3; }
-  .seg, .zoombar { display: inline-flex; }
-  .zoombar { margin-left: auto; gap: 4px; }
-  .zoombar .btn { min-width: 38px; }
+  .seg { display: inline-flex; }
   .seg .btn { border-radius: 0; }
   .seg .btn:first-child { border-radius: 4px 0 0 4px; }
   .seg .btn:last-child { border-radius: 0 4px 4px 0; margin-left: -1px; }
@@ -134,14 +134,15 @@
     .mapbar::-webkit-scrollbar { display: none; }
     .mapbar > * { flex: 0 0 auto; }
     .mapbar .btn { flex: 0 0 auto; min-height: 38px; padding: 6px 10px; font-size: .8rem; }
-    .zoombar { margin-left: 4px; }
+    .zoom { top: 8px; right: 8px; gap: 5px; }
+    .zoom .btn { width: 42px; height: 42px; min-height: 0; padding: 0; font-size: 1.25rem; }
+    .zoom #fit { font-size: .74rem; }
     .swwrap { margin-inline: -16px; border-radius: 0; border-left: 0; border-right: 0; }
     .tabs .btn { min-height: 44px; }
     .post { padding: 9px 12px; }
     .post.empty { padding-block: 7px; }
     #tabs { order: 1; } #memo { order: 2; } .finder { order: 3; } #card { order: 4; } .mapcol { order: 5; } #editor { order: 6; } #posts { order: 7; }
     #rules { order: 8; } #copy { order: 9; } #copytext { order: 10; } .adminbar { order: 11; }
-    .swscroll { max-height: 72vh; max-height: 72svh; }
     #map { max-height: none; }
     .info, .info.left { position: relative; left: auto; right: auto; bottom: auto; width: auto; max-height: none; border-width: 1px 0 0; border-radius: 0; box-shadow: none; }
     .erow { grid-template-columns: auto minmax(0, 1fr) minmax(0, 8.5em) auto; }
@@ -266,18 +267,19 @@
         <button class="btn" id="bgbtn" type="button" aria-pressed="true" title="실제 게임 지도 사진 / 그린 지도">지도 사진</button>
         <button class="btn" id="png" type="button">이미지 저장</button>
         <button class="btn" id="link" type="button">링크 복사</button>
-        <span class="zoombar" role="group" aria-label="지도 크기">
-          <button class="btn" id="zout" type="button" aria-label="축소">－</button>
-          <button class="btn" id="fit" type="button">전체</button>
-          <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
-        </span>
       </div>
       <div class="swwrap">
         <div class="swscroll" id="swscroll">
           <svg id="map" viewBox="-410 -350 800 665" role="img" aria-label="성검 쟁탈 전장 지도"></svg>
         </div>
+        <div class="zoom" role="group" aria-label="지도 크기">
+          <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
+          <button class="btn" id="zout" type="button" aria-label="축소">－</button>
+          <button class="btn" id="fit" type="button" aria-label="전체 보기">전체</button>
+        </div>
         <div class="info" id="info" hidden></div>
       </div>
+      <p class="hint" id="maphint"></p>
       <details class="legend" id="legend" open>
         <summary>범례</summary>
         <div class="keys">
