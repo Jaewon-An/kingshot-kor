@@ -134,7 +134,7 @@
   let C = {};
   const readColors = () => {
     const cs = getComputedStyle(document.documentElement);
-    for (const k of ['m-void', 'm-ground', 'm-fertile', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'm-grid', 'm-edge', 'c-hq', 'c-t2', 'c-banner', 'c-terr', 'c-pick', 'on-obj', 'c-fflag', 'c-fterr', 'c-eflag', 'c-eterr', 'c-tflag', 'c-tterr', 'c-fixed'])
+    for (const k of ['m-void', 'm-ground', 'm-fertile', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'm-grid', 'm-edge', 'c-hq', 'c-t2', 'c-banner', 'c-terr', 'c-pick', 'on-obj', 'c-fflag', 'c-fterr', 'c-eflag', 'c-eterr', 'c-tflag', 'c-tterr', 'c-fixed', 'ok', 'bad'])
       C[k] = cs.getPropertyValue('--' + k).trim();
     if (!C['c-fixed']) C['c-fixed'] = C['c-banner'];
   };
@@ -245,9 +245,10 @@
     if (view.oth) { others.forEach(f => box(f, 1, C[colOf(f.a)[0]], 0.04)); othHQ.forEach(h => box(h, 3, C[colOf(h.a)[0]], 0.05)); }
     if (view.sel) { const f = view.sel, r = K.BN_COV; gx.strokeStyle = C['c-pick']; gx.lineWidth = 3.5 / s; gx.strokeRect(f.x - r, f.y - r, 1 + 2 * r, 1 + 2 * r); gx.strokeRect(f.x - 0.25, f.y - 0.25, 1.5, 1.5); }
     if (view.mark) { const p = view.mark; gx.strokeStyle = C['c-pick']; gx.lineWidth = 3.5 / s; gx.beginPath(); gx.arc(p.x + 0.5, p.y + 0.5, 1.6, 0, Math.PI * 2); gx.stroke(); gx.strokeRect(p.x, p.y, 1, 1); }
-    if (view.step) { const p = view.step, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = C['c-t2']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 1.8, 0, Math.PI * 2); gx.stroke(); }
+    const opCol = op => (op === 'build' ? C.ok : op === 'remove' ? C.bad : C['c-t2']);   // 지금 작업 원: 건설 초록·철거 빨강
+    if (view.step) { const p = view.step, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = opCol(p.op); gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 1.8, 0, Math.PI * 2); gx.stroke(); }
     if (view.stepg.length) { // 같은 묶음에서 함께 할 자리: 점선 원
-      gx.strokeStyle = C['c-t2']; gx.lineWidth = 2 / s; gx.setLineDash([4 / s, 3 / s]);
+      gx.strokeStyle = opCol(view.stepg[0].op); gx.lineWidth = 2 / s; gx.setLineDash([4 / s, 3 / s]);
       view.stepg.forEach(p => { gx.beginPath(); gx.arc(p.x + 0.5, p.y + 0.5, 2.3, 0, Math.PI * 2); gx.stroke(); }); gx.setLineDash([]);
     }
     if (view.cur) { gx.strokeStyle = C['m-edge']; gx.lineWidth = 2 / s; gx.strokeRect(view.cur.x, view.cur.y, 1, 1); }
@@ -383,9 +384,10 @@
     steps.forEach((st, i) => { if (st.g != null) (GRP[st.g] || (GRP[st.g] = { b: [], r: [] }))[st.op === 'build' ? 'b' : 'r'].push(i); });
     const nG = Math.max(0, ...Object.keys(GRP).map(Number));
     const grpName = g => (g ? `묶음 ${g}/${nG}` : '먼저 철거');
-    const grpTag = k => {   // '묶음 3/15 · 건설 2/3'
+    const OPW = { build: '건설', remove: '철거' };
+    const opIn = k => {   // 묶음 안 같은 작업 중 몇 번째: '2/3'
       const st = steps[k], G = GRP[st.g]; if (!G) return '';
-      const a = st.op === 'build' ? G.b : G.r; return `${grpName(st.g)} · ${st.op === 'build' ? '건설' : '철거'} ${a.indexOf(k) + 1}/${a.length}`;
+      const a = st.op === 'build' ? G.b : G.r; return `${a.indexOf(k) + 1}/${a.length}`;
     };
     // 진행 기록: 끝낸 작업 목록. 순서가 바뀌어도 앞부분이 같은 만큼은 이어짐
     const KEY = 'banner-v2-steps', keyOf = st => `${st.op}${st.x},${st.y}`;
@@ -416,24 +418,32 @@
         const G = GRP[(pg = st.g)];
         head += `<li class="grp sub">${grpName(pg)} · ${[G.b.length ? `건설 ${G.b.length}곳 동시에` : '', G.r.length ? `${G.b.length ? '다 지어지면 ' : ''}철거 ${G.r.length}곳` : ''].filter(Boolean).join(' → ')}</li>`;
       }
-      return `${head}<li value="${i + 1}" data-k="${i}"><button type="button" class="lnk" data-k="${i}">${OP[st.op]} ${where(st)}</button></li>`;
+      const opw = OPW[st.op] ? `<b class="opw op-${st.op}">${OPW[st.op]}</b>` : OP[st.op];
+      return `${head}<li value="${i + 1}" data-k="${i}"><button type="button" class="lnk" data-k="${i}">${opw} ${where(st)}</button></li>`;
     }).join('');
     let shown = null;   // '지도에서 보기'로 찍은 자리: 다른 작업으로 넘어가면 지움
     function render() {
       const st = steps[done];
       if (shown && shown !== st && view.mark && view.mark.x === shown.x && view.mark.y === shown.y) { view.mark = null; $('readout').textContent = ''; shown = null; }
       $('stepsum').textContent = `${done}/${steps.length} 완료`;
-      const G = st && GRP[st.g];
-      $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${G ? grpTag(done) : PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
-      $('stepop').textContent = st ? OP[st.op] : '';
+      const G = st && GRP[st.g], opw = st && OPW[st.op];
+      // 건설·철거가 한눈에: 카드 테두리·배지·완료 버튼·아래 바를 작업 색으로(건설 초록, 철거 빨강)
+      for (const el of [$('stepcard'), $('stepbar')]) if (el) { el.classList.toggle('op-build', !!st && st.op === 'build'); el.classList.toggle('op-remove', !!st && st.op === 'remove'); }
+      $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${G ? grpName(st.g) : PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
+      $('stepop').innerHTML = !st ? '' : opw ? `<span class="opb op-${st.op}">${opw}${G ? ` ${opIn(done)}` : ''}</span>` : OP[st.op];
       $('stepxy').textContent = st ? where(st) : '';
-      // 묶음: 동시에 지을 곳 목록 / 철거는 건설이 다 끝난 뒤
-      const hint = !G ? '' : st.op === 'build'
-        ? `동시에 지을 ${G.b.length}곳: ` + G.b.map(k => (k === done ? `<b>X:${steps[k].x} Y:${steps[k].y}</b>` : `<span class="${k < done ? 'gone' : ''}">X:${steps[k].x} Y:${steps[k].y}</span>`)).join(' · ')
-        : G.b.length ? `${grpName(st.g)} 건설 ${G.b.length}곳이 다 지어진 뒤 철거` : '';
+      $('stepdonel').textContent = opw ? `${opw} 완료` : '작업완료';
+      // 묶음: 같은 작업 자리 목록(지금 자리 굵게, 끝낸 자리 줄 긋기). 철거는 앞 건설이 다 지어진 뒤
+      const list = a => a.map(k => (k === done ? `<b>X:${steps[k].x} Y:${steps[k].y}</b>` : `<span class="${k < done ? 'gone' : ''}">X:${steps[k].x} Y:${steps[k].y}</span>`)).join(' · ');
+      const hint = !G ? '' : st.op === 'build' ? `동시에 지을 ${G.b.length}곳: ${list(G.b)}`
+        : `철거할 ${G.r.length}곳: ${list(G.r)}${G.b.length ? ` (건설 ${G.b.length}곳이 다 지어진 뒤)` : ''}`;
       $('stephint').innerHTML = hint; $('stephint').hidden = !hint;
       for (const id of ['stepcopy', 'stepdone', 'stepmap', 'sbcopy', 'sbdone', 'sbmap']) if ($(id)) $(id).disabled = !st;
-      if ($('sbn')) { $('sbn').textContent = st ? `${done + 1}/${steps.length} · ${G ? grpTag(done) : OP[st.op]}` : '모든 작업을 마쳤습니다'; $('sbxy').textContent = st ? `X:${st.x} Y:${st.y}` : ''; }
+      if ($('sbn')) {
+        $('sbn').innerHTML = !st ? '모든 작업을 마쳤습니다' : (opw ? `<b class="opt op-${st.op}">${opw}${G ? ` ${opIn(done)}` : ''}</b> ` : `${OP[st.op]} · `) + `${done + 1}/${steps.length}${G ? ` · 묶음 ${st.g}` : ''}`;
+        $('sbxy').textContent = st ? `X:${st.x} Y:${st.y}` : '';
+        $('sbdone').textContent = opw ? `${opw} 완료` : '완료 · 다음';
+      }
       $('stepundo').disabled = !done;
       document.querySelectorAll('#stepl li[data-k]').forEach(li => { const k = +li.dataset.k; li.classList.toggle('done', k < done); li.classList.toggle('cur', k === done); });
       const cur = document.querySelector('#stepl li.cur'), box = $('stepl');
