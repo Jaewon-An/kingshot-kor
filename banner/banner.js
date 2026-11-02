@@ -2,7 +2,8 @@
  * v1/data.json: 2026-10-29 스크린샷을 다시 이어 붙여 읽은 KOR 깃발(flags)·다른 연맹 깃발(others)·본부·확인된 범위(coverage, [y, x0, x1] 줄; 휴대폰 캡처 포함).
  * v2/data.json: 재배치안 — flags[].fixed(곰덫 주변·본부 위쪽 고정)·keep(그대로), remove(철거할 자리), extra(여분 깃발: 점선, 깃발이 더 늘면),
  *   plan(곰덫2 중심 t, 적 최근접 거리 r·방향별 dir, 지금 값 r1·dir1, 여분까지 rx·dirx, 옛 본부 hq1, 지금 깃발 수 nNow),
- *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지, why, n 깃발 수, r 곰덫2 최근접}]; 진행은 이 브라우저 localStorage),
+ *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지, why, n 깃발 수, r 곰덫2 최근접, g 동시 건설 묶음}]; 진행은 이 브라우저 localStorage),
+ *   plan.batch(묶음 시작 단계 from·묶음 크기 k·깃발 상한 빈 칸 free·상한 cap) — 묶음 g = 건설 여러 곳 동시 → 다 지어지면 철거,
  *   stepsPrev(바로 전 순서의 서명 sig·앞부분이 같은 단계 수 same — 옛 형식 진행 기록 이어받기).
  * 영토: 본부 15×15(KSCore.HQ_COV) + 깃발마다 7×7(BN_COV). 다른 연맹은 본부·깃발 영역에서 KOR 땅을 뺀 칸. 지형은 mapdata.js.
  */
@@ -111,6 +112,7 @@
         ...(extras.length && PLAN.rx ? [`여분 깃발 ${extras.length}개(점선)는 깃발이 더 늘면 세울 곳입니다. 모두 세우면 가장 가까운 적 자리가 ${PLAN.r}칸 → ${PLAN.rx}칸(` + DIRS.map(k => `${k} ${PLAN.dirx[k].d}`).join(' · ') + ')이 됩니다. 이 계획의 깃발은 그대로 두고 더하는 자리입니다.'] : []),
         `모든 깃발이 본부와 이어지고(꼭짓점만 닿아도 연결${PLAN.nUp ? ', 본부 위쪽 깃발은 거점으로 이어짐' : ''}), 영토 안에 도시를 옮길 수 있는 2×2 구멍이 없습니다. 영역이 겹친 깃발은 옆으로 밀어 틈을 메웠고, 남은 폭 1칸 틈은 도시가 못 들어갑니다.`,
         `평원 본부는 ${xy(HQ)}로 이전한 것으로 계산했습니다(지금 ${xy(PLAN.hq1)}).`,
+        ...(PLAN.batch ? [`작업 순서 ${PLAN.batch.from}번부터는 묶음마다 깃발 ${PLAN.batch.k}곳을 동시에 짓고, 다 지어지면 그 덕에 빼도 되는 옛 깃발을 철거합니다. 깃발 수는 연맹 상한 ${PLAN.batch.cap}개(빈 칸 ${PLAN.batch.free}개)를 넘지 않고, 철거할 때도 곰덫2 최근접 적 자리가 그 전보다 가까워지지 않습니다.`] : []),
         'SGD 영토는 우호 연맹으로 보고 적이 쓸 수 없는 곳으로, EoB·TWN 영토는 적이 쓸 수 있는 곳으로 계산했습니다. 연맹원 도시·곰덫·연맹 건물은 v2 배치도 위치 기준입니다.',
       ].map(s => `<li>${s}</li>`).join('');
     } else $('check').innerHTML = [
@@ -165,7 +167,7 @@
   }
 
   // ---------- 보기 ----------
-  const view = { cx: 0, cy: 0, s: 8, rot: true, names: true, each: true, oth: true, rm: true, sel: null, mark: null, cur: null, step: null };
+  const view = { cx: 0, cy: 0, s: 8, rot: true, names: true, each: true, oth: true, rm: true, sel: null, mark: null, cur: null, step: null, stepg: [] };
   const SQ = Math.SQRT1_2;
   function mat(w, h) {
     const s = view.s, cx = view.cx, cy = view.cy;
@@ -244,6 +246,10 @@
     if (view.sel) { const f = view.sel, r = K.BN_COV; gx.strokeStyle = C['c-pick']; gx.lineWidth = 3.5 / s; gx.strokeRect(f.x - r, f.y - r, 1 + 2 * r, 1 + 2 * r); gx.strokeRect(f.x - 0.25, f.y - 0.25, 1.5, 1.5); }
     if (view.mark) { const p = view.mark; gx.strokeStyle = C['c-pick']; gx.lineWidth = 3.5 / s; gx.beginPath(); gx.arc(p.x + 0.5, p.y + 0.5, 1.6, 0, Math.PI * 2); gx.stroke(); gx.strokeRect(p.x, p.y, 1, 1); }
     if (view.step) { const p = view.step, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = C['c-t2']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 1.8, 0, Math.PI * 2); gx.stroke(); }
+    if (view.stepg.length) { // 같은 묶음에서 함께 할 자리: 점선 원
+      gx.strokeStyle = C['c-t2']; gx.lineWidth = 2 / s; gx.setLineDash([4 / s, 3 / s]);
+      view.stepg.forEach(p => { gx.beginPath(); gx.arc(p.x + 0.5, p.y + 0.5, 2.3, 0, Math.PI * 2); gx.stroke(); }); gx.setLineDash([]);
+    }
     if (view.cur) { gx.strokeStyle = C['m-edge']; gx.lineWidth = 2 / s; gx.strokeRect(view.cur.x, view.cur.y, 1, 1); }
     // 글자
     gx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -372,6 +378,15 @@
   function setupSteps(steps) {
     const OP = { build: '깃발 건설', remove: '깃발 철거', hq: '평원 본부 이전' };
     const PHASE = { 1: '① 본부 이전 준비 (먼저)', 2: '② 평원 본부 이전', 3: '③ 나머지 깃발 재배치' };
+    // 동시 건설 묶음 g: 건설 여러 곳을 한꺼번에 → 다 지어지면 철거 (g 0 = 첫 건설 전 철거)
+    const GRP = {};
+    steps.forEach((st, i) => { if (st.g != null) (GRP[st.g] || (GRP[st.g] = { b: [], r: [] }))[st.op === 'build' ? 'b' : 'r'].push(i); });
+    const nG = Math.max(0, ...Object.keys(GRP).map(Number));
+    const grpName = g => (g ? `묶음 ${g}/${nG}` : '먼저 철거');
+    const grpTag = k => {   // '묶음 3/15 · 건설 2/3'
+      const st = steps[k], G = GRP[st.g]; if (!G) return '';
+      const a = st.op === 'build' ? G.b : G.r; return `${grpName(st.g)} · ${st.op === 'build' ? '건설' : '철거'} ${a.indexOf(k) + 1}/${a.length}`;
+    };
     // 진행 기록: 끝낸 작업 목록. 순서가 바뀌어도 앞부분이 같은 만큼은 이어짐
     const KEY = 'banner-v2-steps', keyOf = st => `${st.op}${st.x},${st.y}`;
     let done = 0;
@@ -394,9 +409,13 @@
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => msg(`${pre}${text} 복사됨`), fallback);
       else fallback();
     };
-    let ph = 0;
+    let ph = 0, pg = null;
     $('stepl').innerHTML = steps.map((st, i) => {
-      const head = st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : '';
+      let head = st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : '';
+      if (st.g != null && st.g !== pg) {
+        const G = GRP[(pg = st.g)];
+        head += `<li class="grp sub">${grpName(pg)} · ${[G.b.length ? `건설 ${G.b.length}곳 동시에` : '', G.r.length ? `${G.b.length ? '다 지어지면 ' : ''}철거 ${G.r.length}곳` : ''].filter(Boolean).join(' → ')}</li>`;
+      }
       return `${head}<li value="${i + 1}" data-k="${i}"><button type="button" class="lnk" data-k="${i}">${OP[st.op]} ${where(st)}</button></li>`;
     }).join('');
     let shown = null;   // '지도에서 보기'로 찍은 자리: 다른 작업으로 넘어가면 지움
@@ -404,16 +423,24 @@
       const st = steps[done];
       if (shown && shown !== st && view.mark && view.mark.x === shown.x && view.mark.y === shown.y) { view.mark = null; $('readout').textContent = ''; shown = null; }
       $('stepsum').textContent = `${done}/${steps.length} 완료`;
-      $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
+      const G = st && GRP[st.g];
+      $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${G ? grpTag(done) : PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
       $('stepop').textContent = st ? OP[st.op] : '';
       $('stepxy').textContent = st ? where(st) : '';
-      for (const id of ['stepcopy', 'stepdone', 'stepmap', 'sbcopy', 'sbdone']) if ($(id)) $(id).disabled = !st;
-      if ($('sbn')) { $('sbn').textContent = st ? `${done + 1}/${steps.length} · ${OP[st.op]}` : '모든 작업을 마쳤습니다'; $('sbxy').textContent = st ? `X:${st.x} Y:${st.y}` : ''; }
+      // 묶음: 동시에 지을 곳 목록 / 철거는 건설이 다 끝난 뒤
+      const hint = !G ? '' : st.op === 'build'
+        ? `동시에 지을 ${G.b.length}곳: ` + G.b.map(k => (k === done ? `<b>X:${steps[k].x} Y:${steps[k].y}</b>` : `<span class="${k < done ? 'gone' : ''}">X:${steps[k].x} Y:${steps[k].y}</span>`)).join(' · ')
+        : G.b.length ? `${grpName(st.g)} 건설 ${G.b.length}곳이 다 지어진 뒤 철거` : '';
+      $('stephint').innerHTML = hint; $('stephint').hidden = !hint;
+      for (const id of ['stepcopy', 'stepdone', 'stepmap', 'sbcopy', 'sbdone', 'sbmap']) if ($(id)) $(id).disabled = !st;
+      if ($('sbn')) { $('sbn').textContent = st ? `${done + 1}/${steps.length} · ${G ? grpTag(done) : OP[st.op]}` : '모든 작업을 마쳤습니다'; $('sbxy').textContent = st ? `X:${st.x} Y:${st.y}` : ''; }
       $('stepundo').disabled = !done;
       document.querySelectorAll('#stepl li[data-k]').forEach(li => { const k = +li.dataset.k; li.classList.toggle('done', k < done); li.classList.toggle('cur', k === done); });
       const cur = document.querySelector('#stepl li.cur'), box = $('stepl');
       if (cur) box.scrollTop = Math.max(0, cur.offsetTop - box.clientHeight / 3);
-      view.step = st || null; draw();
+      view.step = st || null;
+      view.stepg = G ? (st.op === 'build' ? G.b : G.r).filter(k => k > done).map(k => steps[k]) : [];
+      draw();
     }
     const doCopy = () => { if (steps[done]) copyXY(steps[done], ''); };
     let lastDone = 0;
@@ -423,14 +450,16 @@
       if (steps[done]) copyXY(steps[done], `${done}번 완료 · `); else msg('모든 작업을 마쳤습니다');
     };
     $('stepcopy').addEventListener('click', doCopy); $('stepdone').addEventListener('click', doDone);
+    const doMap = () => { const st = steps[done]; if (st) { goTo(st.x, st.y); shown = st; } };   // 휴대폰은 지도까지 스크롤
     if ($('stepbar')) {   // 휴대폰: 작업 카드가 화면 밖이면 아래 고정 바
       $('sbcopy').addEventListener('click', doCopy); $('sbdone').addEventListener('click', doDone);
+      if ($('sbmap')) $('sbmap').addEventListener('click', doMap);
       // 작업완료 버튼이 다 보이지 않으면(아래 바 자리 80px는 가린 것으로 침) 바를 띄움
       if ('IntersectionObserver' in window) new IntersectionObserver(es => { const e = es[es.length - 1]; document.body.classList.toggle('stepoff', !(e.isIntersecting && e.intersectionRatio > 0.99)); },
         { threshold: [0, 1], rootMargin: '0px 0px -80px 0px' }).observe($('stepdone'));
     }
     $('stepundo').addEventListener('click', () => { if (!done) return; done--; save(); render(); msg(`${done + 1}번 완료 취소`); });
-    $('stepmap').addEventListener('click', () => { const st = steps[done]; if (st) { goTo(st.x, st.y); shown = st; } });
+    $('stepmap').addEventListener('click', doMap);
     $('stepl').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { const st = steps[+b.dataset.k]; goTo(st.x, st.y); } });
     $('stepbox').hidden = false;
     render();

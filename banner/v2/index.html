@@ -51,6 +51,10 @@
   details.stepall > summary { font-size: .8rem; }
   .stepbar { display: none; }
   .stepmsg { margin: 6px 0 0; font-size: .78rem; color: var(--ok); min-height: 1.2em; }
+  .stephint { margin: 4px 0 0; font-size: .78rem; line-height: 1.5; color: var(--muted); }
+  .stephint b { color: var(--ink); }
+  .stephint .gone { text-decoration: line-through; }
+  ol.stepl li.grp.sub { margin: 4px 0 1px -2em; font-size: .76rem; color: var(--muted); }
   ol.stepl { position: relative; max-height: 300px; overflow: auto; margin: 8px 0 0; padding-left: 2.8em; font-size: .8rem; line-height: 1.6; }
   ol.stepl li.grp { list-style: none; margin: 6px 0 2px -2.8em; font-weight: 600; }
   ol.stepl li.done .lnk { color: var(--muted); text-decoration: line-through; }
@@ -77,6 +81,7 @@
     .stepbar .sbn { font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .stepbar .sbxy { font-size: 1.05rem; font-weight: 600; white-space: nowrap; }
     .stepbar .btn { flex: 0 0 auto; min-height: 46px; padding: 6px 12px; font-size: .9rem; }
+    .stepbar #sbmap { padding: 6px 10px; }
   }
 </style>
 </head>
@@ -101,6 +106,7 @@
         <div class="stepnow">
           <p class="stepph" id="stepph"></p>
           <p class="stepop"><span id="stepop"></span><b class="mono" id="stepxy"></b></p>
+          <p class="stephint" id="stephint" hidden></p>
           <div class="stepbtns">
             <button class="btn strong" id="stepcopy" type="button">좌표 복사</button>
             <button class="btn copy" id="stepdone" type="button">작업완료<small>다음 좌표 복사</small></button>
@@ -185,6 +191,7 @@
 
   <div class="stepbar" id="stepbar">
     <div class="sbt"><span class="sbn" id="sbn"></span><span class="sbxy mono" id="sbxy"></span></div>
+    <button class="btn" id="sbmap" type="button">지도</button>
     <button class="btn strong" id="sbcopy" type="button">복사</button>
     <button class="btn copy" id="sbdone" type="button">완료 · 다음</button>
   </div>
