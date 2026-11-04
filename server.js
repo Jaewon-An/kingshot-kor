@@ -1,5 +1,5 @@
 // Local server with the same API as _worker.js on Cloudflare:
-//   static files, /api/login, GET/PUT /api/layout, GET/PUT /api/v2/layout, GET/PUT /api/sgd/layout
+//   static files, /api/login, GET/PUT /api/layout, GET/PUT /api/v2/layout, GET/PUT /api/sgd/layout, GET/PUT /api/banner/v2/steps
 // Locally the published layouts are the files layouts/current.json, layouts/v2.json and layouts/sgd.json.
 // Usage: node server.js   (PORT env var, default 8080) — no dependencies.
 const http = require('node:http');
@@ -43,6 +43,8 @@ function checkToken(req) {
   const m = /^Bearer (\d+)\.([0-9a-f]{64})$/.exec(req.headers.authorization || '');
   return !!m && !!ADMIN_HASH && Number(m[1]) >= Date.now() && same(hmac(ADMIN_HASH, m[1]), m[2]);
 }
+const STEPS = { '/api/banner/v2/steps': null };
+const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && /^(build|remove|hq)\d{1,4},\d{1,4}$/.test(k));
 const validLayout = list => Array.isArray(list) && list.length <= 5000 && list.every(o =>
   o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
   (o.nickname === undefined || (typeof o.nickname === 'string' && o.nickname.length <= 80)));
@@ -103,6 +105,23 @@ async function api(req, res, url) {
     try { fs.copyFileSync(layoutFile, layoutFile.replace(/\.json$/, '.previous.json')); } catch (_) { /* first publish */ }
     fs.writeFileSync(layoutFile, JSON.stringify(list, null, 1));
     return send(res, 200, { ok: true, count: list.length });
+  }
+  // /banner/v2/ shared progress — same rules as _worker.js, kept in memory here (lost on restart)
+  if (url.pathname in STEPS && req.method === 'GET') {
+    const rec = { ...(STEPS[url.pathname] || { keys: null, ver: 0, log: [] }) };
+    if (!url.searchParams.has('log')) delete rec.log;
+    return send(res, 200, rec);
+  }
+  if (url.pathname in STEPS && req.method === 'PUT') {
+    let body;
+    try { body = JSON.parse(await readBody(req, 64 * 1024)); } catch (_) { return send(res, 400, { error: 'JSON 형식이 아닙니다' }); }
+    if (!body || !Number.isInteger(body.base) || body.base < 0 || !validStepKeys(body.keys)) return send(res, 400, { error: '진행 기록 형식이 아닙니다' });
+    const cur = STEPS[url.pathname] || { keys: null, ver: 0, log: [] };
+    if (body.base !== cur.ver) return send(res, 409, { error: '다른 기기에서 먼저 바뀌었습니다', keys: cur.keys, ver: cur.ver, updated_at: cur.updated_at });
+    const now = new Date().toISOString(), ver = cur.ver + 1;
+    const log = [...cur.log, { ver, n: body.keys.length, from: cur.keys ? cur.keys.length : null, at: now, dev: 'local' }].slice(-100);
+    STEPS[url.pathname] = { keys: body.keys, ver, updated_at: now, log };
+    return send(res, 200, { ok: true, ver, n: body.keys.length, updated_at: now });
   }
   return send(res, 404, { error: 'not found' });
 }

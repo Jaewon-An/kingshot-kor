@@ -2,7 +2,7 @@
 // Static files are served from env.ASSETS; /api/* is handled here.
 //
 // Bindings (Pages project ▸ Settings):
-//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2" and "sgd")
+//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2" and "sgd") and the /banner/v2/ progress ("banner_v2_steps")
 //   ADMIN_HASH  secret "salt$sha256hex(salt:id:password)" — made by `node tools/set-admin.mjs`
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 const MAX_LAYOUT_BYTES = 1024 * 1024;
@@ -14,6 +14,15 @@ const LAYOUTS = {
   '/api/v2/layout': { key: 'v2', prev: 'v2_previous', stamp: 'v2_updated_at', file: '/layouts/v2.json' },
   '/api/sgd/layout': { key: 'sgd', prev: 'sgd_previous', stamp: 'sgd_updated_at', file: '/layouts/sgd.json' },
 };
+
+// Shared progress of the /banner/v2/ work order (finished step keys like "build521,750"), so every phone/PC
+// sees the same step. Anyone may update it (no login: R4s mark steps from their phones); `ver` counts writes and a
+// PUT must name the ver it started from, so a stale screen can't overwrite newer progress (409 hands back the current state).
+// The record keeps the last 100 changes in `log` (GET ?log=1) to put a wrong press back.
+const STEPS = { '/api/banner/v2/steps': 'banner_v2_steps' };
+const STEP_KEY = /^(build|remove|hq)\d{1,4},\d{1,4}$/;
+const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && STEP_KEY.test(k));
+const device = ua => (/Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'Mac' : 'other');
 
 const enc = new TextEncoder();
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -82,6 +91,28 @@ async function api(request, env, url) {
     await env.LAYOUT_KV.put(L.key, JSON.stringify(list), { metadata: { updated_at: now } });
     await env.LAYOUT_KV.put(L.stamp, now);
     return json({ ok: true, count: list.length });
+  }
+
+  const SK = STEPS[path];
+  if (SK && request.method === 'GET') {
+    const rec = (env.LAYOUT_KV && (await env.LAYOUT_KV.get(SK, 'json'))) || { keys: null, ver: 0, log: [] };
+    if (!url.searchParams.has('log')) delete rec.log;
+    return json(rec);
+  }
+
+  if (SK && request.method === 'PUT') {
+    if (!env.LAYOUT_KV) return json({ error: 'LAYOUT_KV 바인딩이 없습니다' }, 500);
+    const text = await request.text();
+    if (text.length > 64 * 1024) return json({ error: '진행 기록이 너무 큽니다' }, 413);
+    let body;
+    try { body = JSON.parse(text); } catch (_) { return json({ error: 'JSON 형식이 아닙니다' }, 400); }
+    if (!body || !Number.isInteger(body.base) || body.base < 0 || !validStepKeys(body.keys)) return json({ error: '진행 기록 형식이 아닙니다' }, 400);
+    const cur = (await env.LAYOUT_KV.get(SK, 'json')) || { keys: null, ver: 0, log: [] };
+    if (body.base !== cur.ver) return json({ error: '다른 기기에서 먼저 바뀌었습니다', keys: cur.keys, ver: cur.ver, updated_at: cur.updated_at }, 409);
+    const now = new Date().toISOString(), ver = cur.ver + 1;
+    const log = [...(cur.log || []), { ver, n: body.keys.length, from: cur.keys ? cur.keys.length : null, at: now, dev: device(request.headers.get('User-Agent') || '') }].slice(-100);
+    await env.LAYOUT_KV.put(SK, JSON.stringify({ keys: body.keys, ver, updated_at: now, log }));
+    return json({ ok: true, ver, n: body.keys.length, updated_at: now });
   }
 
   if (path === '/api/login' && request.method === 'POST') {

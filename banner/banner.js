@@ -2,7 +2,8 @@
  * v1/data.json: 2026-10-29 스크린샷을 다시 이어 붙여 읽은 KOR 깃발(flags)·다른 연맹 깃발(others)·본부·확인된 범위(coverage, [y, x0, x1] 줄; 휴대폰 캡처 포함).
  * v2/data.json: 재배치안 — flags[].fixed(곰덫 주변·본부 위쪽 고정)·keep(그대로), remove(철거할 자리), extra(여분 깃발: 점선, 깃발이 더 늘면),
  *   plan(곰덫2 중심 t, 적 최근접 거리 r·방향별 dir, 지금 값 r1·dir1, 여분까지 rx·dirx, 옛 본부 hq1, 지금 깃발 수 nNow),
- *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지, why, n 깃발 수, r 곰덫2 최근접, g 동시 건설 묶음}]; 진행은 이 브라우저 localStorage),
+ *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지, why, n 깃발 수, r 곰덫2 최근접, g 동시 건설 묶음}]; 진행은 서버 <script data-steps="/api/…/steps">에 저장해 모든 기기가 같이 봄,
+ *   이 브라우저 localStorage는 서버가 안 될 때 대비·마지막으로 맞춘 서버 판 ver),
  *   plan.batch(묶음 시작 단계 from·묶음 크기 k·깃발 상한 빈 칸 free·상한 cap) — 묶음 g = 건설 여러 곳 동시 → 다 지어지면 철거,
  *   stepsPrev(바로 전 순서의 서명 sig·앞부분이 같은 단계 수 same — 옛 형식 진행 기록 이어받기).
  * 영토: 본부 15×15(KSCore.HQ_COV) + 깃발마다 7×7(BN_COV). 다른 연맹은 본부·깃발 영역에서 KOR 땅을 뺀 칸. 지형은 mapdata.js.
@@ -10,6 +11,7 @@
 (function () {
   'use strict';
   const SRC = (document.currentScript && document.currentScript.dataset.src) || '/banner/v1/data.json';
+  const STEPS_API = (document.currentScript && document.currentScript.dataset.steps) || '';   // 작업 진행 공유 저장소
   const $ = id => document.getElementById(id);
   const COPY_LABEL = $('copy').textContent;
   const KP = window.KSPlan, K = window.KSCore, G = 1200;
@@ -389,19 +391,75 @@
       const st = steps[k], G = GRP[st.g]; if (!G) return '';
       const a = st.op === 'build' ? G.b : G.r; return `${a.indexOf(k) + 1}/${a.length}`;
     };
-    // 진행 기록: 끝낸 작업 목록. 순서가 바뀌어도 앞부분이 같은 만큼은 이어짐
+    // 진행 기록: 끝낸 작업 목록. 순서가 바뀌어도 앞부분이 같은 만큼은 이어짐.
+    // 서버(STEPS_API)가 기준 — 누가 어느 기기에서 눌러도 같은 진행. localStorage에는 같은 목록 + 마지막으로 맞춘 서버 판(ver)
+    // + 서버에 아직 못 올린 변경(dirty)을 둠: 서버가 안 될 때는 이 기기에서 이어 하고, 연결되면 올림.
     const KEY = 'banner-v2-steps', keyOf = st => `${st.op}${st.x},${st.y}`;
-    let done = 0;
+    const fromKeys = keys => { let n = 0; while (n < steps.length && n < keys.length && keys[n] === keyOf(steps[n])) n++; return n; };
+    let done = 0, ver = null, dirty = false;
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (v && Array.isArray(v.keys)) while (done < steps.length && done < v.keys.length && v.keys[done] === keyOf(steps[done])) done++;
-      else if (v && v.sig) {   // 10-29 형식 {sig, done}: 그때 순서(D.stepsPrev.sig)와 같으면 앞부분이 같은 만큼
+      if (v && Array.isArray(v.keys)) {
+        done = fromKeys(v.keys);
+        ver = Number.isInteger(v.ver) ? v.ver : null;
+        dirty = !!v.dirty || ver === null;   // 서버 저장 전(11-04 이전) 기록은 올리지 않은 변경으로 침
+      } else if (v && v.sig) {   // 10-29 형식 {sig, done}: 그때 순서(D.stepsPrev.sig)와 같으면 앞부분이 같은 만큼
         let h = 5381; for (const st of steps) for (const c of `${keyOf(st)};`) h = (h * 33 + c.charCodeAt(0)) | 0;
         if (v.sig === String(h >>> 0)) done = Math.min(steps.length, v.done | 0);
         else if (D.stepsPrev && v.sig === D.stepsPrev.sig) done = Math.min(v.done | 0, D.stepsPrev.same);
+        dirty = true;
       }
     } catch (_) { /* 저장소 못 씀 */ }
-    const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf) })); } catch (_) { /* 저장소 못 씀 */ } };
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf), ver, dirty })); } catch (_) { /* 저장소 못 씀 */ } };
+    // ---- 서버 공유 ----
+    const two = n => String(n).padStart(2, '0');
+    const when = s => { const d = new Date(s || ''); return isNaN(d) ? '' : `${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`; };
+    let syncAt = '', syncBad = false, loaded = false;
+    const syncShow = bad => {
+      if (bad !== undefined) syncBad = bad;
+      const el = $('stepsync'); if (!el) return;
+      el.classList.toggle('bad', syncBad && !!STEPS_API);
+      el.textContent = !STEPS_API ? '진행은 이 기기에만 저장' : syncBad ? '서버 연결 안 됨 · 이 기기에만 저장 (연결되면 올림)'
+        : !loaded ? '서버에서 진행 불러오는 중…' : `모든 기기 공유${syncAt ? ` · 마지막 저장 ${syncAt}` : ''}`;
+    };
+    const nowTxt = n => (n >= steps.length ? '모두 완료' : `지금 ${n + 1}번 차례`);
+    const adopt = (v, why) => {   // 서버 진행으로 맞춤
+      const n = fromKeys(v.keys || []), was = done;
+      done = n; ver = v.ver | 0; dirty = false; syncAt = when(v.updated_at); save();
+      if (n !== was) { render(); msg(`${why} · ${nowTxt(n)}`); }
+    };
+    async function call(method, body) {
+      const r = await fetch(STEPS_API, { method, cache: 'no-store', headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined });
+      const v = await r.json().catch(() => ({}));
+      if (!r.ok && r.status !== 409) throw new Error(v.error || `HTTP ${r.status}`);
+      return { conflict: r.status === 409, v };
+    }
+    async function send() {   // 지금 진행을 서버에: 마지막으로 본 판(ver)에서 바뀌었으면 서버 쪽을 따름
+      const { conflict, v } = await call('PUT', { base: ver, keys: steps.slice(0, done).map(keyOf) });
+      if (conflict) adopt(v, '다른 기기에서 먼저 바뀜');
+      else { ver = v.ver; dirty = false; syncAt = when(v.updated_at); save(); }
+    }
+    async function sync() {   // 서버 진행 읽기. 이 기기에 못 올린 변경이 서버보다 앞서 있으면(같은 순서) 올림
+      const { v } = await call('GET');
+      loaded = true;
+      const keys = v.keys || [], n = fromKeys(keys);
+      if (dirty && keys.length === n && done >= n) {
+        ver = v.ver | 0;
+        if (done > n) await send(); else { dirty = false; syncAt = when(v.updated_at); save(); }
+      } else adopt(v, dirty ? '서버 진행으로 맞춤' : '다른 기기에서 진행됨');
+    }
+    // 서버 작업은 한 줄로 차례대로(빠르게 여러 번 눌러도 판 번호가 꼬이지 않게)
+    let queue = Promise.resolve(), waiting = 0;
+    const run = (job, failMsg) => {
+      if (!STEPS_API) return;
+      waiting++;
+      queue = queue.then(job).then(() => syncShow(false), () => { syncShow(true); if (failMsg) msg(failMsg); }).finally(() => { waiting--; });
+    };
+    const pull = () => { if (!waiting) run(sync); };
+    const changed = () => {   // 이 기기에서 완료·취소
+      dirty = true; save();
+      run(() => (ver === null ? sync() : dirty ? send() : null), '서버에 저장 못 함 · 이 기기에만 저장됨');
+    };
     const where = st => (st.op === 'hq' ? `X:${st.from[0]} Y:${st.from[1]} → X:${st.x} Y:${st.y}` : `X:${st.x} Y:${st.y}`);
     let msgT = 0;
     const msg = t => { $('stepmsg').textContent = t; if ($('sbn')) { $('sbn').textContent = t; clearTimeout(msgT); msgT = setTimeout(render, 2500); } };
@@ -456,7 +514,7 @@
     let lastDone = 0;
     const doDone = () => {   // 다음 작업 좌표를 바로 복사 (지도는 움직이지 않음). 두 번 눌림 방지 0.6초
       if (done >= steps.length || Date.now() - lastDone < 600) return;
-      lastDone = Date.now(); done++; save(); render();
+      lastDone = Date.now(); done++; changed(); render();
       if (steps[done]) copyXY(steps[done], `${done}번 완료 · `); else msg('모든 작업을 마쳤습니다');
     };
     $('stepcopy').addEventListener('click', doCopy); $('stepdone').addEventListener('click', doDone);
@@ -468,11 +526,17 @@
       if ('IntersectionObserver' in window) new IntersectionObserver(es => { const e = es[es.length - 1]; document.body.classList.toggle('stepoff', !(e.isIntersecting && e.intersectionRatio > 0.99)); },
         { threshold: [0, 1], rootMargin: '0px 0px -80px 0px' }).observe($('stepdone'));
     }
-    $('stepundo').addEventListener('click', () => { if (!done) return; done--; save(); render(); msg(`${done + 1}번 완료 취소`); });
+    $('stepundo').addEventListener('click', () => { if (!done) return; done--; changed(); render(); msg(`${done + 1}번 완료 취소`); });
     $('stepmap').addEventListener('click', doMap);
     $('stepl').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { const st = steps[+b.dataset.k]; goTo(st.x, st.y); } });
     $('stepbox').hidden = false;
     render();
+    syncShow();
+    if (STEPS_API) {   // 처음 한 번 + 화면을 보고 있는 동안 20초마다 + 다른 앱에서 돌아올 때
+      pull();
+      setInterval(() => { if (document.visibilityState === 'visible') pull(); }, 20000);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pull(); });
+    }
   }
 
   // ---------- 복사 ----------

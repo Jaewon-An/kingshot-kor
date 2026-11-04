@@ -51,6 +51,8 @@
   details.stepall > summary { font-size: .8rem; }
   .stepbar { display: none; }
   .stepmsg { margin: 6px 0 0; font-size: .78rem; color: var(--ok); min-height: 1.2em; }
+  .stepsync { margin: 2px 0 0; font-size: .72rem; color: var(--muted); }
+  .stepsync.bad { color: var(--bad); font-weight: 600; }
   .stephint { margin: 4px 0 0; font-size: .78rem; line-height: 1.5; color: var(--muted); }
   .stephint b { color: var(--ink); }
   .stephint .gone { text-decoration: line-through; }
@@ -126,6 +128,7 @@
             <button class="btn" id="stepmap" type="button">지도에서 보기</button>
           </div>
           <p class="stepmsg" id="stepmsg" role="status"></p>
+          <p class="stepsync" id="stepsync"></p>
         </div>
         <details class="stepall" id="steplbox" open>
           <summary>전체 순서</summary>
@@ -217,6 +220,6 @@
 <script src="/mapdata.js"></script>
 <script src="/v2/core.js"></script>
 <script src="/v2/plan.js"></script>
-<script src="/banner/banner.js" data-src="/banner/v2/data.json"></script>
+<script src="/banner/banner.js" data-src="/banner/v2/data.json" data-steps="/api/banner/v2/steps"></script>
 </body>
 </html>
