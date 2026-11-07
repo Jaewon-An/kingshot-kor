@@ -4,13 +4,17 @@
  *   plan(곰덫2 중심 t, 적 최근접 거리 r·방향별 dir, 지금 값 r1·dir1, 옛 본부 hq1, 지금 깃발 수 nNow,
  *     ex: 여분 깃발 = 곰덫1·2 중앙 c 기준 좌측(게임 화면 왼쪽 반원) 보강 — 좌측 최근접 지금 l1(자리 p1) → 여분까지 l(자리 p), 앞 k개만 세웠을 때 by[{k,l}],
  *     여분까지 세운 뒤 오른쪽 반원 최근접 bot, 곰덫1 최근접 t1a → t1, 곰덫2 최근접 t2),
- *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지·4 여분 깃발(좌측 보강), why, n 깃발 수, r 곰덫2 최근접, l 중앙 좌측 최근접}]; 진행은 이 브라우저 localStorage),
- *   stepsPrev(바로 전 순서의 서명 sig·앞부분이 같은 단계 수 same — 옛 형식 진행 기록 이어받기), progress({done, date}: 게임에서 끝낸 단계 수 — 모든 브라우저가 적어도 여기부터).
+ *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지·4 여분 깃발(좌측 보강), why, n 깃발 수, r 곰덫2 최근접, l 중앙 좌측 최근접, g 동시 건설 묶음}]; 진행은 서버 <script data-steps="/api/…/steps">에 저장해 모든 기기가 같이 봄,
+ *   이 브라우저 localStorage는 서버가 안 될 때 대비·마지막으로 맞춘 서버 판 ver),
+ *   plan.batch(묶음 시작 단계 from·묶음 크기 k·깃발 상한 빈 칸 free·상한 cap) — 묶음 g = 건설 여러 곳 동시 → 다 지어지면 철거,
+ *   stepsPrev(바로 전 순서의 서명 sig·앞부분이 같은 단계 수 same — 옛 형식 진행 기록 이어받기),
+ *   progress({done, date}: 게임에서 끝낸 단계 수 — 서버·이 브라우저 기록이 그보다 적어도 여기까지는 완료로 봄).
  * 영토: 본부 15×15(KSCore.HQ_COV) + 깃발마다 7×7(BN_COV). 다른 연맹은 본부·깃발 영역에서 KOR 땅을 뺀 칸. 지형은 mapdata.js.
  */
 (function () {
   'use strict';
   const SRC = (document.currentScript && document.currentScript.dataset.src) || '/banner/v1/data.json';
+  const STEPS_API = (document.currentScript && document.currentScript.dataset.steps) || '';   // 작업 진행 공유 저장소
   const $ = id => document.getElementById(id);
   const COPY_LABEL = $('copy').textContent;
   const KP = window.KSPlan, K = window.KSCore, G = 1200;
@@ -111,12 +115,13 @@
         `곰덫2에서 적이 도시를 옮길 수 있는 가장 가까운 2×2 빈자리: 지금 ${PLAN.r1}칸 → 재배치 ${PLAN.r}칸.`,
         '방향별(화면 기준): ' + DIRS.map(k => `${k} ${PLAN.dir1[k].d}→${PLAN.dir[k].d}칸`).join(' · '),
         ...(extras.length && PLAN.ex ? (ex => [
-          `여분 깃발 ${extras.length}개(점선, ${flags.length + 1}~${flags.length + extras.length}번)는 곰덫1·2 중앙(X:${ex.c[0]} Y:${ex.c[1]}) 기준 좌측(게임 화면 왼쪽 반원)을 보강하는 자리입니다. 지금 깃발은 그대로 두고 더하며, 작업 순서 ④에 세울 순서대로 있습니다.`,
+          `여분 깃발 ${extras.length}개(점선, ${flags.length + 1}~${flags.length + extras.length}번)는 곰덫1·2 중앙(X:${ex.c[0]} Y:${ex.c[1]}) 기준 좌측(게임 화면 왼쪽 반원)을 보강하는 자리입니다. 지금 깃발은 그대로 두고 더하며, 작업 순서 ④에 세울 순서대로 있습니다.` + (ex.now > 0 && PLAN.batch ? ` 연맹 깃발 상한 ${PLAN.batch.cap}개 기준으로 지금 바로 세울 수 있는 건 앞 ${Math.min(ex.now, extras.length)}개이고, 나머지는 상한이 늘 때마다 이어서 세웁니다.` : ''),
           `중앙에서 좌측의 가장 가까운 적 자리: 지금 ${ex.l1}칸(${xy(ex.p1)}) → ` + ex.by.map(b => `${b.k}개 ${b.l}칸`).join(' · ') + `. 곰덫1에서는 ${ex.t1a}칸 → ${ex.t1}칸, 곰덫2 ${ex.t2}칸은 그대로입니다. 어느 단계에서도 영토 안에 2×2 구멍이 생기지 않습니다.`,
           `여분을 모두 세우면 중앙에서 가장 가까운 적 자리는 아래쪽(5~6시) ${xy(ex.bot)} ${ex.bot.d}칸입니다(오른쪽 반원이라 이번 보강에서 뺌).`,
         ])(PLAN.ex) : []),
         `모든 깃발이 본부와 이어지고(꼭짓점만 닿아도 연결${PLAN.nUp ? ', 본부 위쪽 깃발은 거점으로 이어짐' : ''}), 영토 안에 도시를 옮길 수 있는 2×2 구멍이 없습니다. 영역이 겹친 깃발은 옆으로 밀어 틈을 메웠고, 남은 폭 1칸 틈은 도시가 못 들어갑니다.`,
         `평원 본부는 ${xy(HQ)}로 이전한 것으로 계산했습니다(지금 ${xy(PLAN.hq1)}).`,
+        ...(PLAN.batch ? [`작업 순서 ${PLAN.batch.from}번부터는 묶음마다 깃발 ${PLAN.batch.k}곳을 동시에 짓고, 다 지어지면 그 덕에 빼도 되는 옛 깃발을 철거합니다. 깃발 수는 연맹 상한 ${PLAN.batch.cap}개(빈 칸 ${PLAN.batch.free}개)를 넘지 않고, 철거할 때도 곰덫2 최근접 적 자리가 그 전보다 가까워지지 않습니다.`] : []),
         'SGD 영토는 우호 연맹으로 보고 적이 쓸 수 없는 곳으로, EoB·TWN 영토는 적이 쓸 수 있는 곳으로 계산했습니다. 연맹원 도시·곰덫·연맹 건물은 v2 배치도 위치 기준입니다.',
       ].map(s => `<li>${s}</li>`).join('');
     } else $('check').innerHTML = [
@@ -138,7 +143,7 @@
   let C = {};
   const readColors = () => {
     const cs = getComputedStyle(document.documentElement);
-    for (const k of ['m-void', 'm-ground', 'm-fertile', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'm-grid', 'm-edge', 'c-hq', 'c-t2', 'c-banner', 'c-terr', 'c-pick', 'on-obj', 'c-fflag', 'c-fterr', 'c-eflag', 'c-eterr', 'c-tflag', 'c-tterr', 'c-fixed'])
+    for (const k of ['m-void', 'm-ground', 'm-fertile', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'm-grid', 'm-edge', 'c-hq', 'c-t2', 'c-banner', 'c-terr', 'c-pick', 'on-obj', 'c-fflag', 'c-fterr', 'c-eflag', 'c-eterr', 'c-tflag', 'c-tterr', 'c-fixed', 'ok', 'bad'])
       C[k] = cs.getPropertyValue('--' + k).trim();
     if (!C['c-fixed']) C['c-fixed'] = C['c-banner'];
   };
@@ -171,7 +176,7 @@
   }
 
   // ---------- 보기 ----------
-  const view = { cx: 0, cy: 0, s: 8, rot: true, names: true, each: true, oth: true, rm: true, sel: null, mark: null, cur: null, step: null };
+  const view = { cx: 0, cy: 0, s: 8, rot: true, names: true, each: true, oth: true, rm: true, sel: null, mark: null, cur: null, step: null, stepg: [] };
   const SQ = Math.SQRT1_2;
   function mat(w, h) {
     const s = view.s, cx = view.cx, cy = view.cy;
@@ -254,7 +259,12 @@
     if (view.oth) { others.forEach(f => box(f, 1, C[colOf(f.a)[0]], 0.04)); othHQ.forEach(h => box(h, 3, C[colOf(h.a)[0]], 0.05)); }
     if (view.sel) { const f = view.sel, r = K.BN_COV; gx.strokeStyle = C['c-pick']; gx.lineWidth = 3.5 / s; gx.strokeRect(f.x - r, f.y - r, 1 + 2 * r, 1 + 2 * r); gx.strokeRect(f.x - 0.25, f.y - 0.25, 1.5, 1.5); }
     if (view.mark) { const p = view.mark; gx.strokeStyle = C['c-pick']; gx.lineWidth = 3.5 / s; gx.beginPath(); gx.arc(p.x + 0.5, p.y + 0.5, 1.6, 0, Math.PI * 2); gx.stroke(); gx.strokeRect(p.x, p.y, 1, 1); }
-    if (view.step) { const p = view.step, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = C['c-t2']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 1.8, 0, Math.PI * 2); gx.stroke(); }
+    const opCol = op => (op === 'build' ? C.ok : op === 'remove' ? C.bad : C['c-t2']);   // 지금 작업 원: 건설 초록·철거 빨강
+    if (view.step) { const p = view.step, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = opCol(p.op); gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 1.8, 0, Math.PI * 2); gx.stroke(); }
+    if (view.stepg.length) { // 같은 묶음에서 함께 할 자리: 점선 원
+      gx.strokeStyle = opCol(view.stepg[0].op); gx.lineWidth = 2 / s; gx.setLineDash([4 / s, 3 / s]);
+      view.stepg.forEach(p => { gx.beginPath(); gx.arc(p.x + 0.5, p.y + 0.5, 2.3, 0, Math.PI * 2); gx.stroke(); }); gx.setLineDash([]);
+    }
     if (view.cur) { gx.strokeStyle = C['m-edge']; gx.lineWidth = 2 / s; gx.strokeRect(view.cur.x, view.cur.y, 1, 1); }
     // 글자
     gx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -384,20 +394,88 @@
   function setupSteps(steps) {
     const OP = { build: '깃발 건설', remove: '깃발 철거', hq: '평원 본부 이전' };
     const PHASE = { 1: '① 본부 이전 준비 (먼저)', 2: '② 평원 본부 이전', 3: '③ 나머지 깃발 재배치', 4: '④ 여분 깃발 (곰덫 중앙 좌측 보강 · 깃발이 늘 때마다 순서대로)' };
-    // 진행 기록: 끝낸 작업 목록. 순서가 바뀌어도 앞부분이 같은 만큼은 이어짐
+    // 동시 건설 묶음 g: 건설 여러 곳을 한꺼번에 → 다 지어지면 철거 (g 0 = 첫 건설 전 철거)
+    const GRP = {};
+    steps.forEach((st, i) => { if (st.g != null) (GRP[st.g] || (GRP[st.g] = { b: [], r: [] }))[st.op === 'build' ? 'b' : 'r'].push(i); });
+    const nG = Math.max(0, ...Object.keys(GRP).map(Number));
+    const grpName = g => (g ? `묶음 ${g}/${nG}` : '먼저 철거');
+    const OPW = { build: '건설', remove: '철거' };
+    const opIn = k => {   // 묶음 안 같은 작업 중 몇 번째: '2/3'
+      const st = steps[k], G = GRP[st.g]; if (!G) return '';
+      const a = st.op === 'build' ? G.b : G.r; return `${a.indexOf(k) + 1}/${a.length}`;
+    };
+    // 진행 기록: 끝낸 작업 목록. 순서가 바뀌어도 앞부분이 같은 만큼은 이어짐.
+    // 서버(STEPS_API)가 기준 — 누가 어느 기기에서 눌러도 같은 진행. localStorage에는 같은 목록 + 마지막으로 맞춘 서버 판(ver)
+    // + 서버에 아직 못 올린 변경(dirty)을 둠: 서버가 안 될 때는 이 기기에서 이어 하고, 연결되면 올림.
     const KEY = 'banner-v2-steps', keyOf = st => `${st.op}${st.x},${st.y}`;
-    let done = 0;
+    // 게임에서 끝낸 단계(D.progress.done)까지는 서버·이 브라우저 기록이 적어도 완료로 봄 (다음 완료 때 서버에도 올라감)
+    const BASE = Math.min(steps.length, (D.progress && D.progress.done) | 0);
+    const fromKeys = keys => { let n = 0; while (n < steps.length && n < keys.length && keys[n] === keyOf(steps[n])) n++; return Math.max(n, BASE); };
+    let done = 0, ver = null, dirty = false;
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (v && Array.isArray(v.keys)) while (done < steps.length && done < v.keys.length && v.keys[done] === keyOf(steps[done])) done++;
-      else if (v && v.sig) {   // 10-29 형식 {sig, done}: 그때 순서(D.stepsPrev.sig)와 같으면 앞부분이 같은 만큼
+      if (v && Array.isArray(v.keys)) {
+        done = fromKeys(v.keys);
+        ver = Number.isInteger(v.ver) ? v.ver : null;
+        dirty = !!v.dirty || ver === null;   // 서버 저장 전(11-04 이전) 기록은 올리지 않은 변경으로 침
+      } else if (v && v.sig) {   // 10-29 형식 {sig, done}: 그때 순서(D.stepsPrev.sig)와 같으면 앞부분이 같은 만큼
         let h = 5381; for (const st of steps) for (const c of `${keyOf(st)};`) h = (h * 33 + c.charCodeAt(0)) | 0;
         if (v.sig === String(h >>> 0)) done = Math.min(steps.length, v.done | 0);
         else if (D.stepsPrev && v.sig === D.stepsPrev.sig) done = Math.min(v.done | 0, D.stepsPrev.same);
+        dirty = true;
       }
     } catch (_) { /* 저장소 못 씀 */ }
-    if (D.progress && D.progress.done > done) done = Math.min(steps.length, D.progress.done);   // 게임에서 끝낸 단계까지는 어느 브라우저든 완료로
-    const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf) })); } catch (_) { /* 저장소 못 씀 */ } };
+    if (done < BASE) done = BASE;
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf), ver, dirty })); } catch (_) { /* 저장소 못 씀 */ } };
+    // ---- 서버 공유 ----
+    const two = n => String(n).padStart(2, '0');
+    const when = s => { const d = new Date(s || ''); return isNaN(d) ? '' : `${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`; };
+    let syncAt = '', syncBad = false, loaded = false;
+    const syncShow = bad => {
+      if (bad !== undefined) syncBad = bad;
+      const el = $('stepsync'); if (!el) return;
+      el.classList.toggle('bad', syncBad && !!STEPS_API);
+      el.textContent = !STEPS_API ? '진행은 이 기기에만 저장' : syncBad ? '서버 연결 안 됨 · 이 기기에만 저장 (연결되면 올림)'
+        : !loaded ? '서버에서 진행 불러오는 중…' : `모든 기기 공유${syncAt ? ` · 마지막 저장 ${syncAt}` : ''}`;
+    };
+    const nowTxt = n => (n >= steps.length ? '모두 완료' : `지금 ${n + 1}번 차례`);
+    const adopt = (v, why) => {   // 서버 진행으로 맞춤
+      const n = fromKeys(v.keys || []), was = done;
+      done = n; ver = v.ver | 0; dirty = false; syncAt = when(v.updated_at); save();
+      if (n !== was) { render(); msg(`${why} · ${nowTxt(n)}`); }
+    };
+    async function call(method, body) {
+      const r = await fetch(STEPS_API, { method, cache: 'no-store', headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined });
+      const v = await r.json().catch(() => ({}));
+      if (!r.ok && r.status !== 409) throw new Error(v.error || `HTTP ${r.status}`);
+      return { conflict: r.status === 409, v };
+    }
+    async function send() {   // 지금 진행을 서버에: 마지막으로 본 판(ver)에서 바뀌었으면 서버 쪽을 따름
+      const { conflict, v } = await call('PUT', { base: ver, keys: steps.slice(0, done).map(keyOf) });
+      if (conflict) adopt(v, '다른 기기에서 먼저 바뀜');
+      else { ver = v.ver; dirty = false; syncAt = when(v.updated_at); save(); }
+    }
+    async function sync() {   // 서버 진행 읽기. 이 기기에 못 올린 변경이 서버보다 앞서 있으면(같은 순서) 올림
+      const { v } = await call('GET');
+      loaded = true;
+      const keys = v.keys || [], n = fromKeys(keys);
+      if (dirty && keys.length === n && done >= n) {
+        ver = v.ver | 0;
+        if (done > n) await send(); else { dirty = false; syncAt = when(v.updated_at); save(); }
+      } else adopt(v, dirty ? '서버 진행으로 맞춤' : '다른 기기에서 진행됨');
+    }
+    // 서버 작업은 한 줄로 차례대로(빠르게 여러 번 눌러도 판 번호가 꼬이지 않게)
+    let queue = Promise.resolve(), waiting = 0;
+    const run = (job, failMsg) => {
+      if (!STEPS_API) return;
+      waiting++;
+      queue = queue.then(job).then(() => syncShow(false), () => { syncShow(true); if (failMsg) msg(failMsg); }).finally(() => { waiting--; });
+    };
+    const pull = () => { if (!waiting) run(sync); };
+    const changed = () => {   // 이 기기에서 완료·취소
+      dirty = true; save();
+      run(() => (ver === null ? sync() : dirty ? send() : null), '서버에 저장 못 함 · 이 기기에만 저장됨');
+    };
     const where = st => (st.op === 'hq' ? `X:${st.from[0]} Y:${st.from[1]} → X:${st.x} Y:${st.y}` : `X:${st.x} Y:${st.y}`);
     let msgT = 0;
     const msg = t => { $('stepmsg').textContent = t; if ($('sbn')) { $('sbn').textContent = t; clearTimeout(msgT); msgT = setTimeout(render, 2500); } };
@@ -407,46 +485,74 @@
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => msg(`${pre}${text} 복사됨`), fallback);
       else fallback();
     };
-    let ph = 0;
+    let ph = 0, pg = null;
     $('stepl').innerHTML = steps.map((st, i) => {
-      const head = st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : '';
-      return `${head}<li value="${i + 1}" data-k="${i}"><button type="button" class="lnk" data-k="${i}">${OP[st.op]} ${where(st)}</button></li>`;
+      let head = st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : '';
+      if (st.g != null && st.g !== pg) {
+        const G = GRP[(pg = st.g)];
+        head += `<li class="grp sub">${grpName(pg)} · ${[G.b.length ? `건설 ${G.b.length}곳 동시에` : '', G.r.length ? `${G.b.length ? '다 지어지면 ' : ''}철거 ${G.r.length}곳` : ''].filter(Boolean).join(' → ')}</li>`;
+      }
+      const opw = OPW[st.op] ? `<b class="opw op-${st.op}">${OPW[st.op]}</b>` : OP[st.op];
+      return `${head}<li value="${i + 1}" data-k="${i}"><button type="button" class="lnk" data-k="${i}">${opw} ${where(st)}</button></li>`;
     }).join('');
     let shown = null;   // '지도에서 보기'로 찍은 자리: 다른 작업으로 넘어가면 지움
     function render() {
       const st = steps[done];
       if (shown && shown !== st && view.mark && view.mark.x === shown.x && view.mark.y === shown.y) { view.mark = null; $('readout').textContent = ''; shown = null; }
       $('stepsum').textContent = `${done}/${steps.length} 완료`;
-      $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
-      $('stepop').textContent = st ? OP[st.op] : '';
+      const G = st && GRP[st.g], opw = st && OPW[st.op];
+      // 건설·철거가 한눈에: 카드 테두리·배지·완료 버튼·아래 바를 작업 색으로(건설 초록, 철거 빨강)
+      for (const el of [$('stepcard'), $('stepbar')]) if (el) { el.classList.toggle('op-build', !!st && st.op === 'build'); el.classList.toggle('op-remove', !!st && st.op === 'remove'); }
+      $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${G ? grpName(st.g) : PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
+      $('stepop').innerHTML = !st ? '' : opw ? `<span class="opb op-${st.op}">${opw}${G ? ` ${opIn(done)}` : ''}</span>` : OP[st.op];
       $('stepxy').textContent = st ? where(st) : '';
-      for (const id of ['stepcopy', 'stepdone', 'stepmap', 'sbcopy', 'sbdone']) if ($(id)) $(id).disabled = !st;
-      if ($('sbn')) { $('sbn').textContent = st ? `${done + 1}/${steps.length} · ${OP[st.op]}` : '모든 작업을 마쳤습니다'; $('sbxy').textContent = st ? `X:${st.x} Y:${st.y}` : ''; }
+      $('stepdonel').textContent = opw ? `${opw} 완료` : '작업완료';
+      // 묶음: 같은 작업 자리 목록(지금 자리 굵게, 끝낸 자리 줄 긋기). 철거는 앞 건설이 다 지어진 뒤
+      const list = a => a.map(k => (k === done ? `<b>X:${steps[k].x} Y:${steps[k].y}</b>` : `<span class="${k < done ? 'gone' : ''}">X:${steps[k].x} Y:${steps[k].y}</span>`)).join(' · ');
+      const hint = !G ? '' : st.op === 'build' ? `동시에 지을 ${G.b.length}곳: ${list(G.b)}`
+        : `철거할 ${G.r.length}곳: ${list(G.r)}${G.b.length ? ` (건설 ${G.b.length}곳이 다 지어진 뒤)` : ''}`;
+      $('stephint').innerHTML = hint; $('stephint').hidden = !hint;
+      for (const id of ['stepcopy', 'stepdone', 'stepmap', 'sbcopy', 'sbdone', 'sbmap']) if ($(id)) $(id).disabled = !st;
+      if ($('sbn')) {
+        $('sbn').innerHTML = !st ? '모든 작업을 마쳤습니다' : (opw ? `<b class="opt op-${st.op}">${opw}${G ? ` ${opIn(done)}` : ''}</b> ` : `${OP[st.op]} · `) + `${done + 1}/${steps.length}${G ? ` · 묶음 ${st.g}` : ''}`;
+        $('sbxy').textContent = st ? `X:${st.x} Y:${st.y}` : '';
+        $('sbdone').textContent = opw ? `${opw} 완료` : '완료 · 다음';
+      }
       $('stepundo').disabled = !done;
       document.querySelectorAll('#stepl li[data-k]').forEach(li => { const k = +li.dataset.k; li.classList.toggle('done', k < done); li.classList.toggle('cur', k === done); });
       const cur = document.querySelector('#stepl li.cur'), box = $('stepl');
       if (cur) box.scrollTop = Math.max(0, cur.offsetTop - box.clientHeight / 3);
-      view.step = st || null; draw();
+      view.step = st || null;
+      view.stepg = G ? (st.op === 'build' ? G.b : G.r).filter(k => k > done).map(k => steps[k]) : [];
+      draw();
     }
     const doCopy = () => { if (steps[done]) copyXY(steps[done], ''); };
     let lastDone = 0;
     const doDone = () => {   // 다음 작업 좌표를 바로 복사 (지도는 움직이지 않음). 두 번 눌림 방지 0.6초
       if (done >= steps.length || Date.now() - lastDone < 600) return;
-      lastDone = Date.now(); done++; save(); render();
+      lastDone = Date.now(); done++; changed(); render();
       if (steps[done]) copyXY(steps[done], `${done}번 완료 · `); else msg('모든 작업을 마쳤습니다');
     };
     $('stepcopy').addEventListener('click', doCopy); $('stepdone').addEventListener('click', doDone);
+    const doMap = () => { const st = steps[done]; if (st) { goTo(st.x, st.y); shown = st; } };   // 휴대폰은 지도까지 스크롤
     if ($('stepbar')) {   // 휴대폰: 작업 카드가 화면 밖이면 아래 고정 바
       $('sbcopy').addEventListener('click', doCopy); $('sbdone').addEventListener('click', doDone);
+      if ($('sbmap')) $('sbmap').addEventListener('click', doMap);
       // 작업완료 버튼이 다 보이지 않으면(아래 바 자리 80px는 가린 것으로 침) 바를 띄움
       if ('IntersectionObserver' in window) new IntersectionObserver(es => { const e = es[es.length - 1]; document.body.classList.toggle('stepoff', !(e.isIntersecting && e.intersectionRatio > 0.99)); },
         { threshold: [0, 1], rootMargin: '0px 0px -80px 0px' }).observe($('stepdone'));
     }
-    $('stepundo').addEventListener('click', () => { if (!done) return; done--; save(); render(); msg(`${done + 1}번 완료 취소`); });
-    $('stepmap').addEventListener('click', () => { const st = steps[done]; if (st) { goTo(st.x, st.y); shown = st; } });
+    $('stepundo').addEventListener('click', () => { if (!done) return; done--; changed(); render(); msg(`${done + 1}번 완료 취소`); });
+    $('stepmap').addEventListener('click', doMap);
     $('stepl').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { const st = steps[+b.dataset.k]; goTo(st.x, st.y); } });
     $('stepbox').hidden = false;
     render();
+    syncShow();
+    if (STEPS_API) {   // 처음 한 번 + 화면을 보고 있는 동안 20초마다 + 다른 앱에서 돌아올 때
+      pull();
+      setInterval(() => { if (document.visibilityState === 'visible') pull(); }, 20000);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pull(); });
+    }
   }
 
   // ---------- 복사 ----------

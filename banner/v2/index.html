@@ -51,6 +51,22 @@
   details.stepall > summary { font-size: .8rem; }
   .stepbar { display: none; }
   .stepmsg { margin: 6px 0 0; font-size: .78rem; color: var(--ok); min-height: 1.2em; }
+  .stepsync { margin: 2px 0 0; font-size: .72rem; color: var(--muted); }
+  .stepsync.bad { color: var(--bad); font-weight: 600; }
+  .stephint { margin: 4px 0 0; font-size: .78rem; line-height: 1.5; color: var(--muted); }
+  .stephint b { color: var(--ink); }
+  .stephint .gone { text-decoration: line-through; }
+  /* 건설 초록·철거 빨강: 카드 테두리·배지·목록 글자·아래 바 */
+  .stepnow.op-build { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, var(--bg)); }
+  .stepnow.op-remove { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--bg)); }
+  .opb, .opt { display: inline-block; border-radius: 999px; font-weight: 700; color: var(--accent-ink); line-height: 1.35; }
+  .opb { padding: 2px 12px; font-size: 1.1rem; }
+  .opt { padding: 0 8px; font-size: .8rem; }
+  .opb.op-build, .opt.op-build { background: var(--ok); }
+  .opb.op-remove, .opt.op-remove { background: var(--bad); }
+  .opw.op-build { color: var(--ok); }
+  .opw.op-remove { color: var(--bad); }
+  ol.stepl li.grp.sub { margin: 4px 0 1px -2em; font-size: .76rem; color: var(--muted); }
   ol.stepl { position: relative; max-height: 300px; overflow: auto; margin: 8px 0 0; padding-left: 2.8em; font-size: .8rem; line-height: 1.6; }
   ol.stepl li.grp { list-style: none; margin: 6px 0 2px -2.8em; font-weight: 600; }
   ol.stepl li.done .lnk { color: var(--muted); text-decoration: line-through; }
@@ -73,10 +89,13 @@
       padding: 8px max(12px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
       background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -2px 10px var(--shadow); }
     body.stepoff .page { padding-bottom: 96px; }
+    body.stepoff .stepbar.op-build { border-top: 4px solid var(--ok); }
+    body.stepoff .stepbar.op-remove { border-top: 4px solid var(--bad); }
     .stepbar .sbt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
     .stepbar .sbn { font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .stepbar .sbxy { font-size: 1.05rem; font-weight: 600; white-space: nowrap; }
     .stepbar .btn { flex: 0 0 auto; min-height: 46px; padding: 6px 12px; font-size: .9rem; }
+    .stepbar #sbmap { padding: 6px 10px; }
   }
 </style>
 </head>
@@ -99,16 +118,18 @@
     <aside class="panel">
       <details open id="stepbox" hidden>
         <summary>작업 순서 <span class="sumx" id="stepsum"></span></summary>
-        <div class="stepnow">
+        <div class="stepnow" id="stepcard">
           <p class="stepph" id="stepph"></p>
           <p class="stepop"><span id="stepop"></span><b class="mono" id="stepxy"></b></p>
+          <p class="stephint" id="stephint" hidden></p>
           <div class="stepbtns">
             <button class="btn strong" id="stepcopy" type="button">좌표 복사</button>
-            <button class="btn copy" id="stepdone" type="button">작업완료<small>다음 좌표 복사</small></button>
+            <button class="btn copy" id="stepdone" type="button"><span id="stepdonel">작업완료</span><small>다음 좌표 복사</small></button>
             <button class="btn" id="stepundo" type="button">완료 취소 (이전으로)</button>
             <button class="btn" id="stepmap" type="button">지도에서 보기</button>
           </div>
           <p class="stepmsg" id="stepmsg" role="status"></p>
+          <p class="stepsync" id="stepsync"></p>
         </div>
         <details class="stepall" id="steplbox" open>
           <summary>전체 순서</summary>
@@ -156,7 +177,8 @@
       <details class="legend" id="legend" open>
         <summary>범례</summary>
         <div class="keys">
-          <span><i style="background:transparent;border-radius:50%;outline:3px solid var(--c-t2);outline-offset:-3px"></i>작업 순서의 지금 작업 자리</span>
+          <span><i style="background:transparent;border-radius:50%;outline:3px solid var(--ok);outline-offset:-3px"></i>지금 건설할 자리</span>
+          <span><i style="background:transparent;border-radius:50%;outline:3px solid var(--bad);outline-offset:-3px"></i>지금 철거할 자리 (점선: 같은 묶음)</span>
           <span><i class="ring"></i>곰덫2 중심 안전 반경 (원 안에 적 도시 자리 없음)</span>
           <span><i class="ring2"></i>여분 깃발까지 세웠을 때 좌측 안전 반경 (곰덫1·2 중앙 기준 왼쪽 반원, 가운데 점이 중앙)</span>
           <span><i style="background:transparent;outline:2px solid var(--c-t2);outline-offset:-2px"></i>방향별 가장 가까운 적 도시 자리 (2×2)</span>
@@ -186,6 +208,7 @@
 
   <div class="stepbar" id="stepbar">
     <div class="sbt"><span class="sbn" id="sbn"></span><span class="sbxy mono" id="sbxy"></span></div>
+    <button class="btn" id="sbmap" type="button">지도</button>
     <button class="btn strong" id="sbcopy" type="button">복사</button>
     <button class="btn copy" id="sbdone" type="button">완료 · 다음</button>
   </div>
@@ -198,6 +221,6 @@
 <script src="/mapdata.js"></script>
 <script src="/v2/core.js"></script>
 <script src="/v2/plan.js"></script>
-<script src="/banner/banner.js" data-src="/banner/v2/data.json"></script>
+<script src="/banner/banner.js" data-src="/banner/v2/data.json" data-steps="/api/banner/v2/steps"></script>
 </body>
 </html>
