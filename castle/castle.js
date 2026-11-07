@@ -4,7 +4,7 @@
  *   그림 좌표: x = (i - j)·A, y = (i + j - 5)·A (원점 = 캐슬 가운데, A = 칸 반너비). 처음에는 3열까지 보이게 확대해 둠.
  * 데이터: /api/castle/layout (첫 게시 전에는 layouts/castle.json)
  *   { memo?, members: [{ n: 닉네임, i?, j?: 칸 (없으면 미배치), ext?: 다른 연맹 }] }
- * 편집: 관리자 로그인(/v1/admin과 같은 계정) → 끌어 놓을 때마다 바로 저장(PUT /api/castle/layout). 저장 직전에 서버 최신본을 받아 그 위에 같은 수정을 다시 적용함.
+ * 편집: 캐슬 편집 계정(castle/admin.txt, 서버 비밀값 CASTLE_HASH) 또는 기존 관리자 계정으로 로그인 → 끌어 놓을 때마다 바로 저장(PUT /api/castle/layout). 저장 직전에 서버 최신본을 받아 그 위에 같은 수정을 다시 적용함.
  * 주소: ?q=닉네임 ?edit */
 (function () {
   'use strict';
@@ -15,7 +15,7 @@
   const r1 = v => Math.round(v * 10) / 10;
   const PHONE = matchMedia('(max-width: 900px)');
   const API = '/api/castle/layout', FILE = '/layouts/castle.json';
-  const TOKEN_KEY = 'ks-admin-token';   // /v1/admin과 같은 sessionStorage 키
+  const TOKEN_KEY = 'ks-castle-token', ADMIN_KEY = 'ks-admin-token';   // 캐슬 계정 토큰은 따로 (다른 배치도에선 안 됨) · 같은 탭에서 /v1/admin에 로그인했으면 그 토큰도 씀
   const FONT = '"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif';
   const SYS_FONT = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';   // 이미지 저장용 SVG는 웹 글꼴을 못 씀
   if (PHONE.matches) $('legend').open = false;
@@ -52,7 +52,7 @@
   let data = null, sel = '', found = '', editing = false, showNames = true, k = 1;
   let roster = [], rosterMap = new Map();     // /v2 배치도 연맹원 (소문자 → 원래 이름)
   let token = null;
-  try { token = sessionStorage.getItem(TOKEN_KEY); } catch (_) { /* no session storage */ }
+  try { token = sessionStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(ADMIN_KEY); } catch (_) { /* no session storage */ }
   const placed = m => !!m && Number.isInteger(m.i);
   const findIn = (d, n) => d.members.find(m => low(m.n) === low(n));
   const occupant = (d, i, j) => d.members.find(m => m.i === i && m.j === j);
@@ -509,7 +509,7 @@
   $('loginform').addEventListener('submit', async ev => {
     ev.preventDefault();
     try {
-      const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: $('lid').value.trim(), pw: $('lpw').value }) });
+      const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: $('lid').value.trim(), pw: $('lpw').value, scope: 'castle' }) });   // 캐슬 계정 → 관리자 계정 순으로 확인
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.token) { $('loginerr').textContent = j.error || '로그인하지 못했습니다'; return; }
       token = j.token;
@@ -602,7 +602,7 @@
   function renderMemo() { $('memo').hidden = !data.memo; $('memo').textContent = data.memo || ''; }
   function renderEditor() {
     $('editor').hidden = !editing;
-    $('editbtn').textContent = editing ? '편집 끝내기' : '배치 편집 (관리자)';
+    $('editbtn').textContent = editing ? '편집 끝내기' : '배치 편집 (로그인)';
     $('edit2').setAttribute('aria-pressed', editing);
     if (!editing) return;
     $('edstate').textContent = '끌어 놓으면 바로 저장';

@@ -163,7 +163,7 @@
       <button class="btn copy" id="copy" type="button">연맹 채팅용 텍스트 복사</button>
       <textarea id="copytext" readonly hidden aria-label="복사용 텍스트"></textarea>
       <div class="adminbar">
-        <button class="btn" id="editbtn" type="button">배치 편집 (관리자)</button>
+        <button class="btn" id="editbtn" type="button">배치 편집 (로그인)</button>
         <span class="hint" id="adminhint"></span>
       </div>
     </aside>
@@ -214,7 +214,8 @@
 
   <dialog id="login">
     <form id="loginform">
-      <h2>관리자 로그인</h2>
+      <h2>캐슬 편집 로그인</h2>
+      <p class="hint">캐슬 편집 계정이나 기존 관리자 계정</p>
       <input id="lid" type="text" autocomplete="username" placeholder="아이디" required>
       <input id="lpw" type="password" autocomplete="current-password" placeholder="비밀번호" required>
       <p class="hint" id="loginerr" role="alert" style="color:var(--bad)"></p>
@@ -225,7 +226,7 @@
     </form>
   </dialog>
 
-  <footer><span class="hint">격자·캐슬 크기와 다른 연맹 도시 자리는 2026-11-07 캐슬 배치 플래너 스크린샷을 따랐습니다 (한 칸 = 도시 하나). 열 = 캐슬에서 몇 번째 둘레인지, 게임 좌표는 아닙니다. 편집은 기존 배치도와 같은 관리자 계정.</span></footer>
+  <footer><span class="hint">격자·캐슬 크기와 다른 연맹 도시 자리는 2026-11-07 캐슬 배치 플래너 스크린샷을 따랐습니다 (한 칸 = 도시 하나). 열 = 캐슬에서 몇 번째 둘레인지, 게임 좌표는 아닙니다. 편집은 캐슬 편집 계정이나 기존 관리자 계정으로 로그인.</span></footer>
 </div>
 <script src="/castle/castle.js"></script>
 </body>

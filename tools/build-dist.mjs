@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
-// _worker.js = the /api server on Cloudflare (also sends / to /v2/). admin.txt / .admin-secret are never copied.
+// _worker.js = the /api server on Cloudflare (also sends / to /v2/). admin.txt / .admin-secret / api-token.txt are never copied, from any folder (castle/admin.txt).
 // v1/index.html + app.js, style.css, flags.js = the old layout pages (/v1/, /v1/admin, /v1/flags) and the /v2/admin editor
 // v2/ = the new-seat pages: /v2 (seat guide), /v2/map, /v2/plan (작전도), engine + tools for /v2/admin
 // sgd/ = /sgd, the SGD alliance's seat map (one bear trap; uses v2/core.js, v2/plan.js, v2/guide.css)
@@ -17,7 +17,8 @@ const PUBLIC = ['v1', 'v2', 'sgd', 'sword', 'castle', 'banner', 'app.js', 'flags
 
 await rm(DIST, { recursive: true, force: true });
 await mkdir(DIST);
-for (const f of PUBLIC) await cp(path.join(ROOT, f), path.join(DIST, f), { recursive: true });
+const secret = src => /^(admin\.txt|\.admin-secret|api-token\.txt)$/i.test(path.basename(src));
+for (const f of PUBLIC) await cp(path.join(ROOT, f), path.join(DIST, f), { recursive: true, filter: src => !secret(src) });
 // v1/index.html becomes the editor or the flag survey from its own path; <base href="/"> keeps its files at the root.
 // Cloudflare Pages serves v1/admin.html at /v1/admin, v1/flags.html at /v1/flags, v2/admin.html at /v2/admin (the v2 editor).
 const page = path.join(ROOT, 'v1', 'index.html');

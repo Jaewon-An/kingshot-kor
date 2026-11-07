@@ -18,32 +18,40 @@ const LAYOUT_FILES = {
 };
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 
-// ADMIN_HASH = "salt$sha256(salt:id:password)"; from .admin-secret (tools/set-admin.mjs) or derived from admin.txt
-function loadAdminHash() {
-  try { return fs.readFileSync(path.join(ROOT, '.admin-secret'), 'utf8').trim(); } catch (_) { /* fall back */ }
-  try {
-    const line = fs.readFileSync(path.join(ROOT, 'admin.txt'), 'utf8').trim();
-    const i = line.indexOf(' / ');
-    const salt = crypto.randomBytes(16).toString('hex');
-    return `${salt}$${sha256(`${salt}:${line.slice(0, i).trim()}:${line.slice(i + 3).trim()}`)}`;
-  } catch (_) { return ''; }
-}
+// Account hash = "salt$sha256(salt:id:password)". ADMIN_HASH from .admin-secret (tools/set-admin.mjs) or derived from admin.txt;
+// CASTLE_HASH (the /castle editor's own account) derived from castle/admin.txt. Like _worker.js, /castle takes either account.
 const sha256 = text => crypto.createHash('sha256').update(text).digest('hex');
 const hmac = (key, msg) => crypto.createHmac('sha256', key).update(msg).digest('hex');
 const same = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
-const ADMIN_HASH = loadAdminHash();
+function hashFromFile(file) {   // "id / password" (castle/admin.txt has no space after the slash)
+  try {
+    const line = fs.readFileSync(file, 'utf8').trim();
+    const sp = line.indexOf(' / '), i = sp >= 0 ? sp : line.indexOf('/');
+    if (i < 0) return '';
+    const salt = crypto.randomBytes(16).toString('hex');
+    return `${salt}$${sha256(`${salt}:${line.slice(0, i).trim()}:${line.slice(i + (sp >= 0 ? 3 : 1)).trim()}`)}`;
+  } catch (_) { return ''; }
+}
+function loadAdminHash() {
+  try { return fs.readFileSync(path.join(ROOT, '.admin-secret'), 'utf8').trim(); } catch (_) { /* fall back */ }
+  return hashFromFile(path.join(ROOT, 'admin.txt'));
+}
+const HASHES = { ADMIN_HASH: loadAdminHash(), CASTLE_HASH: hashFromFile(path.join(ROOT, 'castle', 'admin.txt')) };
+const ADMIN_HASH = HASHES.ADMIN_HASH;
+const ACCOUNTS = { '': ['ADMIN_HASH'], castle: ['CASTLE_HASH', 'ADMIN_HASH'] };   // login scope → accounts tried in order
+const AUTH = { '/api/castle/layout': ['CASTLE_HASH', 'ADMIN_HASH'] };              // layouts another account may also save
 
-function checkLogin(id, pw) {
-  const [salt, want] = ADMIN_HASH.split('$');
+function checkLogin(hash, id, pw) {
+  const [salt, want] = String(hash || '').split('$');
   return !!salt && !!want && same(sha256(`${salt}:${id}:${pw}`), want);
 }
-function makeToken() {
+function makeToken(hash) {
   const exp = String(Date.now() + TOKEN_TTL);
-  return `${exp}.${hmac(ADMIN_HASH, exp)}`;
+  return `${exp}.${hmac(hash, exp)}`;
 }
-function checkToken(req) {
+function checkToken(hash, req) {
   const m = /^Bearer (\d+)\.([0-9a-f]{64})$/.exec(req.headers.authorization || '');
-  return !!m && !!ADMIN_HASH && Number(m[1]) >= Date.now() && same(hmac(ADMIN_HASH, m[1]), m[2]);
+  return !!m && !!hash && Number(m[1]) >= Date.now() && same(hmac(hash, m[1]), m[2]);
 }
 const validLayout = list => Array.isArray(list) && list.length <= 5000 && list.every(o =>
   o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
@@ -105,9 +113,12 @@ async function api(req, res, url) {
   if (url.pathname === '/api/login' && req.method === 'POST') {
     let body = {};
     try { body = JSON.parse(await readBody(req, 4096)); } catch (_) { /* empty */ }
-    if (!ADMIN_HASH) return send(res, 500, { error: '관리자 계정이 설정되지 않았습니다 (admin.txt)' });
-    if (!checkLogin(String(body.id || ''), String(body.pw || ''))) return send(res, 401, { error: '아이디 또는 비밀번호가 틀렸습니다' });
-    return send(res, 200, { token: makeToken() });
+    const scope = String(body.scope || '');
+    if (!Object.hasOwn(ACCOUNTS, scope)) return send(res, 400, { error: '없는 계정 종류입니다' });
+    const names = ACCOUNTS[scope].filter(n => HASHES[n]);
+    if (!names.length) return send(res, 500, { error: '관리자 계정이 설정되지 않았습니다 (admin.txt)' });
+    for (const n of names) if (checkLogin(HASHES[n], String(body.id || ''), String(body.pw || ''))) return send(res, 200, { token: makeToken(HASHES[n]) });
+    return send(res, 401, { error: '아이디 또는 비밀번호가 틀렸습니다' });
   }
   const layoutFile = LAYOUT_FILES[url.pathname];
   if (layoutFile && req.method === 'GET') {
@@ -118,7 +129,7 @@ async function api(req, res, url) {
     });
   }
   if (layoutFile && req.method === 'PUT') {
-    if (!checkToken(req)) return send(res, 401, { error: '로그인이 필요합니다' });
+    if (!(AUTH[url.pathname] || ['ADMIN_HASH']).some(n => checkToken(HASHES[n], req))) return send(res, 401, { error: '로그인이 필요합니다' });
     let list;
     try { list = JSON.parse(await readBody(req)); } catch (_) { return send(res, 400, { error: 'JSON 형식이 아닙니다' }); }
     if (!(VALIDATORS[url.pathname] || validLayout)(list)) return send(res, 400, { error: '배치 데이터 형식이 아닙니다' });
@@ -143,7 +154,7 @@ http.createServer((req, res) => {
   if (!file.startsWith(ROOT + path.sep) || rel.includes('..')) return send(res, 403, 'forbidden', 'text/plain');
   // never serve credentials, secrets, server code or the raw screenshots
   const notFound = () => fs.readFile(path.join(ROOT, '404.html'), (e, html) => (e ? send(res, 404, 'not found', 'text/plain') : send(res, 404, html, TYPES['.html'])));
-  if (/^\/(admin\.txt|\.admin-secret|_worker\.js|server\.js|screenshot\/)/i.test(rel)) return notFound();
+  if (/^\/(admin\.txt|\.admin-secret|_worker\.js|server\.js|screenshot\/)/i.test(rel) || /(^|[\\/])(admin\.txt|\.admin-secret|api-token\.txt)$/i.test(rel)) return notFound();   // in any folder (castle/admin.txt)
   fs.readFile(file, (err, data) => {
     if (err) return notFound();
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });

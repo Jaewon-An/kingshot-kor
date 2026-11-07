@@ -4,6 +4,7 @@
 // Bindings (Pages project ▸ Settings):
 //   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2", "sgd", "sword" and "castle")
 //   ADMIN_HASH  secret "salt$sha256hex(salt:id:password)" — made by `node tools/set-admin.mjs`
+//   CASTLE_HASH the same for the /castle editor's own account (castle/admin.txt) — `node tools/set-admin.mjs --castle`
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 const MAX_LAYOUT_BYTES = 1024 * 1024;
 // Published layouts: "/v1" (+ /v1/admin), "/v2" (+ /v2/admin, the new seats around the bear traps in the fertile land)
@@ -15,8 +16,16 @@ const LAYOUTS = {
   '/api/v2/layout': { key: 'v2', prev: 'v2_previous', stamp: 'v2_updated_at', file: '/layouts/v2.json' },
   '/api/sgd/layout': { key: 'sgd', prev: 'sgd_previous', stamp: 'sgd_updated_at', file: '/layouts/sgd.json' },
   '/api/sword/layout': { key: 'sword', prev: 'sword_previous', stamp: 'sword_updated_at', file: '/layouts/sword.json', valid: d => validSword(d) },
-  '/api/castle/layout': { key: 'castle', prev: 'castle_previous', stamp: 'castle_updated_at', file: '/layouts/castle.json', valid: d => validCastle(d) },
+  '/api/castle/layout': { key: 'castle', prev: 'castle_previous', stamp: 'castle_updated_at', file: '/layouts/castle.json', valid: d => validCastle(d), auth: ['CASTLE_HASH', 'ADMIN_HASH'] },
 };
+// Accounts: the admin account (ADMIN_HASH) publishes every layout; /castle can also be saved with its own account (CASTLE_HASH).
+// POST /api/login { scope: 'castle' } takes either account (castle first). A token is signed with its account's hash,
+// so a castle-account token only works on /castle.
+const ACCOUNTS = { '': ['ADMIN_HASH'], castle: ['CASTLE_HASH', 'ADMIN_HASH'] };
+async function anyToken(env, names, request) {
+  for (const n of names) if (await checkToken(env[n], request)) return true;
+  return false;
+}
 
 const enc = new TextEncoder();
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -34,19 +43,20 @@ function sameText(a, b) {  // constant-time compare
 const json = (body, status = 200, extra = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...extra } });
 
-async function checkLogin(env, id, pw) {
-  const [salt, want] = String(env.ADMIN_HASH || '').split('$');
+// `hash` = the account's secret ("salt$sha256hex"), e.g. env.ADMIN_HASH
+async function checkLogin(hash, id, pw) {
+  const [salt, want] = String(hash || '').split('$');
   if (!salt || !want) return false;
   return sameText(await sha256(`${salt}:${id}:${pw}`), want);
 }
-async function makeToken(env) {
+async function makeToken(hash) {
   const exp = String(Date.now() + TOKEN_TTL);
-  return `${exp}.${await hmac(env.ADMIN_HASH, exp)}`;
+  return `${exp}.${await hmac(hash, exp)}`;
 }
-async function checkToken(env, request) {
+async function checkToken(hash, request) {
   const m = /^Bearer (\d+)\.([0-9a-f]{64})$/.exec(request.headers.get('Authorization') || '');
-  if (!m || !env.ADMIN_HASH || Number(m[1]) < Date.now()) return false;
-  return sameText(await hmac(env.ADMIN_HASH, m[1]), m[2]);
+  if (!m || !hash || Number(m[1]) < Date.now()) return false;
+  return sameText(await hmac(hash, m[1]), m[2]);
 }
 
 // Only accept something that looks like a simulator layout.
@@ -91,7 +101,7 @@ async function api(request, env, url) {
   }
 
   if (L && request.method === 'PUT') {
-    if (!(await checkToken(env, request))) return json({ error: '로그인이 필요합니다' }, 401);
+    if (!(await anyToken(env, L.auth || ['ADMIN_HASH'], request))) return json({ error: '로그인이 필요합니다' }, 401);
     if (!env.LAYOUT_KV) return json({ error: 'LAYOUT_KV 바인딩이 없습니다' }, 500);
     const text = await request.text();
     if (text.length > MAX_LAYOUT_BYTES) return json({ error: '배치 데이터가 너무 큽니다' }, 413);
@@ -109,9 +119,14 @@ async function api(request, env, url) {
   if (path === '/api/login' && request.method === 'POST') {
     let body = {};
     try { body = await request.json(); } catch (_) { /* empty body */ }
-    if (!env.ADMIN_HASH) return json({ error: 'ADMIN_HASH 비밀값이 설정되지 않았습니다' }, 500);
-    if (!(await checkLogin(env, String(body.id || ''), String(body.pw || '')))) return json({ error: '아이디 또는 비밀번호가 틀렸습니다' }, 401);
-    return json({ token: await makeToken(env) });
+    const scope = String(body.scope || '');
+    if (!Object.hasOwn(ACCOUNTS, scope)) return json({ error: '없는 계정 종류입니다' }, 400);
+    const names = ACCOUNTS[scope].filter(n => env[n]);
+    if (!names.length) return json({ error: `${ACCOUNTS[scope].join(' / ')} 비밀값이 설정되지 않았습니다` }, 500);
+    for (const n of names) {
+      if (await checkLogin(env[n], String(body.id || ''), String(body.pw || ''))) return json({ token: await makeToken(env[n]) });
+    }
+    return json({ error: '아이디 또는 비밀번호가 틀렸습니다' }, 401);
   }
 
   return json({ error: 'not found' }, 404);
