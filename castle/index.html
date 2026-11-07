@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
+<title>캐슬 도시 배치도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/v2/guide.css">
+<style>
+  /* 지도 색 (castle.js가 읽어 지도·이미지에 씀 — #rrggbb로 둘 것) */
+  :root {
+    --cs-bg: #e6dccd; --cs-tile: #d8c9b2; --cs-near: #c39463; --cs-castle: #4a2f1e; --cs-castleink: #f2a868; --cs-edge: #b8692e; --cs-mark: #e26c26;
+    --cs-ours: #1f7fc0; --cs-ext: #7a8591; --cs-cityink: #ffffff; --cs-sel: #e0a400; --cs-ok: #2f9a52; --cs-bad: #c8372d; --cs-ringtxt: #7d6248;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --cs-bg: #110c09; --cs-tile: #241912; --cs-near: #4b2c15; --cs-castle: #2d1c12; --cs-castleink: #f39a5b; --cs-edge: #a85e2a; --cs-mark: #ee7428;
+      --cs-ours: #1b8fcf; --cs-ext: #5a6470; --cs-cityink: #ffffff; --cs-sel: #ffd24a; --cs-ok: #4fc27a; --cs-bad: #e5574e; --cs-ringtxt: #a07a58;
+    }
+  }
+  :root[data-theme="dark"] {
+    --cs-bg: #110c09; --cs-tile: #241912; --cs-near: #4b2c15; --cs-castle: #2d1c12; --cs-castleink: #f39a5b; --cs-edge: #a85e2a; --cs-mark: #ee7428;
+    --cs-ours: #1b8fcf; --cs-ext: #5a6470; --cs-cityink: #ffffff; --cs-sel: #ffd24a; --cs-ok: #4fc27a; --cs-bad: #e5574e; --cs-ringtxt: #a07a58;
+  }
+  .memo { margin: 0; white-space: pre-wrap; border-left: 3px solid var(--accent); padding: 6px 10px; background: var(--bg); font-size: .86rem; }
+  .card .co { font-family: var(--f-body); font-size: 1.3rem; }
+  td.wh { white-space: normal; font-size: .78rem; }
+
+  /* 지도 */
+  .cwrap { position: relative; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--cs-bg); }
+  .cscroll { overflow: hidden; }
+  #map { display: block; width: 100%; height: auto; aspect-ratio: 1; max-height: max(420px, calc(100vh - 200px)); max-height: max(420px, calc(100svh - 200px)); margin: 0 auto;
+    user-select: none; -webkit-user-select: none; touch-action: none; cursor: grab; font-family: var(--f-body); }
+  #map.drag { cursor: grabbing; }
+  #map.editing [data-n] { cursor: grab; }
+  .zoom .btn { box-shadow: 0 1px 4px var(--shadow); }
+  .zoom #z3, .zoom #z6, .zoom #full { font-size: .72rem; }
+  .zoom #full[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .toast { position: absolute; left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 5px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel);
+    box-shadow: 0 2px 8px var(--shadow); font-size: .8rem; pointer-events: none; }
+  .toast.err { color: var(--bad); border-color: var(--bad); }
+  /* 크게: 지도만 화면 가득 */
+  body.csfull { overflow: hidden; }
+  .cwrap.full { position: fixed; inset: 0; z-index: 60; margin: 0; border: 0; border-radius: 0; display: flex; flex-direction: column; }
+  .cwrap.full .cscroll { flex: 1 1 auto; min-height: 0; }
+  .cwrap.full #map { width: 100%; height: 100%; aspect-ratio: auto; max-height: none; }
+  .cwrap.full .zoom { top: max(8px, env(safe-area-inset-top, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); }
+  .info { position: absolute; right: 8px; bottom: 8px; width: min(340px, calc(100% - 16px)); max-height: 46%; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+    box-shadow: 0 3px 12px var(--shadow); padding: 8px 34px 8px 11px; font-size: .82rem; }
+  .info.left { right: auto; left: 8px; }
+  .info h3 { margin: 0; font-size: 1rem; display: flex; flex-wrap: wrap; gap: 2px 7px; align-items: baseline; }
+  .info h3 small { font-weight: 400; font-size: .74rem; color: var(--muted); }
+  .info p { margin: 3px 0 0; }
+  .info .acts { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .info .x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; padding: 0; min-height: 0; }
+
+  /* 끌어 놓기: 미배치 칸 · 끌고 있는 이름 */
+  .tray { border: 2px dashed var(--line); border-radius: var(--r); padding: 6px 8px 8px; background: var(--panel); }
+  .tray.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+  .chip { font: inherit; font-size: .84rem; font-weight: 500; border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px 4px 8px; background: var(--bg); color: var(--ink);
+    cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; display: inline-flex; align-items: center; gap: 6px; }
+  .chip:hover { border-color: var(--muted); }
+  .chip.on { border-color: var(--cs-sel); box-shadow: inset 0 0 0 1.5px var(--cs-sel); }
+  .chip i { width: 10px; height: 10px; border-radius: 2px; transform: rotate(45deg); flex: none; }
+  .ghost { position: fixed; left: 0; top: 0; z-index: 90; pointer-events: none; padding: 4px 11px; border-radius: 4px; background: var(--cs-ours); color: #fff; font-weight: 600; font-size: .86rem;
+    white-space: nowrap; box-shadow: 0 4px 14px var(--shadow); transform: translate(-50%, calc(-100% - 22px)); }
+  .ghost.ext { background: var(--cs-ext); }
+  .savest { font-size: .78rem; color: var(--muted); }
+  .savest.ok { color: var(--ok); }
+  .savest.err { color: var(--bad); font-weight: 600; }
+
+  /* 편집 */
+  .ed { border: 2px solid var(--accent); border-radius: var(--r); padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 9px; }
+  .ed h2 { font-family: var(--f-display); font-size: 1.1rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .ed h2 .sumx { font-family: var(--f-body); }
+  .ed label { font-size: .8rem; font-weight: 600; }
+  .ed select, .ed input[type=text] { font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); min-width: 0; }
+  .ed .line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .ed .line > input[type=text] { flex: 1 1 150px; }
+  .ed textarea { min-height: 70px; font-family: var(--f-body); font-size: .84rem; }
+  .ed .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .adminbar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
+  dialog { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); color: var(--ink); padding: 16px; width: min(340px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  dialog form { display: flex; flex-direction: column; gap: 8px; }
+  dialog input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); }
+  dialog h2 { font-family: var(--f-display); font-size: 1.15rem; }
+  dialog .acts { display: flex; gap: 6px; justify-content: flex-end; }
+  .legend i.dm { transform: rotate(45deg) scale(.85); }
+
+  @media (max-width: 900px) {   /* 휴대폰 (갤럭시 S24+ 384×832 기준) */
+    .page { gap: 10px; padding-top: 10px; }
+    .top { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding-bottom: 8px; }
+    .eyebrow { display: none; }
+    h1 { font-size: 1.2rem; }
+    .stamp { margin: 0; font-size: .7rem; }
+    .facts { width: 100%; gap: 4px; }
+    .facts div { flex: 0 0 auto; flex-direction: row; align-items: baseline; gap: 5px; padding: 2px 8px; }
+    .facts dd { font-size: .8rem; font-family: var(--f-body); }
+    .finder label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .mapbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin-inline: -16px; padding-inline: 16px; }
+    .mapbar::-webkit-scrollbar { display: none; }
+    .mapbar > * { flex: 0 0 auto; }
+    .mapbar .btn { min-height: 38px; padding: 6px 10px; font-size: .8rem; }
+    .zoom { top: 8px; right: 8px; gap: 5px; }
+    .zoom .btn { width: 42px; height: 42px; min-height: 0; padding: 0; font-size: 1.25rem; }
+    .cwrap { margin-inline: -16px; border-radius: 0; border-left: 0; border-right: 0; }
+    #memo { order: 1; } .finder { order: 2; } #card { order: 3; } .mapcol { order: 4; } #editor { order: 5; } .tbl { order: 6; } #copy { order: 7; } #copytext { order: 8; } .adminbar { order: 9; }
+    #map { max-height: none; }
+    .info, .info.left { position: relative; left: auto; right: auto; bottom: auto; width: auto; max-height: none; border-width: 1px 0 0; border-radius: 0; box-shadow: none; }
+  }
+  .cwrap.full .info, .cwrap.full .info.left { position: absolute; left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom, 0px)); width: auto; max-height: 40%; overflow: auto;
+    border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 3px 12px var(--shadow); }
+</style>
+</head>
+<body>
+<!-- /castle 킹스 캐슬 둘레 도시 배치도. 스크립트 castle/castle.js, 배치 /api/castle/layout (첫 게시 전에는 layouts/castle.json) -->
+<div class="page">
+  <header class="top">
+    <div>
+      <p class="eyebrow">KINGSHOT · 2382 KOR · KING'S CASTLE</p>
+      <h1>캐슬 도시 배치도</h1>
+      <p class="stamp" id="stamp"></p>
+    </div>
+    <dl class="facts" id="facts"></dl>
+  </header>
+
+  <p class="notice" id="notice" role="status">배치도를 불러오는 중…</p>
+
+  <div class="grid" id="main" hidden>
+    <aside class="panel">
+      <p class="memo" id="memo" hidden></p>
+      <div class="finder">
+        <label for="q">내 자리 찾기</label>
+        <input id="q" type="search" enterkeyhint="search" placeholder="내 자리 찾기 — 닉네임 (일부만 써도 됨)" autocomplete="off" spellcheck="false">
+        <p class="hint" id="qhint" role="status"></p>
+      </div>
+      <div class="card" id="card" hidden></div>
+
+      <section class="ed" id="editor" hidden>
+        <h2>배치 편집 <span class="sumx" id="edstate"></span></h2>
+        <p class="hint">지도 위 <b>미배치</b> 칸의 이름이나 지도에 놓인 도시를 끌어 빈칸에 놓으면 <b>바로 서버에 저장</b>됩니다. 다른 도시 위에 놓으면 두 자리를 바꾸고, 미배치 칸으로 끌어오면 뺍니다. 이름(도시)을 누른 뒤 빈칸을 눌러도 옮겨집니다.</p>
+        <div class="line">
+          <input id="addname" type="text" list="roster" placeholder="닉네임 넣기 (여러 명은 쉼표)" autocomplete="off" spellcheck="false" enterkeyhint="done">
+          <select id="addkind" aria-label="넣을 쪽"><option value="">우리 인원</option><option value="ext">다른 연맹</option></select>
+          <button class="btn" id="addbtn" type="button">넣기</button>
+        </div>
+        <datalist id="roster"></datalist>
+        <label for="memoin">메모 (맨 위에 보임 · 입력칸을 벗어나면 저장)</label>
+        <textarea id="memoin" spellcheck="false" placeholder="예: 캐슬 전투 시작 10분 전까지 자리 이동"></textarea>
+        <div class="acts">
+          <button class="btn" id="exitedit" type="button">편집 끝내기</button>
+        </div>
+      </section>
+
+      <div class="tbl"><table id="list"></table></div>
+
+      <button class="btn copy" id="copy" type="button">연맹 채팅용 텍스트 복사</button>
+      <textarea id="copytext" readonly hidden aria-label="복사용 텍스트"></textarea>
+      <div class="adminbar">
+        <button class="btn" id="editbtn" type="button">배치 편집 (관리자)</button>
+        <span class="hint" id="adminhint"></span>
+      </div>
+    </aside>
+
+    <section class="mapcol">
+      <div class="mapbar">
+        <button class="btn" id="edit2" type="button" aria-pressed="false">배치 편집</button>
+        <button class="btn" id="nm" type="button" aria-pressed="true">이름</button>
+        <button class="btn" id="png" type="button">이미지 저장</button>
+        <button class="btn" id="link" type="button">링크 복사</button>
+        <span class="savest" id="savest" role="status"></span>
+        <button class="btn" id="retry" type="button" hidden>다시 저장</button>
+      </div>
+      <div class="tray" id="tray" hidden>
+        <span class="sumx" id="traysum"></span>
+        <div class="chips" id="traychips"></div>
+      </div>
+      <div class="cwrap" id="cwrap">
+        <div class="cscroll">
+          <svg id="map" role="img" aria-label="킹스 캐슬 둘레 도시 배치 지도"></svg>
+        </div>
+        <div class="readout" id="readout" role="status"></div>
+        <div class="zoom" role="group" aria-label="지도 크기">
+          <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
+          <button class="btn" id="zout" type="button" aria-label="축소">－</button>
+          <button class="btn" id="z3" type="button" title="캐슬 둘레 3열까지 보기">3열</button>
+          <button class="btn" id="z6" type="button" title="캐슬 둘레 6열까지 모두 보기">6열</button>
+          <button class="btn" id="full" type="button" aria-pressed="false" aria-label="지도 화면 가득 보기">크게</button>
+        </div>
+        <div class="toast" id="toast" role="status" hidden></div>
+        <div class="info" id="info" hidden></div>
+      </div>
+      <p class="hint" id="maphint"></p>
+      <details class="legend" id="legend" open>
+        <summary>범례</summary>
+        <div class="keys">
+          <span><i class="dm" style="background:var(--cs-ours)"></i>우리 인원</span>
+          <span><i class="dm" style="background:var(--cs-ext)"></i>다른 연맹 (스크린샷에 있던 도시)</span>
+          <span><i class="dm" style="background:var(--cs-near)"></i>캐슬에 가까운 열일수록 진한 칸 · 숫자 = 몇 열</span>
+          <span><i class="dm" style="background:var(--cs-mark)"></i>N · E · S · W = 캐슬 꼭짓점 (북 · 동 · 남 · 서)</span>
+          <span>한 칸 = 도시 하나 · 캐슬 = 6×6칸</span>
+        </div>
+      </details>
+    </section>
+  </div>
+
+  <div class="ghost" id="ghost" hidden></div>
+
+  <dialog id="login">
+    <form id="loginform">
+      <h2>관리자 로그인</h2>
+      <input id="lid" type="text" autocomplete="username" placeholder="아이디" required>
+      <input id="lpw" type="password" autocomplete="current-password" placeholder="비밀번호" required>
+      <p class="hint" id="loginerr" role="alert" style="color:var(--bad)"></p>
+      <div class="acts">
+        <button class="btn" id="logincancel" type="button">취소</button>
+        <button class="btn copy" type="submit">로그인</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer><span class="hint">격자·캐슬 크기와 다른 연맹 도시 자리는 2026-11-07 캐슬 배치 플래너 스크린샷을 따랐습니다 (한 칸 = 도시 하나). 열 = 캐슬에서 몇 번째 둘레인지, 게임 좌표는 아닙니다. 편집은 기존 배치도와 같은 관리자 계정.</span></footer>
+</div>
+<script src="/castle/castle.js"></script>
+</body>
+</html>

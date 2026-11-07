@@ -2,18 +2,20 @@
 // Static files are served from env.ASSETS; /api/* is handled here.
 //
 // Bindings (Pages project ▸ Settings):
-//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2", "sgd" and "sword")
+//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2", "sgd", "sword" and "castle")
 //   ADMIN_HASH  secret "salt$sha256hex(salt:id:password)" — made by `node tools/set-admin.mjs`
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 const MAX_LAYOUT_BYTES = 1024 * 1024;
 // Published layouts: "/v1" (+ /v1/admin), "/v2" (+ /v2/admin, the new seats around the bear traps in the fertile land)
-// "/sgd" (the SGD alliance's seats around its one bear trap) and "/sword" (who goes where in Swordland Showdown — an object, not a list, so its own check).
+// "/sgd" (the SGD alliance's seats around its one bear trap), "/sword" (who goes where in Swordland Showdown — an object, not a list, so its own check)
+// and "/castle" (whose city sits on which tile around the King's Castle — also an object, saved on every drag).
 // Each keeps one step of rollback in `prev`; the bundled file is served until the first publish.
 const LAYOUTS = {
   '/api/layout': { key: 'current', prev: 'previous', stamp: 'updated_at', file: '/layouts/current.json' },
   '/api/v2/layout': { key: 'v2', prev: 'v2_previous', stamp: 'v2_updated_at', file: '/layouts/v2.json' },
   '/api/sgd/layout': { key: 'sgd', prev: 'sgd_previous', stamp: 'sgd_updated_at', file: '/layouts/sgd.json' },
   '/api/sword/layout': { key: 'sword', prev: 'sword_previous', stamp: 'sword_updated_at', file: '/layouts/sword.json', valid: d => validSword(d) },
+  '/api/castle/layout': { key: 'castle', prev: 'castle_previous', stamp: 'castle_updated_at', file: '/layouts/castle.json', valid: d => validCastle(d) },
 };
 
 const enc = new TextEncoder();
@@ -64,6 +66,13 @@ function validSword(d) {
       Array.isArray(l.members) && l.members.length <= 200 && l.members.every(m => m && typeof m.n === 'string' && m.n.trim() && m.n.length <= 40 &&
         typeof m.at === 'string' && SWORD_POST.test(m.at) && (m.then === undefined || (typeof m.then === 'string' && SWORD_POST.test(m.then))) &&
         (m.lead === undefined || typeof m.lead === 'boolean')));
+}
+// /castle (캐슬 둘레 도시 배치): { memo?, members: [{ n, i?, j?, ext? }] } — castle/castle.js의 normalize()와 같은 모양 (i·j = 격자 칸, 캐슬 0~5 + 둘레 6열)
+const CASTLE_CELL = v => Number.isInteger(v) && v >= -6 && v <= 11;
+function validCastle(d) {
+  return !!d && typeof d === 'object' && !Array.isArray(d) && (d.memo === undefined || (typeof d.memo === 'string' && d.memo.length <= 1000)) &&
+    Array.isArray(d.members) && d.members.length <= 300 && d.members.every(m => m && typeof m.n === 'string' && m.n.trim() && m.n.length <= 40 &&
+      ((m.i === undefined && m.j === undefined) || (CASTLE_CELL(m.i) && CASTLE_CELL(m.j))) && (m.ext === undefined || typeof m.ext === 'boolean'));
 }
 
 async function api(request, env, url) {
