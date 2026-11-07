@@ -1,9 +1,11 @@
 /* /banner/v1/·/banner/v2/ 공용 — KOR 깃발·영토 지도. 데이터 주소는 <script data-src="…/data.json">.
  * v1/data.json: 2026-10-29 스크린샷을 다시 이어 붙여 읽은 KOR 깃발(flags)·다른 연맹 깃발(others)·본부·확인된 범위(coverage, [y, x0, x1] 줄; 휴대폰 캡처 포함).
  * v2/data.json: 재배치안 — flags[].fixed(곰덫 주변·본부 위쪽 고정)·keep(그대로), remove(철거할 자리), extra(여분 깃발: 점선, 깃발이 더 늘면),
- *   plan(곰덫2 중심 t, 적 최근접 거리 r·방향별 dir, 지금 값 r1·dir1, 여분까지 rx·dirx, 옛 본부 hq1, 지금 깃발 수 nNow),
- *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지, why, n 깃발 수, r 곰덫2 최근접}]; 진행은 이 브라우저 localStorage),
- *   stepsPrev(바로 전 순서의 서명 sig·앞부분이 같은 단계 수 same — 옛 형식 진행 기록 이어받기).
+ *   plan(곰덫2 중심 t, 적 최근접 거리 r·방향별 dir, 지금 값 r1·dir1, 옛 본부 hq1, 지금 깃발 수 nNow,
+ *     ex: 여분 깃발 = 곰덫1·2 중앙 c 기준 좌측(게임 화면 왼쪽 반원) 보강 — 좌측 최근접 지금 l1(자리 p1) → 여분까지 l(자리 p), 앞 k개만 세웠을 때 by[{k,l}],
+ *     여분까지 세운 뒤 오른쪽 반원 최근접 bot, 곰덫1 최근접 t1a → t1, 곰덫2 최근접 t2),
+ *   steps(작업 순서 [{op: build|remove|hq, x, y, phase 1 본부 이전 준비·2 본부 이전·3 나머지·4 여분 깃발(좌측 보강), why, n 깃발 수, r 곰덫2 최근접, l 중앙 좌측 최근접}]; 진행은 이 브라우저 localStorage),
+ *   stepsPrev(바로 전 순서의 서명 sig·앞부분이 같은 단계 수 same — 옛 형식 진행 기록 이어받기), progress({done, date}: 게임에서 끝낸 단계 수 — 모든 브라우저가 적어도 여기부터).
  * 영토: 본부 15×15(KSCore.HQ_COV) + 깃발마다 7×7(BN_COV). 다른 연맹은 본부·깃발 영역에서 KOR 땅을 뺀 칸. 지형은 mapdata.js.
  */
 (function () {
@@ -61,7 +63,7 @@
     othHQ.forEach(h => each(h.x - K.HQ_COV, h.y - K.HQ_COV, 3 + 2 * K.HQ_COV, addOth(h.a)));
     others.forEach(f => each(f.x - K.BN_COV, f.y - K.BN_COV, 1 + 2 * K.BN_COV, addOth(f.a)));
     const chg = D.changes || [];
-    $('stamp').textContent = PLAN ? `${D.updated} 깃발 기준 재배치안` : `${D.updated} 스크린샷 기준` + (chg.length ? ` · 이후 변경 ${chg.length}건 반영` : '');
+    $('stamp').textContent = PLAN ? `${D.updated} 깃발 기준 재배치안` + (D.progress ? ` · ${D.progress.date} ${D.progress.done}단계까지 완료` : '') : `${D.updated} 스크린샷 기준` + (chg.length ? ` · 이후 변경 ${chg.length}건 반영` : '');
     if (chg.length && $('chgbox')) {
       $('chgsum').textContent = `${chg.length}건`; $('chgbox').hidden = false;
       $('chg').replaceChildren(...chg.map(t => { const li = document.createElement('li'); li.textContent = t; return li; }));
@@ -83,7 +85,7 @@
     const flagsOf = a => others.filter(f => f.a === a), hqOf = a => othHQ.filter(h => h.a === a);
     $('facts').innerHTML = [
       ...(PLAN ? [['--c-t2', '적 최근접 거리', `${PLAN.r}칸 (지금 ${PLAN.r1})`]] : []),
-      ...(PLAN && PLAN.rx ? [['--c-banner', `여분 ${extras.length}개까지`, `${PLAN.rx}칸`]] : []),
+      ...(PLAN && PLAN.ex && extras.length ? [['--c-banner', `중앙 좌측 (여분 ${extras.length}개)`, `${PLAN.ex.l1}→${PLAN.ex.l}칸`]] : []),
       ['--c-banner', 'KOR 깃발', `${flags.length}개`], ['--c-terr', 'KOR 영토', `${korTiles.toLocaleString('ko-KR')}칸`],
       ['--c-hq', '평원 본부', xy(HQ)], ...ALLY.map(a => [`--${colOf(a)[0]}`, `${a} 깃발`, `${flagsOf(a).length}개`]),
     ].map(([c, k, v]) => `<div><dt><i style="background:var(${c})"></i>${k}</dt><dd>${v}</dd></div>`).join('');
@@ -108,7 +110,11 @@
         ...(PLAN.overlap != null ? [`옮긴 깃발끼리 영역이 겹치는 칸은 ${PLAN.overlap}칸입니다. 줄마다 엇갈리게(벽돌 모양) 폭 1칸 틈을 두고 놓아 깃발 하나가 막는 땅을 늘렸습니다.`] : []),
         `곰덫2에서 적이 도시를 옮길 수 있는 가장 가까운 2×2 빈자리: 지금 ${PLAN.r1}칸 → 재배치 ${PLAN.r}칸.`,
         '방향별(화면 기준): ' + DIRS.map(k => `${k} ${PLAN.dir1[k].d}→${PLAN.dir[k].d}칸`).join(' · '),
-        ...(extras.length && PLAN.rx ? [`여분 깃발 ${extras.length}개(점선)는 깃발이 더 늘면 세울 곳입니다. 모두 세우면 가장 가까운 적 자리가 ${PLAN.r}칸 → ${PLAN.rx}칸(` + DIRS.map(k => `${k} ${PLAN.dirx[k].d}`).join(' · ') + ')이 됩니다. 이 계획의 깃발은 그대로 두고 더하는 자리입니다.'] : []),
+        ...(extras.length && PLAN.ex ? (ex => [
+          `여분 깃발 ${extras.length}개(점선, ${flags.length + 1}~${flags.length + extras.length}번)는 곰덫1·2 중앙(X:${ex.c[0]} Y:${ex.c[1]}) 기준 좌측(게임 화면 왼쪽 반원)을 보강하는 자리입니다. 지금 깃발은 그대로 두고 더하며, 작업 순서 ④에 세울 순서대로 있습니다.`,
+          `중앙에서 좌측의 가장 가까운 적 자리: 지금 ${ex.l1}칸(${xy(ex.p1)}) → ` + ex.by.map(b => `${b.k}개 ${b.l}칸`).join(' · ') + `. 곰덫1에서는 ${ex.t1a}칸 → ${ex.t1}칸, 곰덫2 ${ex.t2}칸은 그대로입니다. 어느 단계에서도 영토 안에 2×2 구멍이 생기지 않습니다.`,
+          `여분을 모두 세우면 중앙에서 가장 가까운 적 자리는 아래쪽(5~6시) ${xy(ex.bot)} ${ex.bot.d}칸입니다(오른쪽 반원이라 이번 보강에서 뺌).`,
+        ])(PLAN.ex) : []),
         `모든 깃발이 본부와 이어지고(꼭짓점만 닿아도 연결${PLAN.nUp ? ', 본부 위쪽 깃발은 거점으로 이어짐' : ''}), 영토 안에 도시를 옮길 수 있는 2×2 구멍이 없습니다. 영역이 겹친 깃발은 옆으로 밀어 틈을 메웠고, 남은 폭 1칸 틈은 도시가 못 들어갑니다.`,
         `평원 본부는 ${xy(HQ)}로 이전한 것으로 계산했습니다(지금 ${xy(PLAN.hq1)}).`,
         'SGD 영토는 우호 연맹으로 보고 적이 쓸 수 없는 곳으로, EoB·TWN 영토는 적이 쓸 수 있는 곳으로 계산했습니다. 연맹원 도시·곰덫·연맹 건물은 v2 배치도 위치 기준입니다.',
@@ -224,7 +230,12 @@
       gx.strokeStyle = C['c-t2']; gx.lineWidth = 2 / s; gx.setLineDash([6 / s, 4 / s]);
       gx.beginPath(); gx.arc(tx, ty, PLAN.r, 0, Math.PI * 2); gx.stroke(); gx.setLineDash([]);
       for (const k in PLAN.dir) { const p = PLAN.dir[k]; gx.lineWidth = 3 / s; gx.strokeRect(p.x, p.y, 2, 2); }
-      if (PLAN.rx) { gx.globalAlpha = 0.5; gx.lineWidth = 1.4 / s; gx.setLineDash([2 / s, 4 / s]); gx.beginPath(); gx.arc(tx, ty, PLAN.rx, 0, Math.PI * 2); gx.stroke(); gx.setLineDash([]); gx.globalAlpha = 1; }
+      if (PLAN.ex && extras.length) {   // 여분까지 세웠을 때 곰덫 중앙 기준 좌측 안전 반경: 게임 화면 왼쪽 반원(X−Y가 작은 쪽 = 게임 각도 45°~225°)과 중앙 점
+        const [ex, ey] = PLAN.ex.c;
+        gx.globalAlpha = 0.75; gx.lineWidth = 1.8 / s; gx.setLineDash([2 / s, 3 / s]);
+        gx.beginPath(); gx.arc(ex, ey, PLAN.ex.l, Math.PI / 4, Math.PI * 5 / 4); gx.stroke(); gx.setLineDash([]); gx.globalAlpha = 1;
+        gx.fillStyle = C['c-t2']; gx.beginPath(); gx.arc(ex, ey, 0.45, 0, Math.PI * 2); gx.fill();
+      }
       if (PLAN.hq1) { gx.strokeStyle = C['c-hq']; gx.lineWidth = 1.6 / s; gx.setLineDash([3 / s, 2 / s]); gx.strokeRect(PLAN.hq1.x, PLAN.hq1.y, 3, 3); gx.setLineDash([]); }
     }
     if (view.rm && removed.length) { // 철거할 깃발 자리
@@ -310,6 +321,7 @@
       if (!cov[i]) parts.push('스크린샷 밖');
     }
     if (PLAN) parts.push(`곰덫2에서 ${Math.hypot(x + 0.5 - PLAN.t[0], y + 0.5 - PLAN.t[1]).toFixed(1)}칸`);
+    if (PLAN && PLAN.ex) parts.push(`곰덫 중앙에서 ${Math.hypot(x + 0.5 - PLAN.ex.c[0], y + 0.5 - PLAN.ex.c[1]).toFixed(1)}칸`);
     const text = parts.join(' · ') || (inFertile(x, y) ? '옥토' : '빈 땅');
     return { text, line: `칸 X:${x} Y:${y} · ${text}`, flag: f };
   }
@@ -371,7 +383,7 @@
   // ---------- 작업 순서 (v2): 지금 작업 · 좌표 복사 · 작업완료(다음 좌표 복사) · 완료 취소 ----------
   function setupSteps(steps) {
     const OP = { build: '깃발 건설', remove: '깃발 철거', hq: '평원 본부 이전' };
-    const PHASE = { 1: '① 본부 이전 준비 (먼저)', 2: '② 평원 본부 이전', 3: '③ 나머지 깃발 재배치' };
+    const PHASE = { 1: '① 본부 이전 준비 (먼저)', 2: '② 평원 본부 이전', 3: '③ 나머지 깃발 재배치', 4: '④ 여분 깃발 (곰덫 중앙 좌측 보강 · 깃발이 늘 때마다 순서대로)' };
     // 진행 기록: 끝낸 작업 목록. 순서가 바뀌어도 앞부분이 같은 만큼은 이어짐
     const KEY = 'banner-v2-steps', keyOf = st => `${st.op}${st.x},${st.y}`;
     let done = 0;
@@ -384,6 +396,7 @@
         else if (D.stepsPrev && v.sig === D.stepsPrev.sig) done = Math.min(v.done | 0, D.stepsPrev.same);
       }
     } catch (_) { /* 저장소 못 씀 */ }
+    if (D.progress && D.progress.done > done) done = Math.min(steps.length, D.progress.done);   // 게임에서 끝낸 단계까지는 어느 브라우저든 완료로
     const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf) })); } catch (_) { /* 저장소 못 씀 */ } };
     const where = st => (st.op === 'hq' ? `X:${st.from[0]} Y:${st.from[1]} → X:${st.x} Y:${st.y}` : `X:${st.x} Y:${st.y}`);
     let msgT = 0;
@@ -445,7 +458,7 @@
       const add = flags.filter(f => !f.fixed && !f.keep);
       L = [`[KOR 깃발 재배치안] 서버 2382 · 곰덫2에서 적 최근접 ${PLAN.r1}칸 → ${PLAN.r}칸`, `평원 본부 이전 ${PLAN.hq1.x},${PLAN.hq1.y} → ${HQ.x},${HQ.y}`,
         `새로 세울 곳 ${add.length}개:`, ...rows(add, false), `철거할 곳 ${removed.length}개:`, ...rows(removed, false),
-        ...(extras.length ? [`여분 깃발 ${extras.length}개(깃발이 더 늘면, ${PLAN.r}칸 → ${PLAN.rx}칸):`, ...rows(extras, false)] : [])];
+        ...(extras.length && PLAN.ex ? [`여분 깃발 ${extras.length}개(곰덫 중앙 좌측 보강, 세울 순서대로 · 좌측 ${PLAN.ex.l1}칸 → ${PLAN.ex.l}칸):`, ...rows(extras, false)] : [])];
     } else {
       L = [`[KOR 깃발 좌표] 서버 2382 · ${D.updated} 스크린샷 기준${chg.length ? '(이후 변경 반영)' : ''} · ${flags.length}개`, `평원 본부 ${HQ.x},${HQ.y}`, ...rows(flags, true)];
     }
