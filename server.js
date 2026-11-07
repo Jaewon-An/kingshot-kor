@@ -148,7 +148,7 @@ http.createServer((req, res) => {
   }
   const to = REDIRECTS[url.pathname];
   if (to) { res.writeHead(302, { Location: to + url.search }); return res.end(); }
-  const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html', '/sgd': '/sgd/index.html', '/sgd/': '/sgd/index.html', '/sword': '/sword/index.html', '/sword/': '/sword/index.html', '/castle': '/castle/index.html', '/castle/': '/castle/index.html', '/castle2': '/castle/index.html', '/castle2/': '/castle/index.html', '/castle2/index.html': '/castle/index.html', '/banner/v1': '/banner/v1/index.html', '/banner/v1/': '/banner/v1/index.html', '/banner/v2': '/banner/v2/index.html', '/banner/v2/': '/banner/v2/index.html' };
+  const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html', '/sgd': '/sgd/index.html', '/sgd/': '/sgd/index.html', '/sword': '/sword/index.html', '/sword/': '/sword/index.html', '/castle': '/castle/index.html', '/castle/': '/castle/index.html', '/castle2': '/castle/index.html', '/castle2/': '/castle/index.html', '/castle2/index.html': '/castle/index.html', '/castle/kor': '/castle/index.html', '/castle/kor/': '/castle/index.html', '/castle/kor.html': '/castle/index.html', '/banner/v1': '/banner/v1/index.html', '/banner/v1/': '/banner/v1/index.html', '/banner/v2': '/banner/v2/index.html', '/banner/v2/': '/banner/v2/index.html' };
   const page = V1_PAGES.includes(url.pathname) ? '/v1/index.html' : PAGES[url.pathname] || url.pathname;
   const rel = decodeURIComponent(page);
   const file = path.normalize(path.join(ROOT, rel));
@@ -161,4 +161,4 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
     res.end(data);
   });
-}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (신규 자리: /v2, /v2/admin · 기존 배치도: /v1, /v1/admin · SGD: /sgd · 성검 쟁탈: /sword · 캐슬: /castle, /castle2${ADMIN_HASH ? '' : ' — 계정 미설정'})`));
+}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (신규 자리: /v2, /v2/admin · 기존 배치도: /v1, /v1/admin · SGD: /sgd · 성검 쟁탈: /sword · 캐슬: /castle, /castle2, /castle/kor${ADMIN_HASH ? '' : ' — 계정 미설정'})`));
