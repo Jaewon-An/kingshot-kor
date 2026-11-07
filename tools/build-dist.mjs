@@ -11,7 +11,8 @@ const DIST = path.join(ROOT, 'dist');
 // v2/ = the new-seat pages: /v2 (seat guide), /v2/map, /v2/plan (작전도), engine + tools for /v2/admin
 // sgd/ = /sgd, the SGD alliance's seat map (one bear trap; uses v2/core.js, v2/plan.js, v2/guide.css)
 // sword/ = /sword, the Swordland Showdown member map (who goes to which building; data /api/sword/layout = layouts/sword.json, roster from the v2 layout)
-// castle/ = /castle, the cities around the King's Castle (drag a name onto a tile; data /api/castle/layout = layouts/castle.json, saved on every drop)
+// castle/ = /castle, the cities around the King's Castle (drag a name onto a tile; data /api/castle/layout = layouts/castle.json, saved on every drop);
+//   /castle2 is the same page for a second plan (castle/index.html copied below; castle.js picks /api/castle2/layout = layouts/castle2.json from the path)
 // banner/ = /banner/v1/ (KOR banner + territory map) and /banner/v2/ (banner re-layout plan); shared banner/banner.js (uses mapdata.js, v2/core.js, v2/plan.js, v2/guide.css)
 const PUBLIC = ['v1', 'v2', 'sgd', 'sword', 'castle', 'banner', 'app.js', 'flags.js', 'style.css', 'mapdata.js', '_worker.js', 'layouts', '404.html'];
 
@@ -23,4 +24,5 @@ for (const f of PUBLIC) await cp(path.join(ROOT, f), path.join(DIST, f), { recur
 // Cloudflare Pages serves v1/admin.html at /v1/admin, v1/flags.html at /v1/flags, v2/admin.html at /v2/admin (the v2 editor).
 const page = path.join(ROOT, 'v1', 'index.html');
 for (const out of ['v1/admin.html', 'v1/flags.html', 'v2/admin.html']) await cp(page, path.join(DIST, out));
-console.log(`dist/ ready: ${PUBLIC.join(', ')}, v1/admin.html, v1/flags.html, v2/admin.html`);
+await cp(path.join(ROOT, 'castle', 'index.html'), path.join(DIST, 'castle2', 'index.html'));
+console.log(`dist/ ready: ${PUBLIC.join(', ')}, v1/admin.html, v1/flags.html, v2/admin.html, castle2/index.html`);

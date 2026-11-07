@@ -1,6 +1,6 @@
 // Local server with the same API as _worker.js on Cloudflare:
-//   static files, /api/login, GET/PUT /api/layout, GET/PUT /api/v2/layout, GET/PUT /api/sgd/layout, GET/PUT /api/sword/layout, GET/PUT /api/castle/layout
-// Locally the published layouts are the files layouts/current.json, layouts/v2.json, layouts/sgd.json, layouts/sword.json and layouts/castle.json.
+//   static files, /api/login, GET/PUT /api/layout, GET/PUT /api/v2/layout, GET/PUT /api/sgd/layout, GET/PUT /api/sword/layout, GET/PUT /api/castle/layout, GET/PUT /api/castle2/layout
+// Locally the published layouts are the files layouts/current.json, layouts/v2.json, layouts/sgd.json, layouts/sword.json, layouts/castle.json and layouts/castle2.json.
 // Usage: node server.js   (PORT env var, default 8080) — no dependencies.
 const http = require('node:http');
 const fs = require('node:fs');
@@ -15,6 +15,7 @@ const LAYOUT_FILES = {
   '/api/sgd/layout': path.join(ROOT, 'layouts', 'sgd.json'),
   '/api/sword/layout': path.join(ROOT, 'layouts', 'sword.json'),
   '/api/castle/layout': path.join(ROOT, 'layouts', 'castle.json'),
+  '/api/castle2/layout': path.join(ROOT, 'layouts', 'castle2.json'),
 };
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 
@@ -39,7 +40,7 @@ function loadAdminHash() {
 const HASHES = { ADMIN_HASH: loadAdminHash(), CASTLE_HASH: hashFromFile(path.join(ROOT, 'castle', 'admin.txt')) };
 const ADMIN_HASH = HASHES.ADMIN_HASH;
 const ACCOUNTS = { '': ['ADMIN_HASH'], castle: ['CASTLE_HASH', 'ADMIN_HASH'] };   // login scope → accounts tried in order
-const AUTH = { '/api/castle/layout': ['CASTLE_HASH', 'ADMIN_HASH'] };              // layouts another account may also save
+const AUTH = { '/api/castle/layout': ['CASTLE_HASH', 'ADMIN_HASH'], '/api/castle2/layout': ['CASTLE_HASH', 'ADMIN_HASH'] };              // layouts another account may also save
 
 function checkLogin(hash, id, pw) {
   const [salt, want] = String(hash || '').split('$');
@@ -68,14 +69,14 @@ function validSword(d) {
         typeof m.at === 'string' && SWORD_POST.test(m.at) && (m.then === undefined || (typeof m.then === 'string' && SWORD_POST.test(m.then))) &&
         (m.lead === undefined || typeof m.lead === 'boolean')));
 }
-// /castle (캐슬 둘레 도시 배치): { memo?, members: [{ n, i?, j?, ext? }] } — castle/castle.js의 normalize()와 같은 모양 (i·j = 격자 칸, 캐슬 0~5 + 둘레 6열)
+// /castle · /castle2 (캐슬 둘레 도시 배치 1 · 2): { memo?, members: [{ n, i?, j?, ext? }] } — castle/castle.js의 normalize()와 같은 모양 (i·j = 격자 칸, 캐슬 0~5 + 둘레 6열)
 const CASTLE_CELL = v => Number.isInteger(v) && v >= -6 && v <= 11;
 function validCastle(d) {
   return !!d && typeof d === 'object' && !Array.isArray(d) && (d.memo === undefined || (typeof d.memo === 'string' && d.memo.length <= 1000)) &&
     Array.isArray(d.members) && d.members.length <= 300 && d.members.every(m => m && typeof m.n === 'string' && m.n.trim() && m.n.length <= 40 &&
       ((m.i === undefined && m.j === undefined) || (CASTLE_CELL(m.i) && CASTLE_CELL(m.j))) && (m.ext === undefined || typeof m.ext === 'boolean'));
 }
-const VALIDATORS = { '/api/sword/layout': validSword, '/api/castle/layout': validCastle };
+const VALIDATORS = { '/api/sword/layout': validSword, '/api/castle/layout': validCastle, '/api/castle2/layout': validCastle };
 // same as _worker.js: the front page is /v2/, the old layout pages live under /v1/
 const REDIRECTS = {
   '/': '/v2/', '/index.html': '/v2/',
@@ -147,7 +148,7 @@ http.createServer((req, res) => {
   }
   const to = REDIRECTS[url.pathname];
   if (to) { res.writeHead(302, { Location: to + url.search }); return res.end(); }
-  const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html', '/sgd': '/sgd/index.html', '/sgd/': '/sgd/index.html', '/sword': '/sword/index.html', '/sword/': '/sword/index.html', '/castle': '/castle/index.html', '/castle/': '/castle/index.html', '/banner/v1': '/banner/v1/index.html', '/banner/v1/': '/banner/v1/index.html', '/banner/v2': '/banner/v2/index.html', '/banner/v2/': '/banner/v2/index.html' };
+  const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html', '/sgd': '/sgd/index.html', '/sgd/': '/sgd/index.html', '/sword': '/sword/index.html', '/sword/': '/sword/index.html', '/castle': '/castle/index.html', '/castle/': '/castle/index.html', '/castle2': '/castle/index.html', '/castle2/': '/castle/index.html', '/castle2/index.html': '/castle/index.html', '/banner/v1': '/banner/v1/index.html', '/banner/v1/': '/banner/v1/index.html', '/banner/v2': '/banner/v2/index.html', '/banner/v2/': '/banner/v2/index.html' };
   const page = V1_PAGES.includes(url.pathname) ? '/v1/index.html' : PAGES[url.pathname] || url.pathname;
   const rel = decodeURIComponent(page);
   const file = path.normalize(path.join(ROOT, rel));
@@ -160,4 +161,4 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
     res.end(data);
   });
-}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (신규 자리: /v2, /v2/admin · 기존 배치도: /v1, /v1/admin · SGD: /sgd · 성검 쟁탈: /sword · 캐슬: /castle${ADMIN_HASH ? '' : ' — 계정 미설정'})`));
+}).listen(PORT, () => console.log(`킹샷 배치 시뮬레이터: http://localhost:${PORT}  (신규 자리: /v2, /v2/admin · 기존 배치도: /v1, /v1/admin · SGD: /sgd · 성검 쟁탈: /sword · 캐슬: /castle, /castle2${ADMIN_HASH ? '' : ' — 계정 미설정'})`));

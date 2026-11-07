@@ -7,6 +7,8 @@ api-token.txt
 layouts/current.previous.json
 layouts/v2.previous.json
 layouts/sword.previous.json
+layouts/castle.previous.json
+layouts/castle2.previous.json
 
 # 빌드 결과물 (npm run build 로 다시 만듦)
 dist/

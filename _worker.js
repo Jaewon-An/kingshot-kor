@@ -2,14 +2,14 @@
 // Static files are served from env.ASSETS; /api/* is handled here.
 //
 // Bindings (Pages project ▸ Settings):
-//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2", "sgd", "sword" and "castle")
+//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2", "sgd", "sword", "castle" and "castle2")
 //   ADMIN_HASH  secret "salt$sha256hex(salt:id:password)" — made by `node tools/set-admin.mjs`
 //   CASTLE_HASH the same for the /castle editor's own account (castle/admin.txt) — `node tools/set-admin.mjs --castle`
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
 const MAX_LAYOUT_BYTES = 1024 * 1024;
 // Published layouts: "/v1" (+ /v1/admin), "/v2" (+ /v2/admin, the new seats around the bear traps in the fertile land)
 // "/sgd" (the SGD alliance's seats around its one bear trap), "/sword" (who goes where in Swordland Showdown — an object, not a list, so its own check)
-// and "/castle" (whose city sits on which tile around the King's Castle — also an object, saved on every drag).
+// and "/castle" + "/castle2" (two separate plans of whose city sits on which tile around the King's Castle — also an object, saved on every drag).
 // Each keeps one step of rollback in `prev`; the bundled file is served until the first publish.
 const LAYOUTS = {
   '/api/layout': { key: 'current', prev: 'previous', stamp: 'updated_at', file: '/layouts/current.json' },
@@ -17,10 +17,11 @@ const LAYOUTS = {
   '/api/sgd/layout': { key: 'sgd', prev: 'sgd_previous', stamp: 'sgd_updated_at', file: '/layouts/sgd.json' },
   '/api/sword/layout': { key: 'sword', prev: 'sword_previous', stamp: 'sword_updated_at', file: '/layouts/sword.json', valid: d => validSword(d) },
   '/api/castle/layout': { key: 'castle', prev: 'castle_previous', stamp: 'castle_updated_at', file: '/layouts/castle.json', valid: d => validCastle(d), auth: ['CASTLE_HASH', 'ADMIN_HASH'] },
+  '/api/castle2/layout': { key: 'castle2', prev: 'castle2_previous', stamp: 'castle2_updated_at', file: '/layouts/castle2.json', valid: d => validCastle(d), auth: ['CASTLE_HASH', 'ADMIN_HASH'] },
 };
-// Accounts: the admin account (ADMIN_HASH) publishes every layout; /castle can also be saved with its own account (CASTLE_HASH).
+// Accounts: the admin account (ADMIN_HASH) publishes every layout; /castle and /castle2 can also be saved with their own account (CASTLE_HASH).
 // POST /api/login { scope: 'castle' } takes either account (castle first). A token is signed with its account's hash,
-// so a castle-account token only works on /castle.
+// so a castle-account token only works on /castle and /castle2.
 const ACCOUNTS = { '': ['ADMIN_HASH'], castle: ['CASTLE_HASH', 'ADMIN_HASH'] };
 async function anyToken(env, names, request) {
   for (const n of names) if (await checkToken(env[n], request)) return true;
@@ -77,7 +78,7 @@ function validSword(d) {
         typeof m.at === 'string' && SWORD_POST.test(m.at) && (m.then === undefined || (typeof m.then === 'string' && SWORD_POST.test(m.then))) &&
         (m.lead === undefined || typeof m.lead === 'boolean')));
 }
-// /castle (캐슬 둘레 도시 배치): { memo?, members: [{ n, i?, j?, ext? }] } — castle/castle.js의 normalize()와 같은 모양 (i·j = 격자 칸, 캐슬 0~5 + 둘레 6열)
+// /castle · /castle2 (캐슬 둘레 도시 배치 1 · 2): { memo?, members: [{ n, i?, j?, ext? }] } — castle/castle.js의 normalize()와 같은 모양 (i·j = 격자 칸, 캐슬 0~5 + 둘레 6열)
 const CASTLE_CELL = v => Number.isInteger(v) && v >= -6 && v <= 11;
 function validCastle(d) {
   return !!d && typeof d === 'object' && !Array.isArray(d) && (d.memo === undefined || (typeof d.memo === 'string' && d.memo.length <= 1000)) &&

@@ -1,10 +1,10 @@
-/* /castle 킹스 캐슬 둘레 도시 배치도.
+/* /castle(배치도 1) · /castle2(배치도 2) 킹스 캐슬 둘레 도시 배치도. 두 주소는 같은 페이지이고 배치 데이터만 따로 저장함.
  * 지도: 캐슬 배치 플래너 스크린샷(2026-11-07)의 격자를 그대로 그림. 격자 한 칸 = 도시 하나, 캐슬 = 한 변 6칸 마름모, 둘레 6열까지.
  *   칸 (i, j): 캐슬은 i, j = 0~5. i가 작을수록 북서쪽, 클수록 남동쪽 · j가 작을수록 북동쪽, 클수록 남서쪽. 열 = 캐슬에서 몇 번째 둘레인지(1~6).
  *   그림 좌표: x = (i - j)·A, y = (i + j - 5)·A (원점 = 캐슬 가운데, A = 칸 반너비). 처음에는 3열까지 보이게 확대해 둠.
- * 데이터: /api/castle/layout (첫 게시 전에는 layouts/castle.json)
+ * 데이터: /api/castle/layout · /api/castle2/layout (첫 게시 전에는 layouts/castle.json · castle2.json)
  *   { memo?, members: [{ n: 닉네임, i?, j?: 칸 (없으면 미배치), ext?: 다른 연맹 }] }
- * 편집: 캐슬 편집 계정(castle/admin.txt, 서버 비밀값 CASTLE_HASH) 또는 기존 관리자 계정으로 로그인 → 끌어 놓을 때마다 바로 저장(PUT /api/castle/layout). 저장 직전에 서버 최신본을 받아 그 위에 같은 수정을 다시 적용함.
+ * 편집: 캐슬 편집 계정(castle/admin.txt, 서버 비밀값 CASTLE_HASH) 또는 기존 관리자 계정으로 로그인 → 끌어 놓을 때마다 바로 저장(PUT /api/castle/layout · /api/castle2/layout). 저장 직전에 서버 최신본을 받아 그 위에 같은 수정을 다시 적용함.
  * 주소: ?q=닉네임 ?edit */
 (function () {
   'use strict';
@@ -14,7 +14,11 @@
   const low = s => clean(s).toLowerCase();
   const r1 = v => Math.round(v * 10) / 10;
   const PHONE = matchMedia('(max-width: 900px)');
-  const API = '/api/castle/layout', FILE = '/layouts/castle.json';
+  // /castle = 배치도 1, /castle2 = 배치도 2 (같은 페이지·같은 계정, 배치만 따로 저장 — 빌드가 castle/index.html을 castle2/index.html로 복사)
+  const SLOT = /^\/castle2(\/|$)/.test(location.pathname) ? 'castle2' : 'castle', NO = SLOT === 'castle2' ? 2 : 1;
+  const API = `/api/${SLOT}/layout`, FILE = `/layouts/${SLOT}.json`, HOME = `/${SLOT}/`;
+  document.title = `캐슬 도시 배치도 ${NO}`;
+  for (const a of document.querySelectorAll('#slots [data-slot]')) if (a.dataset.slot === SLOT) a.setAttribute('aria-current', 'page');
   const TOKEN_KEY = 'ks-castle-token', ADMIN_KEY = 'ks-admin-token';   // 캐슬 계정 토큰은 따로 (다른 배치도에선 안 됨) · 같은 탭에서 /v1/admin에 로그인했으면 그 토큰도 씀
   const FONT = '"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif';
   const SYS_FONT = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';   // 이미지 저장용 SVG는 웹 글꼴을 못 씀
@@ -635,7 +639,7 @@
 
   // ---------- 연맹 채팅용 텍스트 · 링크 · 이미지 ----------
   function planText() {
-    const ours = data.members.filter(m => !m.ext).sort(byPlace), out = [`[킹스 캐슬 도시 배치] 우리 인원 ${ours.filter(placed).length}/${ours.length}`];
+    const ours = data.members.filter(m => !m.ext).sort(byPlace), out = [`[킹스 캐슬 도시 배치도 ${NO}] 우리 인원 ${ours.filter(placed).length}/${ours.length}`];
     if (data.memo) out.push(data.memo.trim());
     let r0 = 0;
     for (const m of ours.filter(placed)) {
@@ -645,7 +649,7 @@
     }
     const none = ours.filter(m => !placed(m));
     if (none.length) out.push('', `■ 미배치: ${none.map(m => m.n).join(', ')}`);
-    out.push('', `${location.origin}/castle/`);
+    out.push('', location.origin + HOME);
     return out.join('\n');
   }
   async function copyText(text, btn, done) {
@@ -656,7 +660,7 @@
   }
   function flash(btn, msg) { const t = btn.dataset.t || btn.textContent; btn.dataset.t = t; btn.textContent = msg; setTimeout(() => { btn.textContent = t; }, 1600); }
   $('copy').onclick = () => copyText(planText(), $('copy'), '복사했습니다');
-  $('link').onclick = () => copyText(`${location.origin}/castle/`, $('link'), '링크 복사됨');
+  $('link').onclick = () => copyText(location.origin + HOME, $('link'), '링크 복사됨');
 
   async function savePNG() {   // 놓인 도시가 다 들어가는 열까지(최소 3열) 지도 + 우리 인원 명단
     const btn = $('png'), C = palette(), W = 1200;
@@ -676,17 +680,17 @@
     const F = (size, wt) => `${wt} ${size}px ${FONT}`;
     x.fillStyle = getComputedStyle(document.body).backgroundColor || '#ffffff'; x.fillRect(0, 0, W, H);
     const ink = getComputedStyle(document.body).color || '#1b231e';
-    x.fillStyle = ink; x.font = F(26, 600); x.fillText('킹스 캐슬 도시 배치도', PAD, 38);
+    x.fillStyle = ink; x.font = F(26, 600); x.fillText(`킹스 캐슬 도시 배치도 ${NO}`, PAD, 38);
     x.font = F(16, 400); x.globalAlpha = 0.7;
     x.fillText(`우리 인원 ${ours.filter(placed).length}/${ours.length} · 한 칸 = 도시 하나 · 숫자 = 캐슬에서 몇 열`, PAD, 62);
     x.globalAlpha = 1;
     x.drawImage(img, 0, HEAD, W, W);
     x.font = F(17, 400);
     lines.forEach((ln, i) => { x.fillText(ln, PAD + (i >= per ? (W - PAD) / 2 : 0), HEAD + W + PAD + LH * (i % per) + 18); });
-    x.globalAlpha = 0.6; x.font = F(14, 400); x.fillText(`${location.host}/castle/ · ${new Date().toLocaleDateString('ko-KR')}`, PAD, H - 16); x.globalAlpha = 1;
+    x.globalAlpha = 0.6; x.font = F(14, 400); x.fillText(`${location.host}${HOME} · ${new Date().toLocaleDateString('ko-KR')}`, PAD, H - 16); x.globalAlpha = 1;
     cv.toBlob(async blob => {
       if (!blob) { flash(btn, '이미지를 만들지 못했습니다'); return; }
-      const name = '캐슬_도시배치.png', file = new File([blob], name, { type: 'image/png' });
+      const name = `캐슬_도시배치${NO}.png`, file = new File([blob], name, { type: 'image/png' });
       if (PHONE.matches && navigator.canShare && navigator.canShare({ files: [file] })) {
         try { await navigator.share({ files: [file], title: name }); flash(btn, '공유했습니다'); return; } catch (_) { /* 취소하면 내려받기 */ }
       }
