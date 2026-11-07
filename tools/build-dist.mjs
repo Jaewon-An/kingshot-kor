@@ -13,7 +13,7 @@ const DIST = path.join(ROOT, 'dist');
 // sword/ = /sword, the Swordland Showdown member map (who goes to which building; data /api/sword/layout = layouts/sword.json, roster from the v2 layout)
 // castle/ = /castle, the cities around the King's Castle (drag a name onto a tile; data /api/castle/layout = layouts/castle.json, saved on every drop);
 //   /castle2 is the same page for a second plan (castle/index.html copied below; castle.js picks /api/castle2/layout = layouts/castle2.json from the path),
-//   /castle/kor (castle/kor.html) the same page again as a map-only, view-only page to share, switching between plans 1 and 2
+//   /castle/map?p=1|2 (castle/map.html) the same page again as one map-only, view-only plan; /castle/kor (castle/kor.html) shows both side by side to share
 // banner/ = /banner/v1/ (KOR banner + territory map) and /banner/v2/ (banner re-layout plan); shared banner/banner.js (uses mapdata.js, v2/core.js, v2/plan.js, v2/guide.css)
 const PUBLIC = ['v1', 'v2', 'sgd', 'sword', 'castle', 'banner', 'app.js', 'flags.js', 'style.css', 'mapdata.js', '_worker.js', 'layouts', '404.html'];
 
@@ -25,5 +25,5 @@ for (const f of PUBLIC) await cp(path.join(ROOT, f), path.join(DIST, f), { recur
 // Cloudflare Pages serves v1/admin.html at /v1/admin, v1/flags.html at /v1/flags, v2/admin.html at /v2/admin (the v2 editor).
 const page = path.join(ROOT, 'v1', 'index.html');
 for (const out of ['v1/admin.html', 'v1/flags.html', 'v2/admin.html']) await cp(page, path.join(DIST, out));
-for (const out of ['castle2/index.html', 'castle/kor.html']) await cp(path.join(ROOT, 'castle', 'index.html'), path.join(DIST, out));
-console.log(`dist/ ready: ${PUBLIC.join(', ')}, v1/admin.html, v1/flags.html, v2/admin.html, castle2/index.html, castle/kor.html`);
+for (const out of ['castle2/index.html', 'castle/map.html']) await cp(path.join(ROOT, 'castle', 'index.html'), path.join(DIST, out));
+console.log(`dist/ ready: ${PUBLIC.join(', ')}, v1/admin.html, v1/flags.html, v2/admin.html, castle2/index.html, castle/map.html`);

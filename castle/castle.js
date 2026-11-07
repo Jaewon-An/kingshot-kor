@@ -1,5 +1,5 @@
 /* /castle(배치도 1) · /castle2(배치도 2) 킹스 캐슬 둘레 도시 배치도. 두 주소는 같은 페이지이고 배치 데이터만 따로 저장함.
- * /castle/kor = 공유용 (같은 페이지를 지도만 화면 가득, 배치도 1·2 전환, 보기 전용).
+ * /castle/map?p=1|2 = 공유용 지도 한 장 (같은 페이지를 지도만 화면 가득, 보기 전용) — /castle/kor가 두 장을 나란히 띄움.
  * 지도: 캐슬 배치 플래너 스크린샷(2026-11-07)의 격자를 그대로 그림. 격자 한 칸 = 도시 하나, 캐슬 = 한 변 6칸 마름모, 둘레 6열까지.
  *   칸 (i, j): 캐슬은 i, j = 0~5. i가 작을수록 북서쪽, 클수록 남동쪽 · j가 작을수록 북동쪽, 클수록 남서쪽. 열 = 캐슬에서 몇 번째 둘레인지(1~6).
  *   그림 좌표: x = (i - j)·A, y = (i + j - 5)·A (원점 = 캐슬 가운데, A = 칸 반너비). 처음에는 3열까지 보이게 확대해 둠.
@@ -16,20 +16,13 @@
   const r1 = v => Math.round(v * 10) / 10;
   const PHONE = matchMedia('(max-width: 900px)');
   // /castle = 배치도 1, /castle2 = 배치도 2 (같은 페이지·같은 계정, 배치만 따로 저장 — 빌드가 castle/index.html을 castle2/index.html로 복사)
-  // /castle/kor = 다른 사람에게 보여 줄 공유용: 지도와 확대·축소만, 지도 위 버튼으로 배치도 1·2 전환 (?p=2), 보기 전용 (빌드가 castle/kor.html로 복사)
-  const SHARE = /^\/castle\/kor(\.html)?\/?$/.test(location.pathname);
-  const apiOf = s => `/api/${s}/layout`, fileOf = s => `/layouts/${s}.json`;
-  let SLOT, NO, API, HOME;
-  function useSlot(s) {
-    SLOT = s; NO = s === 'castle2' ? 2 : 1; API = apiOf(s); HOME = `/${s}/`;
-    document.title = `캐슬 도시 배치도 ${NO}`;
-    for (const el of document.querySelectorAll('[data-slot]')) {   // 머리말 링크(배치도 1·2 페이지) · 공유용 전환 버튼
-      const on = el.dataset.slot === s;
-      if (el.tagName !== 'A') el.setAttribute('aria-pressed', on);
-      else if (on) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
-    }
-  }
-  useSlot(SHARE ? (new URLSearchParams(location.search).get('p') === '2' ? 'castle2' : 'castle') : /^\/castle2(\/|$)/.test(location.pathname) ? 'castle2' : 'castle');
+  // /castle/map?p=1|2 = 공유용 지도 한 장: 지도와 확대·축소만 화면 가득, 보기 전용 (빌드가 castle/map.html로 복사).
+  //   다른 사람에게 보내는 /castle/kor(castle/kor.html)가 이것을 배치도 1·2 두 장으로 나란히 띄움
+  const SHARE = /^\/castle\/map(\.html)?\/?$/.test(location.pathname);
+  const SLOT = (SHARE ? new URLSearchParams(location.search).get('p') === '2' : /^\/castle2(\/|$)/.test(location.pathname)) ? 'castle2' : 'castle', NO = SLOT === 'castle2' ? 2 : 1;
+  const API = `/api/${SLOT}/layout`, FILE = `/layouts/${SLOT}.json`, HOME = `/${SLOT}/`;
+  document.title = `캐슬 도시 배치도 ${NO}`;
+  for (const a of document.querySelectorAll('#slots [data-slot]')) if (a.dataset.slot === SLOT) a.setAttribute('aria-current', 'page');
   const TOKEN_KEY = 'ks-castle-token', ADMIN_KEY = 'ks-admin-token';   // 캐슬 계정 토큰은 따로 (다른 배치도에선 안 됨) · 같은 탭에서 /v1/admin에 로그인했으면 그 토큰도 씀
   const FONT = '"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif';
   const SYS_FONT = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';   // 이미지 저장용 SVG는 웹 글꼴을 못 씀
@@ -112,8 +105,8 @@
 
   // ---------- 불러오기 ----------
   function fail(msg) { const n = $('notice'); n.textContent = msg; n.className = 'notice err'; n.hidden = false; }
-  async function fetchPlan(apiOnly, s = SLOT) {
-    for (const url of apiOnly ? [apiOf(s)] : [apiOf(s), fileOf(s)]) {
+  async function fetchPlan(apiOnly) {
+    for (const url of apiOnly ? [API] : [API, FILE]) {
       try {
         const r = await fetch(url, { cache: 'no-store' });
         if (r.ok) return { d: await r.json(), stamp: r.headers.get('X-Layout-Updated') || '' };
@@ -141,10 +134,9 @@
     try { got = await fetchPlan(); } catch (_) { fail('배치도를 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요.'); return; }
     pub = normalize(got.d); pubNorm = JSON.stringify(pub); stamp = got.stamp;
     data = clone(pub);
-    if (SHARE) {   // 지도만 화면 가득 (머리말·패널·범례 숨김), 다른 배치도도 미리 받아 둠
-      document.body.classList.add('share', 'csfull'); wrapEl.classList.add('full'); $('shareslots').hidden = false;
-      const other = SLOT === 'castle' ? 'castle2' : 'castle';
-      fetchPlan(false, other).then(g => { if (!plans[other]) plans[other] = { pub: normalize(g.d), stamp: g.stamp }; }).catch(() => { /* 누를 때 다시 */ });
+    if (SHARE) {   // 지도만 화면 가득 (머리말·패널·범례 숨김) + 왼쪽 위에 몇 번 배치도인지
+      document.body.classList.add('share', 'csfull'); wrapEl.classList.add('full');
+      $('sharelabel').textContent = `배치도 ${NO}`; $('sharelabel').hidden = false;
     }
     $('notice').hidden = true; $('main').hidden = false;
     setView(0, 0, Z0, true);
@@ -155,23 +147,10 @@
     if (qs.has('edit') && !SHARE) startEdit();
     setInterval(poll, 30000);
   }
-  // 공유용: 배치도 1·2 전환 (보던 범위·고른 사람은 그대로 — 같은 사람의 두 자리를 비교하기 좋게)
-  const plans = {};   // 배치도 id → { pub, stamp }
-  function showPlan(s) {
-    if (s === SLOT) return;
-    plans[SLOT] = { pub, stamp };
-    useSlot(s);
-    const p = plans[s];
-    if (p) { pub = p.pub; pubNorm = JSON.stringify(pub); stamp = p.stamp; data = clone(pub); renderAll(); }
-    poll(true);
-  }
-  $('shareslots').addEventListener('click', e => { const b = e.target.closest('[data-slot]'); if (b) showPlan(b.dataset.slot); });
-  async function poll(now) {   // 다른 사람이 고친 배치를 30초마다 받아 옴 (저장·끌기 중에는 쉼)
-    if ((document.hidden && !now) || busy || pending.length || drag) return;
-    const s = SLOT;
+  async function poll() {   // 다른 사람이 고친 배치를 30초마다 받아 옴 (저장·끌기 중에는 쉼)
+    if (document.hidden || busy || pending.length || drag) return;
     try {
-      const g = await fetchPlan(true, s), n = normalize(g.d);
-      if (s !== SLOT) { plans[s] = { pub: n, stamp: g.stamp }; return; }   // 그사이 다른 배치도로 바꿈
+      const g = await fetchPlan(true), n = normalize(g.d);
       if (busy || pending.length || drag || JSON.stringify(n) === pubNorm) return;
       pub = n; pubNorm = JSON.stringify(pub); stamp = g.stamp || stamp; data = clone(pub);
       renderAll();
@@ -742,7 +721,7 @@
     const u = new URL(location.href), sp = u.searchParams, q = clean($('q').value);
     if (q) sp.set('q', q); else sp.delete('q');
     if (editing) sp.set('edit', ''); else sp.delete('edit');
-    if (SHARE && NO === 2) sp.set('p', '2'); else sp.delete('p');   // 공유용: 보고 있는 배치도
+    if (SHARE) sp.set('p', String(NO)); else sp.delete('p');   // 공유용: 몇 번 배치도
     history.replaceState(history.state, '', u.pathname + (sp.toString() ? '?' + sp.toString().replace(/edit=(&|$)/, 'edit$1') : ''));
   }
   PHONE.addEventListener('change', () => data && renderAll());

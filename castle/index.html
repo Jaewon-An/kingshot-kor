@@ -35,14 +35,11 @@
   .slots .btn:first-child { border-radius: 4px 0 0 4px; }
   .slots .btn:last-child { border-radius: 0 4px 4px 0; margin-left: -1px; }
   .slots .btn[aria-current="page"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-  /* 공유용 /castle/kor: 지도만 화면 가득 (.cwrap.full) + 지도 위 배치도 1·2 전환, 보기 전용 */
+  /* 공유용 지도 한 장 /castle/map?p=1|2 (/castle/kor가 두 장을 나란히 띄움): 지도만 화면 가득 (.cwrap.full) + 왼쪽 위 배치도 번호, 보기 전용 */
   body.share .top, body.share .panel, body.share footer, body.share .mapbar, body.share #maphint, body.share #legend, body.share #full { display: none !important; }
-  .shareslots { position: absolute; z-index: 2; left: max(8px, env(safe-area-inset-left, 0px)); top: max(8px, env(safe-area-inset-top, 0px)); display: inline-flex; border-radius: 4px; box-shadow: 0 1px 4px var(--shadow); }
-  .shareslots .btn { border-radius: 0; padding: 8px 14px; font-size: .9rem; background: var(--panel); }
-  .shareslots .btn:first-child { border-radius: 4px 0 0 4px; }
-  .shareslots .btn:last-child { border-radius: 0 4px 4px 0; margin-left: -1px; }
-  .shareslots .btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-  body.share .readout { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 46px); }
+  .sharelabel { position: absolute; z-index: 2; left: max(8px, env(safe-area-inset-left, 0px)); top: max(8px, env(safe-area-inset-top, 0px)); padding: 6px 12px; border-radius: 4px;
+    background: var(--ink); color: var(--bg); font-weight: 600; font-size: .9rem; box-shadow: 0 1px 4px var(--shadow); pointer-events: none; }
+  body.share .readout { top: calc(max(8px, env(safe-area-inset-top, 0px)) + 40px); }
   .memo { margin: 0; white-space: pre-wrap; border-left: 3px solid var(--accent); padding: 6px 10px; background: var(--bg); font-size: .86rem; }
   .card .co { font-family: var(--f-body); font-size: 1.3rem; }
   td.wh { white-space: normal; font-size: .78rem; }
@@ -137,7 +134,7 @@
 </head>
 <body>
 <!-- /castle(배치도 1) · /castle2(배치도 2) 킹스 캐슬 둘레 도시 배치도. 스크립트 castle/castle.js, 배치 /api/castle/layout · /api/castle2/layout (첫 게시 전에는 layouts/castle.json · castle2.json)
-     빌드가 이 파일을 castle2/index.html과 castle/kor.html(/castle/kor — 공유용, 지도만, 배치도 1·2 전환)로 복사함 -->
+     빌드가 이 파일을 castle2/index.html과 castle/map.html(/castle/map?p=1|2 — 공유용 지도 한 장, castle/kor.html이 두 장을 나란히 띄움)로 복사함 -->
 <div class="page">
   <header class="top">
     <div>
@@ -205,7 +202,7 @@
           <svg id="map" role="img" aria-label="킹스 캐슬 둘레 도시 배치 지도"></svg>
         </div>
         <div class="readout" id="readout" role="status"></div>
-        <div class="shareslots" id="shareslots" role="group" aria-label="배치도 고르기" hidden><button class="btn" type="button" data-slot="castle">배치도 1</button><button class="btn" type="button" data-slot="castle2">배치도 2</button></div>
+        <div class="sharelabel" id="sharelabel" hidden></div>
         <div class="zoom" role="group" aria-label="지도 크기">
           <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
           <button class="btn" id="zout" type="button" aria-label="축소">－</button>
