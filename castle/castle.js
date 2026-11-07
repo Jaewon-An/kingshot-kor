@@ -1,4 +1,4 @@
-/* /castle(배치도 1) · /castle2(배치도 2) 킹스 캐슬 둘레 도시 배치도. 두 주소는 같은 페이지이고 배치 데이터만 따로 저장함.
+/* /castle(Turret Layout, 포탑용) · /castle2(Castle Layout, 캐슬용) 킹스 캐슬 둘레 도시 배치도. 두 주소는 같은 페이지이고 배치 데이터만 따로 저장함.
  * /castle/map?p=1|2 = 공유용 지도 한 장 (같은 페이지를 지도만 화면 가득, 보기 전용) — /castle/kor가 두 장을 나란히 띄움.
  * 지도: 캐슬 배치 플래너 스크린샷(2026-11-07)의 격자를 그대로 그림. 격자 한 칸 = 도시 하나, 캐슬 = 한 변 6칸 마름모, 둘레 6열까지.
  *   칸 (i, j): 캐슬은 i, j = 0~5. i가 작을수록 북서쪽, 클수록 남동쪽 · j가 작을수록 북동쪽, 클수록 남서쪽. 열 = 캐슬에서 몇 번째 둘레인지(1~6).
@@ -15,13 +15,14 @@
   const low = s => clean(s).toLowerCase();
   const r1 = v => Math.round(v * 10) / 10;
   const PHONE = matchMedia('(max-width: 900px)');
-  // /castle = 배치도 1, /castle2 = 배치도 2 (같은 페이지·같은 계정, 배치만 따로 저장 — 빌드가 castle/index.html을 castle2/index.html로 복사)
+  // /castle = 1번 Turret Layout(포탑용), /castle2 = 2번 Castle Layout(캐슬용) (같은 페이지·같은 계정, 배치만 따로 저장 — 빌드가 castle/index.html을 castle2/index.html로 복사)
   // /castle/map?p=1|2 = 공유용 지도 한 장: 지도와 확대·축소만 화면 가득, 보기 전용 (빌드가 castle/map.html로 복사).
-  //   다른 사람에게 보내는 /castle/kor(castle/kor.html)가 이것을 배치도 1·2 두 장으로 나란히 띄움
+  //   다른 사람에게 보내는 /castle/kor(castle/kor.html)가 이것을 1·2번 두 장으로 나란히 띄움
   const SHARE = /^\/castle\/map(\.html)?\/?$/.test(location.pathname);
   const SLOT = (SHARE ? new URLSearchParams(location.search).get('p') === '2' : /^\/castle2(\/|$)/.test(location.pathname)) ? 'castle2' : 'castle', NO = SLOT === 'castle2' ? 2 : 1;
+  const NAME = NO === 2 ? 'Castle Layout' : 'Turret Layout';   // 배치도 이름 (사용자 지정: 영어)
   const API = `/api/${SLOT}/layout`, FILE = `/layouts/${SLOT}.json`, HOME = `/${SLOT}/`;
-  document.title = `캐슬 도시 배치도 ${NO}`;
+  document.title = `${NAME} · 캐슬 도시 배치도`;
   for (const a of document.querySelectorAll('#slots [data-slot]')) if (a.dataset.slot === SLOT) a.setAttribute('aria-current', 'page');
   const TOKEN_KEY = 'ks-castle-token', ADMIN_KEY = 'ks-admin-token';   // 캐슬 계정 토큰은 따로 (다른 배치도에선 안 됨) · 같은 탭에서 /v1/admin에 로그인했으면 그 토큰도 씀
   const FONT = '"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif';
@@ -136,7 +137,7 @@
     data = clone(pub);
     if (SHARE) {   // 지도만 화면 가득 (머리말·패널·범례 숨김) + 왼쪽 위에 몇 번 배치도인지
       document.body.classList.add('share', 'csfull'); wrapEl.classList.add('full');
-      $('sharelabel').textContent = `배치도 ${NO}`; $('sharelabel').hidden = false;
+      $('sharelabel').textContent = NAME; $('sharelabel').hidden = false;
     }
     $('notice').hidden = true; $('main').hidden = false;
     setView(0, 0, Z0, true);
@@ -647,7 +648,7 @@
 
   // ---------- 연맹 채팅용 텍스트 · 링크 · 이미지 ----------
   function planText() {
-    const ours = data.members.filter(m => !m.ext).sort(byPlace), out = [`[킹스 캐슬 도시 배치도 ${NO}] 우리 인원 ${ours.filter(placed).length}/${ours.length}`];
+    const ours = data.members.filter(m => !m.ext).sort(byPlace), out = [`[킹스 캐슬 ${NAME}] 우리 인원 ${ours.filter(placed).length}/${ours.length}`];
     if (data.memo) out.push(data.memo.trim());
     let r0 = 0;
     for (const m of ours.filter(placed)) {
@@ -688,7 +689,7 @@
     const F = (size, wt) => `${wt} ${size}px ${FONT}`;
     x.fillStyle = getComputedStyle(document.body).backgroundColor || '#ffffff'; x.fillRect(0, 0, W, H);
     const ink = getComputedStyle(document.body).color || '#1b231e';
-    x.fillStyle = ink; x.font = F(26, 600); x.fillText(`킹스 캐슬 도시 배치도 ${NO}`, PAD, 38);
+    x.fillStyle = ink; x.font = F(26, 600); x.fillText(`킹스 캐슬 ${NAME}`, PAD, 38);
     x.font = F(16, 400); x.globalAlpha = 0.7;
     x.fillText(`우리 인원 ${ours.filter(placed).length}/${ours.length} · 한 칸 = 도시 하나 · 숫자 = 캐슬에서 몇 열`, PAD, 62);
     x.globalAlpha = 1;
@@ -698,7 +699,7 @@
     x.globalAlpha = 0.6; x.font = F(14, 400); x.fillText(`${location.host}${HOME} · ${new Date().toLocaleDateString('ko-KR')}`, PAD, H - 16); x.globalAlpha = 1;
     cv.toBlob(async blob => {
       if (!blob) { flash(btn, '이미지를 만들지 못했습니다'); return; }
-      const name = `캐슬_도시배치${NO}.png`, file = new File([blob], name, { type: 'image/png' });
+      const name = `castle_${NAME.replace(' ', '_')}.png`, file = new File([blob], name, { type: 'image/png' });
       if (PHONE.matches && navigator.canShare && navigator.canShare({ files: [file] })) {
         try { await navigator.share({ files: [file], title: name }); flash(btn, '공유했습니다'); return; } catch (_) { /* 취소하면 내려받기 */ }
       }

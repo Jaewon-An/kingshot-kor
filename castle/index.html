@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
 <title>캐슬 도시 배치도</title>
 <meta property="og:title" content="킹스 캐슬 도시 배치도">
-<meta property="og:description" content="2382 KOR · 킹스 캐슬 둘레 도시 배치도 1 · 2">
-<meta name="description" content="2382 KOR · 킹스 캐슬 둘레 도시 배치도 1 · 2">
+<meta property="og:description" content="2382 KOR · 킹스 캐슬 둘레 도시 배치도 — Turret Layout · Castle Layout">
+<meta name="description" content="2382 KOR · 킹스 캐슬 둘레 도시 배치도 — Turret Layout · Castle Layout">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
@@ -29,7 +29,7 @@
     --cs-bg: #110c09; --cs-tile: #241912; --cs-near: #4b2c15; --cs-castle: #2d1c12; --cs-castleink: #f39a5b; --cs-edge: #a85e2a; --cs-mark: #ee7428;
     --cs-ours: #1b8fcf; --cs-ext: #5a6470; --cs-cityink: #ffffff; --cs-sel: #ffd24a; --cs-ok: #4fc27a; --cs-bad: #e5574e; --cs-ringtxt: #a07a58;
   }
-  /* 배치도 1 / 2 (/castle · /castle2 — 같은 페이지, 배치만 따로) */
+  /* Turret Layout / Castle Layout (/castle · /castle2 — 같은 페이지, 배치만 따로) */
   .slots { display: inline-flex; margin-top: 8px; }
   .slots .btn { text-decoration: none; border-radius: 0; padding: 6px 14px; }
   .slots .btn:first-child { border-radius: 4px 0 0 4px; }
@@ -133,14 +133,14 @@
 </style>
 </head>
 <body>
-<!-- /castle(배치도 1) · /castle2(배치도 2) 킹스 캐슬 둘레 도시 배치도. 스크립트 castle/castle.js, 배치 /api/castle/layout · /api/castle2/layout (첫 게시 전에는 layouts/castle.json · castle2.json)
+<!-- /castle(Turret Layout, 포탑용) · /castle2(Castle Layout, 캐슬용) 킹스 캐슬 둘레 도시 배치도. 스크립트 castle/castle.js, 배치 /api/castle/layout · /api/castle2/layout (첫 게시 전에는 layouts/castle.json · castle2.json)
      빌드가 이 파일을 castle2/index.html과 castle/map.html(/castle/map?p=1|2 — 공유용 지도 한 장, castle/kor.html이 두 장을 나란히 띄움)로 복사함 -->
 <div class="page">
   <header class="top">
     <div>
       <p class="eyebrow">KINGSHOT · 2382 KOR · KING'S CASTLE</p>
       <h1>캐슬 도시 배치도</h1>
-      <nav class="slots" id="slots" aria-label="배치도 고르기"><a class="btn" href="/castle/" data-slot="castle">배치도 1</a><a class="btn" href="/castle2/" data-slot="castle2">배치도 2</a></nav>
+      <nav class="slots" id="slots" aria-label="배치도 고르기"><a class="btn" href="/castle/" data-slot="castle">Turret Layout</a><a class="btn" href="/castle2/" data-slot="castle2">Castle Layout</a></nav>
       <p class="stamp" id="stamp"></p>
     </div>
     <dl class="facts" id="facts"></dl>
