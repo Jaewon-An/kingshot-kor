@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
+<title>Swap Out Injured Troops · KOR</title>
+<meta name="description" content="Castle Battle: lightly injured troops can't fight until their squad goes home. Recall the hit squad and send a fresh one.">
+<meta property="og:title" content="Castle Battle · Swap out lightly injured troops">
+<meta property="og:description" content="Lightly injured troops can't fight until their squad goes home. Recall the hit squad and send a fresh one.">
+<meta property="og:image" content="https://kingshot-kor.pages.dev/war/report.webp">
+<style>
+  /* /war — 캐슬전 경상자 교체 안내 (영문, 연맹원 공유용). 스크린샷 원본은 war/KakaoTalk_20261108_103243411.jpg(커밋 안 함), 페이지는 WebP 사본 report.webp */
+  :root { --bg: #e9ece6; --panel: #f6f7f3; --ink: #1b231e; --muted: #5a665e; --line: #cdd5ca; --accent: #94600f; --accent-soft: #f1e4cb;
+    --ours: #2f5f9e; --enemy: #b23a3a; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #111513; --panel: #181d1a; --ink: #e2e7df; --muted: #97a39a; --line: #2b332e; --accent: #d6a24a; --accent-soft: #2c2415;
+      --ours: #8cb4ec; --enemy: #ec8f8f; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #111513; --panel: #181d1a; --ink: #e2e7df; --muted: #97a39a; --line: #2b332e; --accent: #d6a24a; --accent-soft: #2c2415;
+    --ours: #8cb4ec; --enemy: #ec8f8f; color-scheme: dark; }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.55; font-size: 16px;
+    font-family: "IBM Plex Sans", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; }
+  .page { max-width: 1060px; margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left));
+    display: grid; gap: 28px; }
+  .text { min-width: 0; max-width: 640px; }
+  .eyebrow { margin: 0 0 6px; color: var(--accent); font-weight: 700; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
+  h1 { margin: 0 0 12px; font-size: 1.75rem; line-height: 1.2; text-wrap: balance; }
+  .lead { margin: 0 0 24px; font-size: 1.08rem; }
+  h2 { margin: 32px 0 10px; font-size: 1.15rem; }
+  p { margin: 0 0 12px; }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  blockquote { margin: 0 0 6px; padding: 12px 16px; background: var(--panel); border-left: 4px solid var(--accent); border-radius: 0 6px 6px 0; }
+  blockquote p { margin: 0; }
+  .src { color: var(--muted); font-size: .85rem; margin: 0; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+  .stat .k { color: var(--muted); font-size: .8rem; }
+  .stat .v { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat.ours .v { color: var(--ours); }
+  .stat.enemy .v { color: var(--enemy); }
+  .meta { color: var(--muted); font-size: .9rem; }
+
+  ol.why, ol.how { margin: 0; padding: 0; list-style: none; counter-reset: n; display: grid; gap: 10px; }
+  ol.why li, ol.how li { counter-increment: n; position: relative; padding: 12px 14px 12px 48px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  ol.why li::before, ol.how li::before { content: counter(n); position: absolute; left: 12px; top: 11px; width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 700; font-size: .85rem; background: var(--accent-soft); color: var(--accent); }
+  ol.why li strong { display: block; }
+
+  .crop { position: relative; overflow: hidden; aspect-ratio: 923 / 740; border-radius: 8px; border: 1px solid var(--line); margin: 0 0 12px; background: var(--panel); }
+  .crop img { position: absolute; left: 0; top: -67.57%; width: 100%; height: auto; display: block; }
+
+  figure.shot { margin: 0; }
+  figure.shot img { display: block; width: 100%; max-width: 380px; height: auto; margin: 0 auto; border-radius: 10px; border: 1px solid var(--line); }
+  figcaption { color: var(--muted); font-size: .85rem; text-align: center; margin-top: 8px; }
+
+  @media (min-width: 900px) {
+    .page { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; padding-top: 32px; gap: 40px; }
+    figure.shot { position: sticky; top: 16px; }
+    figure.shot img { max-height: calc(100vh - 80px); width: auto; }
+    .crop { display: none; }
+    h1 { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <article class="text">
+    <p class="eyebrow">2382 KOR · Castle Battle</p>
+    <h1>Swap out lightly injured troops</h1>
+    <p class="lead">Lightly injured troops can't fight again until their squad goes home. A squad that stays out gets weaker with every hit — so recall it and send a fresh one.</p>
+
+    <h2>What the game says</h2>
+    <blockquote><p>“Lightly Injured Troops will recover when they are returned to the City. Until they are returned, the Lightly Injured Troops will stay in the same squad and not be able to participate in battles.”</p></blockquote>
+    <p class="src">In-game tooltip on “Lightly Injured” in the battle report</p>
+
+    <h2>This battle report</h2>
+    <div class="crop"><img src="/war/report.webp" alt="" width="1080" height="2340" aria-hidden="true"></div>
+    <div class="stats">
+      <div class="stat ours"><div class="k">Lightly injured · ours</div><div class="v">79,915</div></div>
+      <div class="stat enemy"><div class="k">Lightly injured · enemy</div><div class="v">222,829</div></div>
+    </div>
+    <p class="meta">[KOR]Khan vs [NYX]Empirym · Victory · 2026-11-08&nbsp;02:33:57 · X:486&nbsp;Y:867</p>
+    <p>We won, and still 79,915 of our troops are out of the fight. They are not dead and don't need the hospital — but any squad that stays out after a fight (holding the castle or a turret, or reinforcing it) keeps them, and they can't fight the next rally.</p>
+
+    <h2>Why it matters</h2>
+    <ol class="why">
+      <li><strong>Strength drops quietly.</strong> The squad is still there, but only its healthy troops fight the next rally. Every hit leaves the garrison weaker than it looks.</li>
+      <li><strong>Injured troops hold the space.</strong> They stay in the squad, using room that fresh troops could fill. Only a recall clears it.</li>
+      <li><strong>The fix is free.</strong> They recover the moment they reach the city — no healing time, no hospital. A swap only costs march time.</li>
+      <li><strong>The next rally decides it.</strong> We don't lose the castle to the rally that already hit — we lose it to the next one. Every enemy rally should meet a full-strength garrison.</li>
+    </ol>
+
+    <h2>How to swap</h2>
+    <ol class="how">
+      <li>After every fight, open your battle report and check <strong>Lightly Injured</strong>.</li>
+      <li>If your squad has injured troops, <strong>recall it</strong>. They recover as soon as it reaches your city.</li>
+      <li><strong>Send a full squad back right away</strong> — the same one once it's home, or another one.</li>
+      <li><strong>Swap one squad at a time</strong>, right after an enemy rally lands. Don't all recall together — never leave the castle empty.</li>
+      <li>Keep your city in your spot on the <a href="/castle/kor">Castle Layout</a>. Short marches make swaps fast.</li>
+    </ol>
+  </article>
+
+  <figure class="shot">
+    <a href="/war/report.webp"><img src="/war/report.webp" width="1080" height="2340"
+      alt="Battle report: [KOR]Khan vs [NYX]Empirym, Victory. Tooltip on Lightly Injured: lightly injured troops recover when returned to the city and can't fight until then. Lightly injured 79,915 (ours) and 222,829 (enemy)."></a>
+    <figcaption>Battle report, 2026-11-08 02:33:57 · tap to enlarge</figcaption>
+  </figure>
+</main>
+</body>
+</html>
