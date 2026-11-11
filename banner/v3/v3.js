@@ -50,9 +50,9 @@
     const cs = D.cands.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99));
     let acc = D.main.flags.length;
     $('candsum').textContent = `${cs.filter(c => c.rank).length}곳 더 이을 수 있음`;
-    $('cand').innerHTML = '<tr><th>거점</th><th>좌표</th><th class="n">더 드는 깃발</th><th class="n">누적</th></tr>' + cs.map(c => {
-      if (!c.rank) return `<tr class="no"><td>${c.name}</td><td><button class="lnk" data-x="${c.x}" data-y="${c.y}">${xy(c.x, c.y)}</button></td><td class="n" colspan="2">지금은 못 이음</td></tr>`;
-      acc += c.add; return `<tr><td>${c.rank}. ${c.name}</td><td><button class="lnk" data-x="${c.x}" data-y="${c.y}">${xy(c.x, c.y)}</button></td><td class="n">+${c.add}</td><td class="n">${acc}</td></tr>`;
+    $('cand').innerHTML = '<tr><th>거점</th><th>좌표</th><th class="n">혼자 붙이면</th><th class="n">차례로 붙이면</th><th class="n">누적</th></tr>' + cs.map(c => {
+      if (!c.rank) return `<tr class="no"><td>${c.name}</td><td><button class="lnk" data-x="${c.x}" data-y="${c.y}">${xy(c.x, c.y)}</button></td><td class="n" colspan="3">지금은 못 이음</td></tr>`;
+      acc += c.add; return `<tr><td>${c.rank}. ${c.name}</td><td><button class="lnk" data-x="${c.x}" data-y="${c.y}">${xy(c.x, c.y)}</button></td><td class="n">${c.alone != null ? `+${c.alone}` : '—'}</td><td class="n">+${c.add}</td><td class="n">${acc}</td></tr>`;
     }).join('');
     $('cand').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x + 1, +b.dataset.y + 1); });
     // 거점 종류 요약: 추천안 + 이을 수 있는 주변 거점까지 모두 이은 뒤
@@ -82,7 +82,7 @@
       `지금 거점 연결 깃발은 게임 총 ${D.count.now}개에서 평원 쪽(v2 ${D.count.v2}개·여분 최대 ${D.count.extra}개)을 뺀 약 ${D.count.now - D.count.v2 - D.count.extra}~${D.count.now - D.count.v2}개입니다. 지도에 회색 점선으로 그린 ${D.now.length}개는 화면의 KOR 영토 모양을 7×7 최소 개수로 덮어 추정한 것이라(많이 겹친 깃발은 하나로 잡힘) 실제보다 적고 좌표도 1~3칸 다를 수 있습니다. ④ 철거는 "새 경로(주황)에 없는 거점 연결 깃발은 모두 철거"가 기준이고, 목록 좌표는 찾아가는 길잡이입니다.`,
       `황야 본부 자리는 황야(왕국 300~899 평원 고리 밖) 중 3×3이 비어 있고 영토 15×15에 다른 연맹이 없는 곳 ${'1.9만'}여 곳을 모두 계산해 골랐습니다. 평원 본부 하나로만 5곳을 이으면 깃발 약 ${D.plainOnly}개가 듭니다.`,
       `연맹 자원지(깃발 범위 안에 있어야 깃발 추가·자원 생산): 새 경로 영토 안 ${sum(r.new)}곳(${rs(r.new)}) · 지금 ${sum(r.now)}곳(${rs(r.now)}). 같은 깃발 수라면 자원지를 더 많이 덮는 자리를 고르게 했습니다.`,
-      '주변 거점 더 잇기는 추천안에서 가장 적게 드는 거점부터 하나씩 붙인 결과입니다. "지금은 못 이음"은 다른 연맹 영토에 막혀 있거나(훈련 캠프·방어구 창고(동)는 FUN 등 다른 연맹 영토에 둘러싸임) 화면에서 확인하지 못한 곳입니다.',
+      '주변 거점 더 잇기: "혼자 붙이면"은 추천안에 그 거점 하나만 이을 때, "차례로 붙이면"은 가장 적게 드는 거점부터 하나씩 붙여 앞 거점 길을 함께 쓸 때 더 드는 깃발입니다(예: Lv.3 연구소는 방어구 창고 Lv.4 길을 쓰면 줄어듦). 동쪽 Lv.3 연구소(X:867 Y:867)는 THE 소유라 뺐습니다. "지금은 못 이음"은 다른 연맹 영토에 막혀 있거나(훈련 캠프·방어구 창고(동)는 FUN 등 다른 연맹 영토에 둘러싸임) 화면에서 확인하지 못한 곳입니다.',
       '깃발 1개 비용(276~285개 구간, 팬 사이트 표): 빵·나무 250,800, 돌 167,200, 철 91,200. 건설 약 33분.',
     ].map(s => `<li>${s}</li>`).join('');
     $('src').textContent = '지형·연맹 자원지·거점 위치: mapdata.js(ksmapper). 영토·깃발: 2026-11-11 PC 게임 화면에서 읽음.';
