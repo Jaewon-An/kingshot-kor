@@ -34,18 +34,14 @@
   }
 
   // ---------- 연결안 ----------
-  const PLANS = () => [
-    ['main', D.main, `추천: 황야 본부 → ${xy(...D.main.w)}`, `깃발 ${D.main.flags.length}개(새로 ${D.main.flags.length - D.up.used.length} + v2 위쪽 ${D.up.used.length}개 그대로)로 점령 거점 5곳 연결, v2 위쪽 ${D.up.unused.length}개 철거 가능 (Lv.2 무기 창고 X:867은 지금처럼 연결 없이 유지)`],
-    ...(D.alts || []).slice(0, 2).map((p, i) => [`alt${i}`, p, `대안 ${i + 1}: 황야 본부 → ${xy(...p.w)}`, `깃발 ${p.flags.length}개`]),
-    ...(D.stay ? [['stay', D.stay, '황야 본부 그대로', `깃발 ${D.stay.flags.length}개 (지금 자리 ${xy(...D.hq.wild)})`]] : []),
-    ...(D.all6 ? [['all6', D.all6, `6곳 전부: 황야 본부 → ${xy(...D.all6.w)}`, `깃발 ${D.all6.flags.length}개 — Lv.2 무기 창고(X:867)까지 잇으려면 황야 본부를 그 옆에 둬야 하고 나머지 5곳은 평원 본부에서 이어야 함`]] : []),
+  const PLANS = () => [   // 11-11 사용자: 추천안만 남김
+    ['main', D.main, `추천: 황야 본부 → ${xy(...D.main.w)}`, `깃발 ${D.main.flags.length}개(새로 ${D.main.flags.length - D.up.used.length} + v2 위쪽 ${D.up.used.length}개 그대로)로 점령 거점 5곳 연결, v2 위쪽 ${D.up.unused.length}개 철거 (Lv.2 무기 창고 X:867은 지금처럼 연결 없이 유지)`],
   ];
   function setPlan(k) { planKey = k; PLAN = PLANS().find(p => p[0] === k)[1]; renderFacts(); renderFlags(); $('stepbox').hidden = k !== 'main'; draw(); }
 
   function setup() {
     $('stamp').textContent = `${D.updated} 게임 화면 기준 · 점령 거점 6곳`;
-    $('plans').innerHTML = PLANS().map(([k, p, t, s]) => `<label><input type="radio" name="plan" value="${k}"${k === 'main' ? ' checked' : ''}><span><b>${t}</b><small>${s}</small></span></label>`).join('');
-    $('plans').addEventListener('change', e => setPlan(e.target.value));
+    $('plans').innerHTML = PLANS().map(([k, p, t, s]) => `<label><span><b>${t}</b><small>${s}</small></span></label>`).join('');
     // 주변 거점
     const cs = D.cands.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99));
     let acc = D.main.flags.length;
@@ -85,7 +81,7 @@
       `황야 본부 자리는 황야(왕국 300~899 평원 고리 밖) 중 3×3이 비어 있고 영토 15×15에 다른 연맹이 없는 곳 ${'1.9만'}여 곳을 모두 계산해 골랐습니다. ${D.plainOnly ? `평원 본부 하나로만 5곳을 이으면 깃발 약 ${D.plainOnly}개가 듭니다.` : '황야 본부 없이 평원 본부 하나로는 5곳을 다 이을 수 없습니다(건설소·방어구 창고 둘레가 다른 연맹 영토·금지 구역에 막힘).'}${D.stay ? '' : ' 황야 본부를 지금 자리에 두면 5곳을 다 이을 수 없어 이전이 필요합니다.'}`,
       `연맹 자원지(깃발 범위 안에 있어야 깃발 추가·자원 생산): 새 경로 영토 안 ${sum(r.new)}곳(${rs(r.new)}) · 지금 ${sum(r.now)}곳(${rs(r.now)}). 같은 깃발 수라면 자원지를 더 많이 덮는 자리를 고르게 했습니다.`,
       '주변 거점 더 잇기: "혼자 붙이면"은 추천안에 그 거점 하나만 이을 때, "차례로 붙이면"은 가장 적게 드는 거점부터 하나씩 붙여 앞 거점 길을 함께 쓸 때 더 드는 깃발입니다(예: Lv.3 연구소는 방어구 창고 Lv.4 길을 쓰면 줄어듦). 동쪽 Lv.3 연구소(X:867 Y:867)는 THE 소유라 뺐습니다. "지금은 못 이음"은 다른 연맹 영토에 막혀 있거나(훈련 캠프·방어구 창고(동)는 FUN 등 다른 연맹 영토에 둘러싸임) 화면에서 확인하지 못한 곳입니다.',
-      'Lv.2 무기 창고(FUN, X:438 Y:1068): 게임에서 칸을 눌러 확인하니 금지 구역 둘레가 FN5(X:438 Y:1058 — 바로 옆 FN5 연맹 목재장)와 CMS(X:445 Y:1058·X:450 Y:1064) 영토로 막혀 있어 지금은 깃발로 이을 수 없습니다. 둘레 깃발 하나가 빠져 틈이 생기면(예: X:438 Y:1058) 최종 연결망에서 깃발 약 28개로 닿습니다(11-11).',
+      `Lv.2 무기 창고(FUN, X:438 Y:1068): 지금 KOR 깃발 X:440 Y:1080이 북쪽 변에 닿아 있습니다(게임에서 확인). 이 깃발을 그대로 쓰고 깃발 ${(D.cands.find(c => c.name.startsWith('Lv.2 무기 창고')) || {}).add}개로 잇습니다. 남쪽·동쪽 둘레는 FN5(X:438 Y:1058)·CMS(X:445 Y:1058·X:450 Y:1064) 땅이라 북쪽으로만 닿습니다.`,
       '깃발 1개 비용(276~285개 구간, 팬 사이트 표): 빵·나무 250,800, 돌 167,200, 철 91,200. 건설 약 33분.',
     ].map(s => `<li>${s}</li>`).join('');
     $('src').textContent = '지형·연맹 자원지·거점 위치: mapdata.js(ksmapper). 영토·깃발: 2026-11-11 PC 게임 화면에서 읽음.';
