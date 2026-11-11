@@ -55,6 +55,21 @@
       acc += c.add; return `<tr><td>${c.rank}. ${c.name}</td><td><button class="lnk" data-x="${c.x}" data-y="${c.y}">${xy(c.x, c.y)}</button></td><td class="n">+${c.add}</td><td class="n">${acc}</td></tr>`;
     }).join('');
     $('cand').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x + 1, +b.dataset.y + 1); });
+    // 거점 종류 요약: 추천안 + 이을 수 있는 주변 거점까지 모두 이은 뒤
+    const TYPES = ['건설소', '방어구 창고', '연구소', '무기 창고', '훈련 캠프', '개척 기지', '수렵 기지', '수확 기지'];
+    const typeOf = n => TYPES.find(t => n.includes(t)) || '기타', lvOf = n => (n.match(/Lv\.\d/) || [''])[0];
+    const ownOf = n => (n.match(/\((\w+)\)/) || [, ''])[1];
+    const rows = TYPES.map(t => {
+      const on = D.held.filter(h => typeOf(h.name) === t && D.main.flags.length && !(h.x === 867 && h.y === 1068)).map(h => lvOf(h.name));
+      const heldOff = D.held.filter(h => typeOf(h.name) === t && h.x === 867 && h.y === 1068).map(h => `${lvOf(h.name)} (연결 없이 점령 유지)`);
+      const add = D.cands.filter(c => typeOf(c.name) === t && c.rank).map(c => `${lvOf(c.name)} ${ownOf(c.name)} +${c.add}`);
+      const no = D.cands.filter(c => typeOf(c.name) === t && !c.rank).map(c => `${lvOf(c.name)} ${ownOf(c.name)}`).concat((D.excluded || []).filter(c => typeOf(c.name) === t).map(c => `${lvOf(c.name)} ${ownOf(c.name)}(제외)`));
+      const got = on.length + add.length > 0;
+      return { t, got, html: `<tr class="${got ? '' : 'no'}"><td><b>${t}</b></td><td>${[...on.map(v => `${v} 점령`), ...heldOff, ...add.map(v => `${v} 더 이음`)].join('<br>') || '<b class="warn">없음</b>'}</td><td>${no.join('<br>') || '—'}</td></tr>` };
+    });
+    const miss = rows.filter(r => !r.got).map(r => r.t);
+    $('typesum').textContent = miss.length ? `연결 안 되는 종류 ${miss.length}: ${miss.join('·')}` : '모든 종류 연결';
+    $('types').innerHTML = '<tr><th>종류</th><th>연결됨 (추천안 + 더 잇기)</th><th>못 이음 (소유)</th></tr>' + rows.map(r => r.html).join('');
     $('fl').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x, +b.dataset.y); });
     const r = D.res, sum = a => a.reduce((s, v) => s + v, 0), rs = a => `빵 ${a[0]}·나무 ${a[1]}·돌 ${a[2]}·철 ${a[3]}`;
     $('check').innerHTML = [
