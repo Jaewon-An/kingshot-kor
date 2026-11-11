@@ -64,8 +64,10 @@
       `깃발 ${total}개 (상한 ${D.count.cap}, 빈 칸 ${D.count.cap - total}): 평원 본부 쪽 ${base.length}개(곰덫 주변 v2 깃발${base.some(f => f.ex) ? `·지은 여분 ${base.filter(f => f.ex).length}개` : ''}) + 거점 연결 ${conn.length}개${view.cand ? ` + 주변 거점 연결 ${cand.length}개` : ''}.`,
       `이어진 점령 거점 ${held}곳: ${D.held.filter(h => !(h.x === 867 && h.y === 1068)).map(h => h.name).join(', ')}. Lv.2 무기 창고(${xy(867, 1068)})는 지금처럼 연결 없이 점령 유지.`,
       view.cand ? `주변 거점 ${cs.length}곳도 이어짐: ${cs.map(c => `${c.name} +${c.add}`).join(', ')} (지금은 다른 연맹 소유 — 영토가 닿아야 공격해 점령할 수 있음). '주변 거점까지'를 끄면 점령 거점 5곳만 이은 추천안 모습.` : `'주변 거점까지'를 켜면 ${cs.map(c => `${c.name} +${c.add}`).join(', ')}까지 다 이은 모습을 봅니다.`,
-      `거점 연결 깃발은 서로·평원 쪽 영토·황야 본부 영역과 겹치는 칸 없이(${D.main.overlap ? D.main.overlap[1] : 0}칸) 꼭짓점·변으로만 이어지게 놓았습니다.`,
-      `황야 본부: 지금 ${xy(...D.hq.wild)} → ${xy(...D.main.w)}(Lv.1 건설소 바로 옆). 평원 본부 ${xy(...D.hq.plain)} 그대로.`,
+      `거점 연결 깃발은 서로·평원 쪽 영토·황야 본부 영역과 겹치는 칸 없이(${D.main.overlap ? D.main.overlap[1] : 0}칸) 놓았습니다.`,
+      `황야 본부: 지금 ${xy(...D.hq.wild)} → ${xy(...D.main.w)}${D.main.direct && D.main.direct.length ? `(${D.main.direct.join('·')}에 바로 닿음)` : ''}. 평원 본부 ${xy(...D.hq.plain)} 그대로.`,
+      '깃발 영역은 거점·성채 금지 구역과 겹치지 않게 놓고, 깃발끼리·거점과는 금지 구역 밖에서 변으로 맞닿게 했습니다(꼭짓점만 닿는 연결 없음).',
+      `거점마다 금지 구역과 맞닿는 길이를 깃발 두 개 폭(13칸 이상)으로 넓혔습니다: ${Object.entries(D.main.contact || {}).map(([k, v]) => `${k} ${v}칸`).join(', ')}${view.cand ? ', ' + D.cands.filter(c => c.rank).map(c => `${c.name.replace(/ \(.*\)/, '')} ${c.contact}칸`).join(', ') : ''}.`,
       `v2 위쪽 깃발 중 ${D.up.unused.length}개는 철거, ${D.up.used.length}개는 거점 연결에 그대로 씀.${exPlan.length ? ` v2 여분 ${exPlan.length}개(${exPlan.map(e => xy(e.x, e.y)).join(', ')})는 아직 안 지어 점선으로 표시.` : ''}`,
     ].map(s => `<li>${s}</li>`).join('');
     $('g3box').hidden = !view.cand;
