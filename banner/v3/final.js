@@ -68,6 +68,7 @@
       `황야 본부: 지금 ${xy(...D.hq.wild)} → ${xy(...D.main.w)}${D.main.direct && D.main.direct.length ? `(${D.main.direct.join('·')}에 바로 닿음)` : ''}. 평원 본부 ${xy(...D.hq.plain)} 그대로.`,
       '깃발 영역은 거점·성채 금지 구역과 겹치지 않게 놓고, 깃발끼리·거점과는 금지 구역 밖에서 변으로 맞닿게 했습니다(꼭짓점만 닿는 연결 없음).',
       `거점마다 금지 구역과 맞닿는 길이를 깃발 두 개 폭(13칸 이상)으로 넓혔습니다: ${Object.entries(D.main.contact || {}).map(([k, v]) => `${k} ${v}칸`).join(', ')}${view.cand ? ', ' + D.cands.filter(c => c.rank).map(c => `${c.name.replace(/ \(.*\)/, '')} ${c.contact}칸`).join(', ') : ''}.`,
+      'Lv.2 무기 창고(FUN, X:438 Y:1068)는 둘레가 FN5·CMS 영토로 막혀 지금은 못 이음(게임에서 확인). 둘레에 틈이 생기면 깃발 약 28개로 닿음.',
       `v2 위쪽 깃발 중 ${D.up.unused.length}개는 철거, ${D.up.used.length}개는 거점 연결에 그대로 씀.${exPlan.length ? ` v2 여분 ${exPlan.length}개(${exPlan.map(e => xy(e.x, e.y)).join(', ')})는 아직 안 지어 점선으로 표시.` : ''}`,
     ].map(s => `<li>${s}</li>`).join('');
     $('g3box').hidden = !view.cand;
