@@ -56,7 +56,7 @@
     }).join('');
     $('cand').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x + 1, +b.dataset.y + 1); });
     // 거점 종류 요약: 추천안 + 이을 수 있는 주변 거점까지 모두 이은 뒤
-    const TYPES = ['건설소', '방어구 창고', '연구소', '무기 창고', '훈련 캠프', '개척 기지', '수렵 기지', '수확 기지'];
+    const TYPES = ['건설소', '방어구 창고', '연구소', '무기 창고', '훈련 캠프', '원정 캠프', '채집 제단', '풍작 제단'];
     const typeOf = n => TYPES.find(t => n.includes(t)) || '기타', lvOf = n => (n.match(/Lv\.\d/) || [''])[0];
     const ownOf = n => (n.match(/\((\w+)\)/) || [, ''])[1];
     const rows = TYPES.map(t => {
