@@ -1,4 +1,5 @@
 /* /banner/v3/final/ — 추천안을 다 마친 뒤의 KOR 깃발 전체 모습 (/banner/v3/data.json을 같이 씀).
+ * 기본 화면은 주변 거점(원정 캠프·방어구 창고 Lv.4·연구소 Lv.3)까지 다 이은 모습, '주변 거점까지'를 끄면 추천안(점령 거점 5곳)만.
  * 최종 깃발 = 평원 쪽 v2 깃발(위쪽 중 안 쓰는 것 up.unused 뺌) + v2 여분(v2extra: built 지음 / 아니면 점선) + 거점 연결 경로(main.flags, 위쪽 재사용 포함)
  *   + '주변 거점까지'를 켜면 주변 거점 연결 깃발(cands[].flags, 더 이을 수 있는 것만).
  */
@@ -34,11 +35,11 @@
     readColors(); setup(); $('notice').hidden = true; $('main').hidden = false; fit();
   }
 
-  const view = { cx: 0, cy: 0, s: 4, rot: true, cand: false, each: true, oth: false, mark: null };
+  const view = { cx: 0, cy: 0, s: 4, rot: true, cand: true, each: true, oth: false, mark: null };   // 기본: 연구소 Lv.3까지 다 이은 모습(11-11 사용자)
   let terrImg = null, maskKey = '';
   function setup() {
     const w = D.main.w;
-    $('stamp').textContent = `${D.updated} 추천안을 다 마친 뒤 · 황야 본부 ${xy(...w)}`;
+    $('stamp').textContent = `${D.updated} 추천안 + 주변 거점(연구소 Lv.3까지) 다 이은 뒤 · 황야 본부 ${xy(...w)}`;
     const list = (el, arr, tag) => { $(el).innerHTML = arr.map(f => `<li><button class="lnk" data-x="${f.x}" data-y="${f.y}">${xy(f.x, f.y)}</button>${tag ? tag(f) : ''}</li>`).join(''); };
     list('g1', conn, f => (f.reuse ? ' <small>v2 위쪽 그대로</small>' : ''));
     list('g2', base, f => (f.ex ? ' <small>여분</small>' : ''));
@@ -62,7 +63,7 @@
     $('sum').innerHTML = [
       `깃발 ${total}개 (상한 ${D.count.cap}, 빈 칸 ${D.count.cap - total}): 평원 본부 쪽 ${base.length}개(곰덫 주변 v2 깃발${base.some(f => f.ex) ? `·지은 여분 ${base.filter(f => f.ex).length}개` : ''}) + 거점 연결 ${conn.length}개${view.cand ? ` + 주변 거점 연결 ${cand.length}개` : ''}.`,
       `이어진 점령 거점 ${held}곳: ${D.held.filter(h => !(h.x === 867 && h.y === 1068)).map(h => h.name).join(', ')}. Lv.2 무기 창고(${xy(867, 1068)})는 지금처럼 연결 없이 점령 유지.`,
-      view.cand ? `주변 거점까지 이으면 ${cs.map(c => c.name).join(', ')}도 이어짐 (공격해서 점령하려면 영토가 닿아 있어야 함).` : `'주변 거점까지'를 켜면 ${cs.map(c => `${c.name} +${c.add}`).join(', ')}까지 이은 모습을 봅니다.`,
+      view.cand ? `주변 거점 ${cs.length}곳도 이어짐: ${cs.map(c => `${c.name} +${c.add}`).join(', ')} (지금은 다른 연맹 소유 — 영토가 닿아야 공격해 점령할 수 있음). '주변 거점까지'를 끄면 점령 거점 5곳만 이은 추천안 모습.` : `'주변 거점까지'를 켜면 ${cs.map(c => `${c.name} +${c.add}`).join(', ')}까지 다 이은 모습을 봅니다.`,
       `거점 연결 깃발은 서로·평원 쪽 영토·황야 본부 영역과 겹치는 칸 없이(${D.main.overlap ? D.main.overlap[1] : 0}칸) 꼭짓점·변으로만 이어지게 놓았습니다.`,
       `황야 본부: 지금 ${xy(...D.hq.wild)} → ${xy(...D.main.w)}(Lv.1 건설소 바로 옆). 평원 본부 ${xy(...D.hq.plain)} 그대로.`,
       `v2 위쪽 깃발 중 ${D.up.unused.length}개는 철거, ${D.up.used.length}개는 거점 연결에 그대로 씀.${exPlan.length ? ` v2 여분 ${exPlan.length}개(${exPlan.map(e => xy(e.x, e.y)).join(', ')})는 아직 안 지어 점선으로 표시.` : ''}`,
