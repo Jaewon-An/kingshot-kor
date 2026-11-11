@@ -14,7 +14,7 @@ const DIST = path.join(ROOT, 'dist');
 // castle/ = /castle, the cities around the King's Castle (drag a name onto a tile; data /api/castle/layout = layouts/castle.json, saved on every drop);
 //   /castle2 is the same page for a second plan (castle/index.html copied below; castle.js picks /api/castle2/layout = layouts/castle2.json from the path),
 //   /castle/map?p=1|2 (castle/map.html) the same page again as one map-only, view-only plan; /castle/kor (castle/kor.html) shows both side by side to share
-// banner/ = /banner/v1/ (KOR banner + territory map) and /banner/v2/ (banner re-layout plan); shared banner/banner.js (uses mapdata.js, v2/core.js, v2/plan.js, v2/guide.css)
+// banner/ = /banner/v1/ (KOR banner + territory map), /banner/v2/ (banner re-layout plan) and /banner/v3/ (outpost connection route, own v3.js); shared banner/banner.js (uses mapdata.js, v2/core.js, v2/plan.js, v2/guide.css)
 const PUBLIC = ['v1', 'v2', 'sgd', 'sword', 'castle', 'banner', 'app.js', 'flags.js', 'style.css', 'mapdata.js', '_worker.js', 'layouts', '404.html'];
 
 await rm(DIST, { recursive: true, force: true });
