@@ -11,7 +11,7 @@
   const PHONE = matchMedia('(max-width: 900px)');
   if (PHONE.matches) for (const id of ['legend', 'g2box']) if ($(id)) $(id).open = false;
   const xy = (x, y) => `X:${x} Y:${y}`, key = (x, y) => y * G + x;
-  let D, kind, VX, VY, VW, VH, base = [], conn = [], cand = [], exPlan = [], resf = [];
+  let D, kind, VX, VY, VW, VH, base = [], conn = [], cand = [], exPlan = [], exDrop = [], resf = [];
   const C = {};
   const readColors = () => { const cs = getComputedStyle(document.documentElement); for (const k of ['m-void', 'm-ground', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'c-hq', 'c-t2', 'c-banner', 'c-terr', 'c-pick', 'c-new', 'c-wild', 'c-cand', 'c-oth', 'bg', 'ok']) C[k] = cs.getPropertyValue('--' + k).trim(); };
   const rgb = c => { const t = document.createElement('canvas').getContext('2d'); t.fillStyle = c; const h = t.fillStyle; return h.startsWith('#') ? [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)) : (h.match(/\d+/g) || [0, 0, 0]).slice(0, 3).map(Number); };
@@ -31,6 +31,8 @@
     base = D.v2.filter(f => !drop.has(key(...f)) && !connSet.has(key(...f))).map(f => ({ x: f[0], y: f[1] }))
       .concat((D.v2extra || []).filter(e => e.built).map(e => ({ x: e.x, y: e.y, ex: true })));
     exPlan = (D.v2extra || []).filter(e => !e.built);
+    const spare = (D.resfill || {}).useSpare;   // 11-12 사용자: 여유분 남기지 말고 모두 사용 → 안 지은 v2 여분 몫도 자원지 보강에 씀
+    if (spare) { exDrop = exPlan; exPlan = []; }
     cand = D.cands.filter(c => c.rank).sort((a, b) => a.rank - b.rank).flatMap(c => c.flags.map(f => ({ x: f[0], y: f[1], to: c.name })));
     resf = ((D.resfill || {}).groups || []).flatMap(g => g.flags.map(f => ({ x: f[0], y: f[1], got: g.got })));   // 자원지 보강(빵·나무 우선, 11-12)
     readColors(); setup(); $('notice').hidden = true; $('main').hidden = false; fit();
@@ -71,10 +73,10 @@
     $('sum').innerHTML = [
       `깃발 ${total}개 (상한 ${D.count.cap}, 빈 칸 ${D.count.cap - total}): 평원 본부 쪽 ${base.length}개(곰덫 주변 v2 깃발${base.some(f => f.ex) ? `·지은 여분 ${base.filter(f => f.ex).length}개` : ''}) + 거점 연결 ${conn.length}개${view.cand ? ` + 주변 거점 연결 ${cand.length}개` : ''}${useRes ? ` + 자원지 보강 ${resf.length}개` : ''}.`,
       `연맹 자원지(2×2 네 칸이 모두 영토 안, 하나당 시간당 ${per.toLocaleString('ko-KR')}): 빵 ${rc[0]}·나무 ${rc[1]}·돌 ${rc[2]}·철 ${rc[3]} = ${rc.reduce((a, b) => a + b, 0)}곳, 시간당 빵 ${(rc[0] * per).toLocaleString('ko-KR')}·나무 ${(rc[1] * per).toLocaleString('ko-KR')}·돌 ${(rc[2] * per).toLocaleString('ko-KR')}·철 ${(rc[3] * per).toLocaleString('ko-KR')} (지금 게임: 빵 ${now[0]}·나무 ${now[1]}·돌 ${now[2]}·철 ${now[3]}곳).`,
-      resf.length ? (useRes ? `자원지 보강 깃발 ${resf.length}개(초록): 깃발 작업에 많이 드는 빵·나무 자원지를 우선(돌 0.3·철 0.2배로 셈)으로, 연결망에서 이어 1개당 새로 넣는 자원지가 많은 자리부터 상한까지 채움(v2 여분 남은 ${exPlan.length}칸은 비워 둠). '자원지 보강'을 끄면 빼고 봄.` : `'자원지 보강'을 켜면 빵·나무 우선 보강 깃발 ${resf.length}개를 더한 모습(빵 ${(RC.res || [])[0]}·나무 ${(RC.res || [])[1]}곳)을 봅니다.`) : '',
+      resf.length ? (useRes ? `자원지 보강 깃발 ${resf.length}개(초록): 깃발 작업에 많이 드는 빵·나무 자원지를 우선(돌 0.3·철 0.2배로 셈)으로, 연결망에서 이어 1개당 새로 넣는 자원지가 많은 자리부터 상한 ${D.count.cap}개까지 모두 채움${exDrop.length ? ` — 안 지은 v2 여분 ${exDrop.length}개(${exDrop.map(e => xy(e.x, e.y)).join(', ')}) 몫도 여기에 씀` : ''}. 기존 영토와 7칸 넘게 겹치는 자리는 안 쓰고, 덮는 자원지를 지키며 옮겨 겹침을 줄임. '자원지 보강'을 끄면 빼고 봄.` : `'자원지 보강'을 켜면 빵·나무 우선 보강 깃발 ${resf.length}개를 더한 모습(빵 ${(RC.res || [])[0]}·나무 ${(RC.res || [])[1]}곳)을 봅니다.`) : '',
       `이어진 점령 거점 ${held}곳: ${D.held.filter(h => !(h.x === 867 && h.y === 1068)).map(h => h.name).join(', ')}. Lv.2 무기 창고(${xy(867, 1068)})는 지금처럼 연결 없이 점령 유지.`,
       view.cand ? `주변 거점 ${cs.length}곳도 이어짐: ${cs.map(c => `${c.name} +${c.add}`).join(', ')} (지금은 다른 연맹 소유 — 영토가 닿아야 공격해 점령할 수 있음). '주변 거점까지'를 끄면 점령 거점 5곳만 이은 추천안 모습.` : `'주변 거점까지'를 켜면 ${cs.map(c => `${c.name} +${c.add}`).join(', ')}까지 다 이은 모습을 봅니다.`,
-      `거점 연결 깃발은 서로·평원 쪽 영토·황야 본부 영역과 겹치는 칸 없이(${D.main.overlap ? D.main.overlap[1] : 0}칸) 놓았습니다.`,
+      `깃발 영역 겹침(곰덫 주변 v2 깃발끼리 빼고): 거점 연결은 서로·평원 쪽 영토·황야 본부 영역과 0칸, 주변 거점·자원지 보강까지 합쳐 ${(D.overlapAll != null ? D.overlapAll : '-')}칸. 거점에 맞닿는 면을 넓히는 보강 깃발은 14칸 넘게 겹치는 자리면 넣지 않음.`,
       `황야 본부: 지금 ${xy(...D.hq.wild)} → ${xy(...D.main.w)}${D.main.direct && D.main.direct.length ? `(${D.main.direct.join('·')}에 바로 닿음)` : ''}. 평원 본부 ${xy(...D.hq.plain)} 그대로.`,
       '깃발 영역은 거점·성채 금지 구역과 겹치지 않게 놓고, 깃발끼리·거점과는 금지 구역 밖에서 변으로 맞닿게 했습니다(꼭짓점만 닿는 연결 없음).',
       `거점마다 금지 구역과 맞닿는 길이를 깃발 두 개 폭(13칸 이상)으로 넓혔습니다: ${Object.entries(D.main.contact || {}).map(([k, v]) => `${k} ${v}칸`).join(', ')}${view.cand ? ', ' + D.cands.filter(c => c.rank).map(c => `${c.name.replace(/ \(.*\)/, '')} ${c.contact}칸`).join(', ') : ''}.`,
