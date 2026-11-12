@@ -20,6 +20,7 @@
   async function load() {
     let map;
     try { const r = await fetch('/banner/v3/data.json', { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status); D = await r.json(); } catch (_) { fail('데이터(data.json)를 불러오지 못했습니다. 새로고침해 주세요.'); return; }
+    try { const r2 = await fetch('/banner/v3/oth.json', { cache: 'no-cache' }); if (r2.ok) D.oth = await r2.json(); } catch (_) {}   // 다른 연맹 색별 영역·깃발(없어도 됨)
     try { map = await KP.loadMap(); } catch (_) { fail('지도 데이터를 풀지 못했습니다. 최신 브라우저에서 열어 주세요.'); return; }
     VX = D.view.x0; VY = D.view.y0; VW = D.view.x1 - VX + 1; VH = D.view.y1 - VY + 1;
     kind = new Uint8Array(VW * VH);
@@ -38,7 +39,7 @@
     readColors(); setup(); $('notice').hidden = true; $('main').hidden = false; fit();
   }
 
-  const view = { cx: 0, cy: 0, s: 4, rot: true, cand: true, res: true, each: true, oth: false, mark: null };   // 기본: 연구소 Lv.3까지 다 이은 모습(11-11 사용자) — 11-12 EoB 영토를 피해 꼭짓점 연결 길로
+  const view = { cx: 0, cy: 0, s: 4, rot: true, cand: true, res: true, each: true, oth: true, mark: null };   // 기본: 연구소 Lv.3까지 다 이은 모습(11-11 사용자) — 11-12 EoB 영토를 피해 꼭짓점 연결 길로
   let terrImg = null, maskKey = '';
   function setup() {
     const w = D.main.w;
@@ -107,7 +108,8 @@
     terrImg = img(i => [...col[kind[i]], 255]);
     const rows = list => { const m = new Uint8Array(VW * VH); for (const [y, a, b] of list) for (let x = a; x <= b; x++) m[(y - VY) * VW + x - VX] = 1; return m; };
     const known = rows(D.known), oth = rows(D.others); const o = rgb(C['c-oth']), v = rgb(C['m-void']);
-    othImg = img(i => (oth[i] ? [...o, 255] : null)); unkImg = img(i => (known[i] ? null : [...v, 160]));
+    const ocls = new Int8Array(VW * VH).fill(-1); if (D.oth) for (const [y, a, b, k] of D.oth.runs) for (let x = a; x <= b; x++) ocls[(y - VY) * VW + x - VX] = k; const ocol = D.oth ? D.oth.colors.map(c => rgb(c[1])) : [];
+    othImg = img(i => (oth[i] ? [...(ocls[i] >= 0 ? ocol[ocls[i]] : o), 255] : null)); unkImg = img(i => (known[i] ? null : [...v, 160]));
   }
   function buildKor() {   // 최종 영토: 본부 15×15 + 깃발 7×7 (다른 연맹 칸 제외)
     const oth = new Uint8Array(VW * VH); for (const [y, a, b] of D.others) for (let x = a; x <= b; x++) oth[(y - VY) * VW + x - VX] = 1;
@@ -129,11 +131,12 @@
     const m = mat(w, h), s = view.s;
     gx.setTransform(m[0] * dpr, m[1] * dpr, m[2] * dpr, m[3] * dpr, m[4] * dpr, m[5] * dpr); gx.imageSmoothingEnabled = false;
     const put = (im, a = 1) => { gx.globalAlpha = a; gx.drawImage(im, VX, VY, VW, VH); gx.globalAlpha = 1; };
-    put(terrImg); if (view.oth) put(othImg, 0.3); put(korImg, 0.32); put(unkImg);
+    put(terrImg); if (view.oth) put(othImg, 0.42); put(korImg, 0.32); put(unkImg);
     const sq = (x, y, r, col, lw, dash) => { gx.strokeStyle = col; gx.lineWidth = lw / s; gx.setLineDash(dash ? dash.map(v => v / s) : []); gx.strokeRect(x - r, y - r, 1 + 2 * r, 1 + 2 * r); gx.setLineDash([]); };
     const dot = (x, y, col, z = 1) => { gx.fillStyle = col; gx.fillRect(x + (1 - z) / 2, y + (1 - z) / 2, z, z); };
     for (const f of base) { if (view.each) sq(f.x, f.y, 3, C['c-banner'], 0.8); dot(f.x, f.y, C['c-banner']); }
     for (const e of exPlan) { sq(e.x, e.y, 3, C['c-banner'], 1.4, [4, 3]); }
+    if (view.oth && D.oth) for (const [x, y, k] of D.oth.flags) { sq(x, y, 3, D.oth.colors[k][1], 1, null); dot(x, y, D.oth.colors[k][1], 0.7); }   // 다른 연맹 깃발(화면 영토에서 7×7로 역산, 11-13)
     if (view.cand) for (const f of cand) { sq(f.x, f.y, 3, C['c-cand'], 1.8, [5, 3]); dot(f.x, f.y, C['c-cand']); }
     for (const [p, q] of [...(D.main.corner || []), ...(view.cand ? D.cands.filter(c => c.rank).flatMap(c => c.corner || []) : [])]) { gx.strokeStyle = '#d93025'; gx.lineWidth = 2.4 / s; gx.beginPath(); gx.arc((p[0] + q[0] + 1) / 2, (p[1] + q[1] + 1) / 2, 2.6, 0, 2 * Math.PI); gx.stroke(); }   // 꼭짓점으로만 이어지는 자리(11-12)
     if (view.cand && view.res) for (const f of resf) { sq(f.x, f.y, 3, C.ok, 1.8); dot(f.x, f.y, C.ok); }

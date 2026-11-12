@@ -24,6 +24,7 @@
 
   async function load() {
     try { const r = await fetch('/banner/v3/data.json', { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status); D = await r.json(); } catch (_) { fail('경로 데이터(data.json)를 불러오지 못했습니다. 새로고침해 주세요.'); return; }
+    try { const r2 = await fetch('/banner/v3/oth.json', { cache: 'no-cache' }); if (r2.ok) D.oth = await r2.json(); } catch (_) {}   // 다른 연맹 색별 영역·깃발(없어도 됨)
     try { map = await KP.loadMap(); } catch (_) { fail('지도 데이터를 풀지 못했습니다. 최신 Chrome·Edge·Safari·Firefox에서 열어 주세요.'); return; }
     VX = D.view.x0; VY = D.view.y0; VW = D.view.x1 - VX + 1; VH = D.view.y1 - VY + 1;
     kind = new Uint8Array(VW * VH);
@@ -166,13 +167,14 @@
     const paint = (fn) => { const c = mk(), g = c.getContext('2d'), im = g.createImageData(VW, VH), d = im.data; for (let i = 0; i < VW * VH; i++) { const v = fn(i); if (!v) continue; d.set(v, 4 * i); } g.putImageData(im, 0, 0); return c; };
     const rows = list => { const m = new Uint8Array(VW * VH); for (const [y, a, b] of list) for (let x = a; x <= b; x++) m[(y - VY) * VW + x - VX] = 1; return m; };
     const known = rows(D.known), oth = rows(D.others), kor = rows(D.kor);
+    const ocls = new Int8Array(VW * VH).fill(-1); if (D.oth) for (const [y, a, b, k] of D.oth.runs) for (let x = a; x <= b; x++) ocls[(y - VY) * VW + x - VX] = k; const ocol = D.oth ? D.oth.colors.map(c => rgb(c[1])) : [];
     const col = [rgb(C['m-ground']), rgb(C['m-mount']), rgb(C['m-lake']), rgb(C['m-node']), rgb(C['m-struct'])];
     const nodeHi = [230, 160, 20];
     imgs = {
       terr: paint(i => [...col[kind[i]], 255]),
       nodeHi: paint(i => (kind[i] === 3 ? [...nodeHi, 255] : null)),
       unk: paint(i => (known[i] ? null : [...rgb(C['m-void']), 170])),
-      oth: paint(i => (oth[i] ? [...rgb(C['c-oth']), 255] : null)),
+      oth: paint(i => (oth[i] ? [...(ocls[i] >= 0 ? ocol[ocls[i]] : rgb(C['c-oth'])), 255] : null)),
       kor: paint(i => (kor[i] ? [...rgb(C['c-terr']), 255] : null)),
     };
   }
@@ -190,11 +192,12 @@
     // 이미지는 행 0 = Y 작은 쪽 → 아래위 뒤집어 그림(지도 좌표 y는 위로 증가)
     const put = (img, a = 1) => { gx.save(); gx.globalAlpha = a; gx.translate(VX, VY); gx.drawImage(img, 0, 0, VW, VH); gx.restore(); };
     put(imgs.terr); if (view.res) put(imgs.nodeHi);
-    if (view.oth) put(imgs.oth, 0.32);
+    if (view.oth) put(imgs.oth, 0.42);
     put(imgs.kor, view.now ? 0.28 : 0.12);
     put(imgs.unk);
     const sq = (x, y, r, col, lw, dash) => { gx.strokeStyle = col; gx.lineWidth = lw / s; gx.setLineDash(dash ? dash.map(v => v / s) : []); gx.strokeRect(x - r, y - r, 1 + 2 * r, 1 + 2 * r); gx.setLineDash([]); };
     const dot = (x, y, col, sz = 1) => { gx.fillStyle = col; gx.fillRect(x + (1 - sz) / 2, y + (1 - sz) / 2, sz, sz); };
+    if (view.oth && D.oth) for (const [x, y, k] of D.oth.flags) { sq(x, y, 3, D.oth.colors[k][1], 1, null); dot(x, y, D.oth.colors[k][1], 0.7); }   // 다른 연맹 깃발(화면 영토에서 7×7로 역산, 11-13)
     // 평원 쪽 v2 깃발 (위쪽 중 새 경로에 안 쓰는 것은 빨간 점선 = 철거 가능)
     for (const [x, y] of D.v2) dot(x, y, C['c-banner']);
     for (const [x, y] of D.up.unused) { sq(x, y, 3, C.bad, 1.6, [3, 3]); dot(x, y, C.bad); }
