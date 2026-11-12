@@ -1,5 +1,5 @@
 /* /banner/v3/final/ — 추천안을 다 마친 뒤의 KOR 깃발 전체 모습 (/banner/v3/data.json을 같이 씀).
- * 기본 화면은 주변 거점(원정 캠프·방어구 창고 Lv.4·연구소 Lv.3)까지 다 이은 모습, '주변 거점까지'를 끄면 추천안(점령 거점 5곳)만.
+ * 기본 화면은 주변 거점(원정 캠프·방어구 창고 Lv.4·무기 창고 Lv.2 FUN)까지 다 이은 모습, '주변 거점까지'를 끄면 추천안(점령 거점 5곳)만.
  * 최종 깃발 = 평원 쪽 v2 깃발(위쪽 중 안 쓰는 것 up.unused 뺌) + v2 여분(v2extra: built 지음 / 아니면 점선) + 거점 연결 경로(main.flags, 위쪽 재사용 포함)
  *   + '주변 거점까지'를 켜면 주변 거점 연결 깃발(cands[].flags, 더 이을 수 있는 것만).
  */
@@ -38,11 +38,11 @@
     readColors(); setup(); $('notice').hidden = true; $('main').hidden = false; fit();
   }
 
-  const view = { cx: 0, cy: 0, s: 4, rot: true, cand: true, res: true, each: true, oth: false, mark: null };   // 기본: 연구소 Lv.3까지 다 이은 모습(11-11 사용자)
+  const view = { cx: 0, cy: 0, s: 4, rot: true, cand: true, res: true, each: true, oth: false, mark: null };   // 기본: 이을 수 있는 주변 거점까지 다 이은 모습(11-11 사용자) — 연구소 Lv.3은 11-12 EoB 영토에 막혀 빠짐
   let terrImg = null, maskKey = '';
   function setup() {
     const w = D.main.w;
-    $('stamp').textContent = `${D.updated} 추천안 + 주변 거점(연구소 Lv.3까지) 다 이은 뒤 · 황야 본부 ${xy(...w)}`;
+    $('stamp').textContent = `${D.updated} 추천안 + 이을 수 있는 주변 거점까지 다 이은 뒤 · 황야 본부 ${xy(...w)}`;
     const list = (el, arr, tag) => { $(el).innerHTML = arr.map(f => `<li><button class="lnk" data-x="${f.x}" data-y="${f.y}">${xy(f.x, f.y)}</button>${tag ? tag(f) : ''}</li>`).join(''); };
     list('g1', conn, f => (f.reuse ? ' <small>v2 위쪽 그대로</small>' : ''));
     list('g2', base, f => (f.ex ? ' <small>여분</small>' : ''));
@@ -74,6 +74,7 @@
       `깃발 ${total}개 (상한 ${D.count.cap}, 빈 칸 ${D.count.cap - total}): 평원 본부 쪽 ${base.length}개(곰덫 주변 v2 깃발${base.some(f => f.ex) ? `·지은 여분 ${base.filter(f => f.ex).length}개` : ''}) + 거점 연결 ${conn.length}개${view.cand ? ` + 주변 거점 연결 ${cand.length}개` : ''}${useRes ? ` + 자원지 보강 ${resf.length}개` : ''}.`,
       `연맹 자원지(2×2 네 칸이 모두 영토 안, 하나당 시간당 ${per.toLocaleString('ko-KR')}): 빵 ${rc[0]}·나무 ${rc[1]}·돌 ${rc[2]}·철 ${rc[3]} = ${rc.reduce((a, b) => a + b, 0)}곳, 시간당 빵 ${(rc[0] * per).toLocaleString('ko-KR')}·나무 ${(rc[1] * per).toLocaleString('ko-KR')}·돌 ${(rc[2] * per).toLocaleString('ko-KR')}·철 ${(rc[3] * per).toLocaleString('ko-KR')} (지금 게임: 빵 ${now[0]}·나무 ${now[1]}·돌 ${now[2]}·철 ${now[3]}곳).`,
       resf.length ? (useRes ? `자원지 보강 깃발 ${resf.length}개(초록): 깃발 작업에 많이 드는 빵·나무 자원지를 우선(돌 0.3·철 0.2배로 셈)으로, 연결망에서 이어 1개당 새로 넣는 자원지가 많은 자리부터 상한 ${D.count.cap}개까지 모두 채움${exDrop.length ? ` — 안 지은 v2 여분 ${exDrop.length}개(${exDrop.map(e => xy(e.x, e.y)).join(', ')}) 몫도 여기에 씀` : ''}. 기존 영토와 7칸 넘게 겹치는 자리는 안 쓰고, 덮는 자원지를 지키며 옮겨 겹침을 줄임. '자원지 보강'을 끄면 빼고 봄.` : `'자원지 보강'을 켜면 빵·나무 우선 보강 깃발 ${resf.length}개를 더한 모습(빵 ${(RC.res || [])[0]}·나무 ${(RC.res || [])[1]}곳)을 봅니다.`) : '',
+      (() => { const no = D.cands.find(c => c.name.startsWith('Lv.3 연구소') && !c.rank); return no ? `Lv.3 연구소(NYX, ${xy(no.x, no.y)})는 못 이음: 가는 길(X:340~400 Y:850~890)이 EoB 노란 영토로 막혀 있고, 거점 둘레 나머지도 다른 연맹 영토라 깃발을 놓을 길이 없음(11-11 화면 기준, 11-12 노란 영토 판독 고침). 그 몫 깃발은 자원지 보강에 씀.` : ''; })(),
       `이어진 점령 거점 ${held}곳: ${D.held.filter(h => !(h.x === 867 && h.y === 1068)).map(h => h.name).join(', ')}. Lv.2 무기 창고(${xy(867, 1068)})는 지금처럼 연결 없이 점령 유지.`,
       view.cand ? `주변 거점 ${cs.length}곳도 이어짐: ${cs.map(c => `${c.name} +${c.add}`).join(', ')} (지금은 다른 연맹 소유 — 영토가 닿아야 공격해 점령할 수 있음). '주변 거점까지'를 끄면 점령 거점 5곳만 이은 추천안 모습.` : `'주변 거점까지'를 켜면 ${cs.map(c => `${c.name} +${c.add}`).join(', ')}까지 다 이은 모습을 봅니다.`,
       `깃발 영역 겹침(곰덫 주변 v2 깃발끼리 빼고): 거점 연결은 서로·평원 쪽 영토·황야 본부 영역과 0칸, 주변 거점·자원지 보강까지 합쳐 ${(D.overlapAll != null ? D.overlapAll : '-')}칸. 거점에 맞닿는 면을 넓히는 보강 깃발은 14칸 넘게 겹치는 자리면 넣지 않음.`,
