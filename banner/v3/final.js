@@ -11,9 +11,9 @@
   const PHONE = matchMedia('(max-width: 900px)');
   if (PHONE.matches) for (const id of ['legend', 'g2box']) if ($(id)) $(id).open = false;
   const xy = (x, y) => `X:${x} Y:${y}`, key = (x, y) => y * G + x;
-  let D, kind, VX, VY, VW, VH, base = [], conn = [], cand = [], exPlan = [];
+  let D, kind, VX, VY, VW, VH, base = [], conn = [], cand = [], exPlan = [], resf = [];
   const C = {};
-  const readColors = () => { const cs = getComputedStyle(document.documentElement); for (const k of ['m-void', 'm-ground', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'c-hq', 'c-t2', 'c-banner', 'c-terr', 'c-pick', 'c-new', 'c-wild', 'c-cand', 'c-oth', 'bg']) C[k] = cs.getPropertyValue('--' + k).trim(); };
+  const readColors = () => { const cs = getComputedStyle(document.documentElement); for (const k of ['m-void', 'm-ground', 'm-mount', 'm-lake', 'm-node', 'm-struct', 'c-hq', 'c-t2', 'c-banner', 'c-terr', 'c-pick', 'c-new', 'c-wild', 'c-cand', 'c-oth', 'bg', 'ok']) C[k] = cs.getPropertyValue('--' + k).trim(); };
   const rgb = c => { const t = document.createElement('canvas').getContext('2d'); t.fillStyle = c; const h = t.fillStyle; return h.startsWith('#') ? [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)) : (h.match(/\d+/g) || [0, 0, 0]).slice(0, 3).map(Number); };
   function fail(msg) { const n = $('notice'); n.textContent = msg; n.className = 'notice err'; n.hidden = false; }
 
@@ -32,10 +32,11 @@
       .concat((D.v2extra || []).filter(e => e.built).map(e => ({ x: e.x, y: e.y, ex: true })));
     exPlan = (D.v2extra || []).filter(e => !e.built);
     cand = D.cands.filter(c => c.rank).sort((a, b) => a.rank - b.rank).flatMap(c => c.flags.map(f => ({ x: f[0], y: f[1], to: c.name })));
+    resf = ((D.resfill || {}).groups || []).flatMap(g => g.flags.map(f => ({ x: f[0], y: f[1], got: g.got })));   // 자원지 보강(빵·나무 우선, 11-12)
     readColors(); setup(); $('notice').hidden = true; $('main').hidden = false; fit();
   }
 
-  const view = { cx: 0, cy: 0, s: 4, rot: true, cand: true, each: true, oth: false, mark: null };   // 기본: 연구소 Lv.3까지 다 이은 모습(11-11 사용자)
+  const view = { cx: 0, cy: 0, s: 4, rot: true, cand: true, res: true, each: true, oth: false, mark: null };   // 기본: 연구소 Lv.3까지 다 이은 모습(11-11 사용자)
   let terrImg = null, maskKey = '';
   function setup() {
     const w = D.main.w;
@@ -48,20 +49,29 @@
     const cs = D.cands.filter(c => c.rank).sort((a, b) => a.rank - b.rank);
     $('g3').innerHTML = cs.map(c => `<li class="grp" style="list-style:none;margin-left:-2.8em;font-weight:600">${c.name} +${c.add}</li>` + c.flags.map(f => `<li><button class="lnk" data-x="${f[0]}" data-y="${f[1]}">${xy(f[0], f[1])}</button></li>`).join('')).join('');
     $('g3sum').textContent = `${cand.length}개`;
-    for (const id of ['g1', 'g2', 'g3']) $(id).addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x, +b.dataset.y); });
+    const NT = ['빵', '나무', '돌', '철'], gotTxt = g => g.map((v, i) => (v ? `${NT[i]} ${v}` : '')).filter(Boolean).join('·');
+    $('g4').innerHTML = ((D.resfill || {}).groups || []).map((g, i) => `<li class="grp" style="list-style:none;margin-left:-2.8em;font-weight:600">${i + 1}. ${gotTxt(g.got)} (+${g.flags.length})</li>` + g.flags.map(f => `<li><button class="lnk" data-x="${f[0]}" data-y="${f[1]}">${xy(f[0], f[1])}</button></li>`).join('')).join('');
+    $('g4sum').textContent = `${resf.length}개`;
+    for (const id of ['g1', 'g2', 'g3', 'g4']) $(id).addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x, +b.dataset.y); });
     render();
   }
   function render() {
-    const total = base.length + conn.length + (view.cand ? cand.length : 0);
+    const useRes = view.cand && view.res && resf.length;
+    const total = base.length + conn.length + (view.cand ? cand.length : 0) + (useRes ? resf.length : 0);
+    const RC = (D.resfill || {}).count || {}, rc = RC[!view.cand ? 'main' : useRes ? 'res' : 'cand'] || [0, 0, 0, 0], per = (D.resfill || {}).per || 3600, now = (D.resfill || {}).now || [0, 0, 0, 0];
+    const k = v => `${Math.round(v / 100) / 10}K`;
     const held = 5, extra = view.cand ? D.cands.filter(c => c.rank).length : 0;
     $('facts').innerHTML = [
       ['--c-terr', '최종 KOR 깃발', `${total}개 / ${D.count.cap}`], ['--c-banner', '평원 본부 쪽', `${base.length}개`],
       ['--c-new', '거점 연결', `${conn.length}개${view.cand ? ` + ${cand.length}` : ''}`], ['--c-t2', '이어진 거점', `${held + extra}곳`],
+      ['--ok', '빵·나무 자원지', `${rc[0]}·${rc[1]}곳`], ['--ok', '시간당 빵·나무', `${k(rc[0] * per)}·${k(rc[1] * per)}`],
       ['--c-wild', '황야 본부', xy(...D.main.w)],
     ].map(([c, k, v]) => `<div><dt><i style="background:var(${c})"></i>${k}</dt><dd>${v}</dd></div>`).join('');
     const cs = D.cands.filter(c => c.rank).sort((a, b) => a.rank - b.rank);
     $('sum').innerHTML = [
-      `깃발 ${total}개 (상한 ${D.count.cap}, 빈 칸 ${D.count.cap - total}): 평원 본부 쪽 ${base.length}개(곰덫 주변 v2 깃발${base.some(f => f.ex) ? `·지은 여분 ${base.filter(f => f.ex).length}개` : ''}) + 거점 연결 ${conn.length}개${view.cand ? ` + 주변 거점 연결 ${cand.length}개` : ''}.`,
+      `깃발 ${total}개 (상한 ${D.count.cap}, 빈 칸 ${D.count.cap - total}): 평원 본부 쪽 ${base.length}개(곰덫 주변 v2 깃발${base.some(f => f.ex) ? `·지은 여분 ${base.filter(f => f.ex).length}개` : ''}) + 거점 연결 ${conn.length}개${view.cand ? ` + 주변 거점 연결 ${cand.length}개` : ''}${useRes ? ` + 자원지 보강 ${resf.length}개` : ''}.`,
+      `연맹 자원지(2×2 네 칸이 모두 영토 안, 하나당 시간당 ${per.toLocaleString('ko-KR')}): 빵 ${rc[0]}·나무 ${rc[1]}·돌 ${rc[2]}·철 ${rc[3]} = ${rc.reduce((a, b) => a + b, 0)}곳, 시간당 빵 ${(rc[0] * per).toLocaleString('ko-KR')}·나무 ${(rc[1] * per).toLocaleString('ko-KR')}·돌 ${(rc[2] * per).toLocaleString('ko-KR')}·철 ${(rc[3] * per).toLocaleString('ko-KR')} (지금 게임: 빵 ${now[0]}·나무 ${now[1]}·돌 ${now[2]}·철 ${now[3]}곳).`,
+      resf.length ? (useRes ? `자원지 보강 깃발 ${resf.length}개(초록): 깃발 작업에 많이 드는 빵·나무 자원지를 우선(돌 0.3·철 0.2배로 셈)으로, 연결망에서 이어 1개당 새로 넣는 자원지가 많은 자리부터 상한까지 채움(v2 여분 남은 ${exPlan.length}칸은 비워 둠). '자원지 보강'을 끄면 빼고 봄.` : `'자원지 보강'을 켜면 빵·나무 우선 보강 깃발 ${resf.length}개를 더한 모습(빵 ${(RC.res || [])[0]}·나무 ${(RC.res || [])[1]}곳)을 봅니다.`) : '',
       `이어진 점령 거점 ${held}곳: ${D.held.filter(h => !(h.x === 867 && h.y === 1068)).map(h => h.name).join(', ')}. Lv.2 무기 창고(${xy(867, 1068)})는 지금처럼 연결 없이 점령 유지.`,
       view.cand ? `주변 거점 ${cs.length}곳도 이어짐: ${cs.map(c => `${c.name} +${c.add}`).join(', ')} (지금은 다른 연맹 소유 — 영토가 닿아야 공격해 점령할 수 있음). '주변 거점까지'를 끄면 점령 거점 5곳만 이은 추천안 모습.` : `'주변 거점까지'를 켜면 ${cs.map(c => `${c.name} +${c.add}`).join(', ')}까지 다 이은 모습을 봅니다.`,
       `거점 연결 깃발은 서로·평원 쪽 영토·황야 본부 영역과 겹치는 칸 없이(${D.main.overlap ? D.main.overlap[1] : 0}칸) 놓았습니다.`,
@@ -71,7 +81,7 @@
       'Lv.2 무기 창고(FUN, X:438 Y:1068)는 지금 있는 KOR 깃발 X:440 Y:1080(북쪽 변)을 그대로 써서 이음. 남쪽·동쪽 둘레는 FN5·CMS 땅(게임에서 확인).',
       `v2 위쪽 깃발 중 ${D.up.unused.length}개는 철거, ${D.up.used.length}개는 거점 연결에 그대로 씀.${exPlan.length ? ` v2 여분 ${exPlan.length}개(${exPlan.map(e => xy(e.x, e.y)).join(', ')})는 아직 안 지어 점선으로 표시.` : ''}`,
     ].map(s => `<li>${s}</li>`).join('');
-    $('g3box').hidden = !view.cand;
+    $('g3box').hidden = !view.cand; $('g4box').hidden = !useRes;
     draw();
   }
 
@@ -80,7 +90,7 @@
   function mat(w, h) { const s = view.s, cx = view.cx, cy = view.cy; if (!view.rot) return [s, 0, 0, -s, w / 2 - cx * s, h / 2 + cy * s]; const k = s * SQ; return [k, -k, -k, -k, w / 2 - k * (cx - cy), h / 2 + k * (cx + cy)]; }
   function toWorld(sx, sy) { const w = cv.clientWidth, h = cv.clientHeight; if (!view.rot) return { x: view.cx + (sx - w / 2) / view.s, y: view.cy - (sy - h / 2) / view.s }; const k = view.s * SQ, p = (sx - w / 2) / k, q = -(sy - h / 2) / k; return { x: view.cx + (p + q) / 2, y: view.cy + (q - p) / 2 }; }
   function fit() {
-    const pts = [D.hq.plain, D.main.w, ...D.held.filter(h => h.x !== 867).map(h => [h.x, h.y]), ...conn.map(f => [f.x, f.y]), ...base.map(f => [f.x, f.y]), ...(view.cand ? cand.map(f => [f.x, f.y]) : [])];
+    const pts = [D.hq.plain, D.main.w, ...D.held.filter(h => h.x !== 867).map(h => [h.x, h.y]), ...conn.map(f => [f.x, f.y]), ...base.map(f => [f.x, f.y]), ...(view.cand ? cand.map(f => [f.x, f.y]) : []), ...(view.cand && view.res ? resf.map(f => [f.x, f.y]) : [])];
     const x0 = Math.min(...pts.map(p => p[0])) - 10, y0 = Math.min(...pts.map(p => p[1])) - 10, x1 = Math.max(...pts.map(p => p[0])) + 12, y1 = Math.max(...pts.map(p => p[1])) + 12;
     const w = cv.clientWidth, h = cv.clientHeight, bw = x1 - x0, bh = y1 - y0;
     view.cx = (x0 + x1) / 2; view.cy = (y0 + y1) / 2;
@@ -100,7 +110,7 @@
     const m = new Uint8Array(VW * VH), put = (x0, y0, x1, y1) => { for (let y = Math.max(VY, y0); y <= Math.min(VY + VH - 1, y1); y++) for (let x = Math.max(VX, x0); x <= Math.min(VX + VW - 1, x1); x++) m[(y - VY) * VW + x - VX] = 1; };
     const hq = h => put(h[0] - 6, h[1] - 6, h[0] + 8, h[1] + 8);
     hq(D.hq.plain); hq(D.main.w);
-    for (const f of base.concat(conn, view.cand ? cand : [])) put(f.x - 3, f.y - 3, f.x + 3, f.y + 3);
+    for (const f of base.concat(conn, view.cand ? cand : [], view.cand && view.res ? resf : [])) put(f.x - 3, f.y - 3, f.x + 3, f.y + 3);
     const t = rgb(C['c-terr']); korImg = img(i => (m[i] && !oth[i] ? [...t, 255] : null));
   }
   let pending = false;
@@ -111,7 +121,7 @@
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
     gx.setTransform(dpr, 0, 0, dpr, 0, 0); gx.fillStyle = C['m-void']; gx.fillRect(0, 0, w, h);
     if (!terrImg) buildBase();
-    const k = String(view.cand); if (!korImg || maskKey !== k) { buildKor(); maskKey = k; }
+    const mk = `${view.cand}${view.res}`; if (!korImg || maskKey !== mk) { buildKor(); maskKey = mk; }
     const m = mat(w, h), s = view.s;
     gx.setTransform(m[0] * dpr, m[1] * dpr, m[2] * dpr, m[3] * dpr, m[4] * dpr, m[5] * dpr); gx.imageSmoothingEnabled = false;
     const put = (im, a = 1) => { gx.globalAlpha = a; gx.drawImage(im, VX, VY, VW, VH); gx.globalAlpha = 1; };
@@ -121,6 +131,7 @@
     for (const f of base) { if (view.each) sq(f.x, f.y, 3, C['c-banner'], 0.8); dot(f.x, f.y, C['c-banner']); }
     for (const e of exPlan) { sq(e.x, e.y, 3, C['c-banner'], 1.4, [4, 3]); }
     if (view.cand) for (const f of cand) { sq(f.x, f.y, 3, C['c-cand'], 1.8, [5, 3]); dot(f.x, f.y, C['c-cand']); }
+    if (view.cand && view.res) for (const f of resf) { sq(f.x, f.y, 3, C.ok, 1.8); dot(f.x, f.y, C.ok); }
     for (const f of conn) { sq(f.x, f.y, 3, C['c-new'], view.each ? 2 : 0.01); dot(f.x, f.y, C['c-new']); }
     for (const hq of D.held) { sq(hq.x + 1, hq.y + 1, 7, C['c-t2'], 2.4); gx.fillStyle = C['c-t2']; gx.fillRect(hq.x, hq.y, 3, 3); }
     if (view.cand) for (const c of D.cands.filter(c => c.rank)) { sq(c.x + 1, c.y + 1, 7, C['c-cand'], 2.4); gx.fillStyle = C['c-cand']; gx.fillRect(c.x, c.y, 3, 3); }
@@ -156,7 +167,7 @@
   cv.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
   function zoomAt(sx, sy, f) { const a = toWorld(sx, sy); view.s = Math.max(0.8, Math.min(40, view.s * f)); const b = toWorld(sx, sy); view.cx += a.x - b.x; view.cy += a.y - b.y; draw(); }
   const toggle = (id, k, after) => $(id).addEventListener('click', () => { view[k] = !view[k]; $(id).setAttribute('aria-pressed', String(view[k])); after ? after() : draw(); });
-  toggle('rot', 'rot', fit); toggle('candb', 'cand', () => { render(); fit(); }); toggle('eachb', 'each'); toggle('othb', 'oth');
+  toggle('rot', 'rot', fit); toggle('candb', 'cand', () => { render(); fit(); }); toggle('resb', 'res', () => { render(); fit(); }); toggle('eachb', 'each'); toggle('othb', 'oth');
   $('fit').addEventListener('click', fit);
   $('zin').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.35));
   $('zout').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.35));
