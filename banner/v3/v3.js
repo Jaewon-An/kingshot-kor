@@ -91,7 +91,7 @@
       `연맹 자원지(2×2 네 칸이 모두 영토 안이어야 셈, 하나당 시간당 3,600): 추천안까지 ${sum(RC.main || [])}곳 → 주변 거점까지 ${sum(RC.cand || [])}곳 → 자원지 보강까지 ${sum(RC.res || [])}곳(${rs(RC.res || [0, 0, 0, 0])}). 지금 게임은 111곳(빵 33·나무 29·돌 30·철 19). 자원지 보강은 빵·나무가 고르게 늘도록 골랐습니다 — 깃발 하나에 빵·나무가 같은 양 들어서 적은 쪽이 병목이기 때문입니다${RV.resSumOnly ? `(합계만 최대로 하면 빵 ${RV.resSumOnly[0]}·나무 ${RV.resSumOnly[1]}곳)` : ''}.`,
       `주변 거점 ${D.cands.filter(c => c.rank).length}곳은 한꺼번에 최소 깃발로 잇도록 계산했습니다(거점 묶음마다 가장 적게 드는 길, 묶음 나누기는 모두 비교). "혼자 붙이면"은 추천안에 그 거점 하나만 이을 때, "차례로 붙이면"은 앞 거점 길을 함께 쓸 때 그 거점 몫(맞닿는 면 보강 포함)입니다. 뺀 거점: THE 소유 3곳(점령 불가), FUN Lv.2 훈련 캠프(점령 중인 것과 종류·레벨 중복), 채집 제단·풍작 제단(보류 — 11-13).`,
       cl.length ? `깃발이 꼭짓점으로만 이어지는 자리 ${cl.length}곳: ${cl.map(c => `${xy(...c.a)} ↔ ${xy(...c.b)}`).join(', ')}. 이 자리가 끊기면 그 뒤 깃발이 본부와 떨어집니다.${RV.noCornerFlags ? ` 꼭짓점 연결을 전혀 안 쓰면 거점 연결 깃발이 ${D.main.flags.length}개 → ${RV.noCornerFlags}개로 늘어납니다.` : ''}` : '꼭짓점으로만 이어지는 자리는 없습니다.',
-      D.resFirst && D.resFirst.segs ? `작업 순서(${D.resFirst.at} 다시 짬): 거점 연결 우선순위대로 ① 평원 본부 → 무기 창고 Lv.4 ② 평원 본부 → 원정 캠프 Lv.3 ③ 원정 캠프 → 연구소 Lv.1 ④ 원정 캠프 → 훈련 캠프 Lv.2 ⑤ 훈련 캠프 → 방어구 창고 Lv.2 ⑥ 방어구 창고 → 무기 창고 Lv.2 ⑦ 황야 본부 이전 ⑧ 평원 본부 → 방어구 창고 Lv.4 ⑨ 방어구 창고 Lv.4 → 연구소 Lv.3 ⑩ 방어구 창고 Lv.4 → 건설소 Lv.3 순서로 짓습니다. 구간마다 그 곁의 자원지 보강 깃발을 함께 넣고, 구간 안에서는 나무·빵 자원지가 빨리 느는 깃발부터(나무 1·빵 0.6·돌 0.05·철 0.02), 한 방향만 이어 가지 않고 여러 방향을 번갈아 둡니다(동시에 여러 개 건설 가능). 빈 칸이 없으면 '빼도 깃발이 안 끊기고 자원지도 안 잃는' 옛 깃발부터 철거합니다. 방어구 창고 Lv.2 ~ 건설소 Lv.1 사이 옛 연결 깃발은 황야 본부 이전(⑦) 뒤에만 철거합니다. 영토 안 연맹 자원지: 다시 짤 때 ${rs(D.resFirst.now)} → 최종 ${rs(D.resFirst.final)}. 남은 건설을 자원지 수입만으로(재고 0, 깃발 1개에 나무·빵 250,800씩) 지으면 약 ${D.resFirst.hours}시간(${(D.resFirst.hours / 24).toFixed(1)}일)입니다 — 나무가 병목입니다. 지도의 숫자는 작업 순서 번호입니다(건설 초록·철거 빨강).` :
+      D.resFirst && D.resFirst.segs ? `작업 순서(${D.resFirst.at} 다시 짬): 거점 연결 우선순위대로 ① 평원 본부 → 무기 창고 Lv.4 ② 평원 본부 → 원정 캠프 Lv.3 ③ 원정 캠프 → 연구소 Lv.1 ④ 원정 캠프 → 훈련 캠프 Lv.2 ⑤ 훈련 캠프 → 방어구 창고 Lv.2 ⑥ 방어구 창고 → 무기 창고 Lv.2 ⑦ 황야 본부 이전 ⑧ 평원 본부 → 방어구 창고 Lv.4 ⑨ 방어구 창고 Lv.4 → 연구소 Lv.3 ⑩ 방어구 창고 Lv.4 → 건설소 Lv.3 순서로 짓습니다. 구간마다 그 곁의 자원지 보강 깃발을 함께 넣고, 구간 안에서는 나무·빵 자원지가 빨리 느는 깃발부터(나무 1·빵 0.6·돌 0.05·철 0.02), 한 방향만 이어 가지 않고 여러 방향을 번갈아 둡니다(동시에 여러 개 건설 가능). 빈 칸이 없으면 '빼도 깃발이 안 끊기고 자원지도 안 잃는' 옛 깃발부터 철거합니다. 방어구 창고 Lv.2 ~ 건설소 Lv.1 사이 옛 연결 깃발은 황야 본부 이전(⑦) 뒤에만 철거합니다. 영토 안 연맹 자원지: 다시 짤 때 ${rs(D.resFirst.now)} → 최종 ${rs(D.resFirst.final)}. 남은 건설을 자원지 수입만으로(재고 0, 깃발 1개에 나무·빵 250,800씩) 지으면 약 ${D.resFirst.hours}시간(${(D.resFirst.hours / 24).toFixed(1)}일)입니다 — 나무가 병목입니다. 지도의 숫자는 작업 순서 번호이고, 테두리 색은 남은 작업입니다(새로 지을 깃발 녹색·철거할 깃발 주황). 모든 거점 연결 뒤에 짓던 자원지 보강 깃발 14개는 뺐습니다(11-14).` :
       D.resFirst ? `작업 순서(${D.resFirst.at} 다시 짬 — 연맹 나무 부족): 여유 깃발 ${D.resFirst.spare}개로 ① 나무·빵 자원지가 빨리 느는 묶음부터 짓습니다(늘어나는 값 ÷ 깃발 수가 큰 순서, 나무 1·빵 0.6·돌 0.05·철 0.02로 셈). 빈 칸이 없으면 '빼도 깃발이 안 끊기고 자원지도 안 잃는' 옛 깃발부터 철거합니다. 황야 본부는 옛 본부 둘레 새 깃발 4개를 지은 직후에 옮기고(옮겨도 끊기는 깃발·잃는 자원지 없음), 방어구 창고 Lv.2 ~ 건설소 Lv.1 사이 옛 연결 깃발은 본부 이전 뒤에만 철거합니다(먼저 빼면 건설소가 끊김). 그다음 ② 거점 연결 길 → ③ 자원지 보강 → ④ 주변 거점 연결 → ⑤ 보강 순서입니다. 영토 안 연맹 자원지: 다시 짤 때 ${rs(D.resFirst.now)} → 최종 ${rs(D.resFirst.final)}. 단계마다 자원지 수가 바뀌면 '나무 +1 → 나무 n·빵 m'처럼 적었습니다.` :
       '작업 순서 ⑥~⑧: 추천안(①~⑤)을 마친 뒤 ⑥ 추천안 영토에서 바로 이을 수 있는 자원지 보강 묶음(빵·나무 수입을 먼저 늘림, 값이 큰 묶음부터) → ⑦ 주변 거점 연결(영토가 닿아야 공격해 점령할 수 있음) → ⑧ 주변 거점 길에서 이어 가는 자원지 보강 묶음. ⑥~⑧의 깃발 수 표시는 ④에서 옛 깃발을 모두 철거했다고 보고 센 값입니다.',
       '깃발 1개 비용(276~285개 구간, 팬 사이트 표): 빵·나무 250,800, 돌 167,200, 철 91,200. 건설 약 33분.',
@@ -103,7 +103,7 @@
     const n = PLAN.flags.length, lo = D.count.now - D.count.v2 - D.count.extra, hi = D.count.now - D.count.v2;   // 게임 총 깃발 − 평원 쪽(v2·여분)
     const upN = D.up.used.length + D.up.unused.length;   // 지금 연결에 쓰는 v2 위쪽 깃발(새 안에서는 PLAN.flags에 포함된 것만 남음)
     $('facts').innerHTML = [
-      ['--c-new', '새 경로 깃발', `${n}개`], ['--c-old', '지금 거점 연결 깃발', `약 ${lo + upN}~${hi + upN}개`], ['--ok', '줄어드는 깃발', `약 ${lo + upN - n}~${hi + upN - n}개`],
+      ['--ok', '새 경로 깃발', `${n}개`], ['--c-old', '지금 거점 연결 깃발', `약 ${lo + upN}~${hi + upN}개`], ['--c-new', '줄어드는 깃발', `약 ${lo + upN - n}~${hi + upN - n}개`],
       ['--c-wild', '황야 본부', PLAN.w && (PLAN.w[0] !== D.hq.wild[0] || PLAN.w[1] !== D.hq.wild[1]) ? `${xy(...PLAN.w)}로 이전` : '그대로'],
     ].map(([c, k, v]) => `<div><dt><i style="background:var(${c})"></i>${k}</dt><dd>${v}</dd></div>`).join('');
   }
@@ -254,8 +254,14 @@
     sq(D.hq.wild[0] + 1, D.hq.wild[1] + 1, 7, C['c-wild'], 1.6, [5, 4]); gx.fillStyle = C['c-wild']; gx.globalAlpha = 0.5; gx.fillRect(D.hq.wild[0], D.hq.wild[1], 3, 3); gx.globalAlpha = 1;
     if (PLAN.w) { sq(PLAN.w[0] + 1, PLAN.w[1] + 1, 7, C['c-wild'], 3.2); gx.fillStyle = C['c-wild']; gx.fillRect(PLAN.w[0], PLAN.w[1], 3, 3); }
     // 새 경로
-    for (const [x, y] of PLAN.flags) { sq(x, y, 3, C['c-new'], 2.2); dot(x, y, C['c-new']); }
-    if (planKey === 'main' && stepCur) { const p = stepCur, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = p.op === 'remove' || p.op === 'sweep' ? C.bad : p.op === 'build' ? C.ok : C['c-wild']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 4, 0, Math.PI * 2); gx.stroke(); }
+    // 11-14: 남은 작업을 테두리 색으로 — 새로 지을 깃발 녹색, 철거할 깃발 주황, 이미 지은 새 경로 깃발은 회색 실선
+    if (planKey === 'main' && steps) {
+      const tb = new Set(); for (let i = done; i < steps.length; i++) if (steps[i].op === 'build') tb.add(steps[i].x + ',' + steps[i].y);
+      for (const [x, y] of PLAN.flags) if (!tb.has(x + ',' + y)) { sq(x, y, 3, C['c-old'], 1.6); dot(x, y, C['c-old']); }
+      for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op === 'remove') { sq(st.x, st.y, 3, C['c-new'], 2.2); dot(st.x, st.y, C['c-new']); } }
+      for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op === 'build') { sq(st.x, st.y, 3, C.ok, 2.2); dot(st.x, st.y, C.ok); } }
+    } else for (const [x, y] of PLAN.flags) { sq(x, y, 3, C['c-new'], 2.2); dot(x, y, C['c-new']); }
+    if (planKey === 'main' && stepCur) { const p = stepCur, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = p.op === 'remove' || p.op === 'sweep' ? C['c-new'] : p.op === 'build' ? C.ok : C['c-wild']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 4, 0, Math.PI * 2); gx.stroke(); }
     if (view.mark) { gx.strokeStyle = C['c-pick']; gx.lineWidth = 3 / s; gx.strokeRect(view.mark.x, view.mark.y, 1, 1); gx.beginPath(); gx.arc(view.mark.x + 0.5, view.mark.y + 0.5, 3, 0, Math.PI * 2); gx.stroke(); }
     // 글자
     gx.setTransform(dpr, 0, 0, dpr, 0, 0); gx.textAlign = 'center'; gx.textBaseline = 'middle';
@@ -265,7 +271,7 @@
     label(D.hq.plain[0] + 1.5, D.hq.plain[1] - 8, '평원 본부', C['c-hq']);
     label(D.hq.wild[0] + 1.5, D.hq.wild[1] - 8, '황야 본부(지금)', C['c-wild']);
     if (PLAN.w && (PLAN.w[0] !== D.hq.wild[0] || PLAN.w[1] !== D.hq.wild[1])) label(PLAN.w[0] + 1.5, PLAN.w[1] - 8, '황야 본부(새 자리)', C['c-wild']);
-    // 작업 순서 번호(11-14): 남은 단계의 깃발 자리에 번호 — 건설 초록, 철거 빨강. 멀리서 보면 다음 30단계만, 가까이 보면 모두.
+    // 작업 순서 번호(11-14): 남은 단계의 깃발 자리에 번호 — 건설 초록, 철거 주황. 멀리서 보면 다음 30단계만, 가까이 보면 모두.
     if (planKey === 'main' && steps) {
       const all = s >= 3.2, fs = Math.max(9, Math.min(15, s * 2.2));
       gx.font = `700 ${fs}px "IBM Plex Sans KR", sans-serif`; gx.lineJoin = 'round';
@@ -275,7 +281,7 @@
         const px = m[0] * (st.x + 0.5) + m[2] * (st.y + 0.5) + m[4], py = m[1] * (st.x + 0.5) + m[3] * (st.y + 0.5) + m[5];
         if (px < -20 || py < -20 || px > w + 20 || py > h + 20) continue;
         gx.lineWidth = 3; gx.strokeStyle = C.bg; gx.strokeText(i + 1, px, py);
-        gx.fillStyle = st.op === 'build' ? C.ok : C.bad; gx.fillText(i + 1, px, py);
+        gx.fillStyle = st.op === 'build' ? C.ok : C['c-new']; gx.fillText(i + 1, px, py);
       }
     }
   }
