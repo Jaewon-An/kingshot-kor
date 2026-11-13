@@ -264,6 +264,19 @@
     label(D.hq.plain[0] + 1.5, D.hq.plain[1] - 8, '평원 본부', C['c-hq']);
     label(D.hq.wild[0] + 1.5, D.hq.wild[1] - 8, '황야 본부(지금)', C['c-wild']);
     if (PLAN.w && (PLAN.w[0] !== D.hq.wild[0] || PLAN.w[1] !== D.hq.wild[1])) label(PLAN.w[0] + 1.5, PLAN.w[1] - 8, '황야 본부(새 자리)', C['c-wild']);
+    // 작업 순서 번호(11-14): 남은 단계의 깃발 자리에 번호 — 건설 초록, 철거 빨강. 멀리서 보면 다음 30단계만, 가까이 보면 모두.
+    if (planKey === 'main' && steps) {
+      const all = s >= 3.2, fs = Math.max(9, Math.min(15, s * 2.2));
+      gx.font = `700 ${fs}px "IBM Plex Sans KR", sans-serif`; gx.lineJoin = 'round';
+      for (let i = steps.length - 1; i >= done; i--) {
+        const st = steps[i]; if (st.op !== 'build' && st.op !== 'remove') continue;
+        if (!all && i >= done + 30) continue;
+        const px = m[0] * (st.x + 0.5) + m[2] * (st.y + 0.5) + m[4], py = m[1] * (st.x + 0.5) + m[3] * (st.y + 0.5) + m[5];
+        if (px < -20 || py < -20 || px > w + 20 || py > h + 20) continue;
+        gx.lineWidth = 3; gx.strokeStyle = C.bg; gx.strokeText(i + 1, px, py);
+        gx.fillStyle = st.op === 'build' ? C.ok : C.bad; gx.fillText(i + 1, px, py);
+      }
+    }
   }
   // 이미지 행 순서: putImageData는 위→아래로 행 0..VH-1 = Y VY..VY+VH-1, 지도 변환이 y를 위로 뒤집으므로 그대로 맞음
 
