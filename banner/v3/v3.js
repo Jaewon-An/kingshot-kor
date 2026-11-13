@@ -2,6 +2,7 @@
  * data: view{x0..y1}, hq{plain, wild(지금), wildNew}, held[{name,x,y}](점령 거점 3×3 모서리), cands[{name,x,y,add,rank,flags}](주변 미점령 거점, 더 잇는 데 드는 깃발),
  *   v2(평원 본부 쪽 깃발 — 그대로), now(지금 깃발: 화면에서 추정), main/alts/stay/all6(연결안: w 황야 본부, flags, cost, A 평원 쪽 거점, B 황야 쪽, direct 바로 닿음),
  *   res{now,new}(영토 안 연맹 자원지 [빵,나무,돌,철]), steps(작업 순서 — main 기준), others/known/kor([y,x0,x1] 줄).
+ *   11-13: assume.swap(무기 창고 교환 가정), gave, corners[{a,b,grp}], resfill.groups[{flags,got,early}], steps phase ⑥~⑧·op sweep, review.
  * 지형·연맹 자원지는 mapdata.js(KSPlan.loadMap). 진행은 이 브라우저 localStorage.
  */
 (function () {
@@ -34,13 +35,14 @@
   }
 
   // ---------- 연결안 ----------
-  const PLANS = () => [   // 11-11 사용자: 추천안만 남김
-    ['main', D.main, `추천: 황야 본부 → ${xy(...D.main.w)}`, `깃발 ${D.main.flags.length}개(새로 ${D.main.flags.length - D.up.used.length} + v2 위쪽 ${D.up.used.length}개 그대로)로 점령 거점 5곳 연결, v2 위쪽 ${D.up.unused.length}개 철거 (Lv.2 무기 창고 X:867은 지금처럼 연결 없이 유지)`],
-  ];
+  const PLANS = () => {   // 11-11 사용자: 추천안만 남김 · 11-13: 무기 창고 교환 가정
+    const had = new Set([...D.v2, ...D.now].map(f => f[0] * G + f[1])), keep = D.main.flags.filter(f => had.has(f[0] * G + f[1])).length, sw = (D.assume || {}).swap;
+    return [['main', D.main, `추천: 황야 본부 → ${xy(...D.main.w)}`, `깃발 ${D.main.flags.length}개(새로 ${D.main.flags.length - keep} + 지금 있는 ${keep}개 그대로)로 점령 거점 ${D.held.length}곳 연결, v2 위쪽 ${D.up.unused.length}개 철거${sw ? ` — ${sw.with}과 무기 창고 교환(${xy(...sw.give)} ↔ ${xy(...sw.take)}) 성사 가정` : ''}`]];
+  };
   function setPlan(k) { planKey = k; PLAN = PLANS().find(p => p[0] === k)[1]; renderFacts(); renderFlags(); $('stepbox').hidden = k !== 'main'; draw(); }
 
   function setup() {
-    $('stamp').textContent = `${D.updated} 게임 화면 기준 · 점령 거점 6곳`;
+    $('stamp').textContent = `${D.updated} 기준 · 점령 거점 ${D.held.length}곳${(D.assume || {}).swap ? ' (무기 창고 교환 가정)' : ''}`;
     $('plans').innerHTML = PLANS().map(([k, p, t, s]) => `<label><span><b>${t}</b><small>${s}</small></span></label>`).join('');
     // 주변 거점
     const cs = D.cands.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99));
@@ -54,12 +56,12 @@
     // 거점 종류 요약: 추천안 + 이을 수 있는 주변 거점까지 모두 이은 뒤
     const TYPES = ['건설소', '방어구 창고', '연구소', '무기 창고', '훈련 캠프', '원정 캠프', '채집 제단', '풍작 제단'];
     const typeOf = n => TYPES.find(t => n.includes(t)) || '기타', lvOf = n => (n.match(/Lv\.\d/) || [''])[0];
-    const ownOf = n => (n.match(/\((\w+)\)/) || [, ''])[1];
+    const ownOf = n => (n.match(/\(([^)]*)\)/) || [, ''])[1];
     const rows = TYPES.map(t => {
-      const on = D.held.filter(h => typeOf(h.name) === t && D.main.flags.length && !(h.x === 867 && h.y === 1068)).map(h => lvOf(h.name));
-      const heldOff = D.held.filter(h => typeOf(h.name) === t && h.x === 867 && h.y === 1068).map(h => `${lvOf(h.name)} (연결 없이 점령 유지)`);
+      const on = D.held.filter(h => typeOf(h.name) === t).map(h => lvOf(h.name));
+      const heldOff = [];
       const add = D.cands.filter(c => typeOf(c.name) === t && c.rank).map(c => `${lvOf(c.name)} ${ownOf(c.name)} +${c.add}`);
-      const no = D.cands.filter(c => typeOf(c.name) === t && !c.rank).map(c => `${lvOf(c.name)} ${ownOf(c.name)}`).concat((D.excluded || []).filter(c => typeOf(c.name) === t).map(c => `${lvOf(c.name)} ${ownOf(c.name)}(제외)`));
+      const no = D.cands.filter(c => typeOf(c.name) === t && !c.rank).map(c => `${lvOf(c.name)} ${ownOf(c.name)}`).concat((D.gave || []).filter(c => typeOf(c.name) === t).map(c => `${lvOf(c.name)} ${xy(c.x, c.y)} — 교환으로 FUN에 넘김`)).concat((D.excluded || []).filter(c => typeOf(c.name) === t).map(c => `${lvOf(c.name)} ${ownOf(c.name)}${ownOf(c.name).includes('·') ? '' : ' (제외)'}`));
       const got = on.length + add.length > 0;
       return { t, got, html: `<tr class="${got ? '' : 'no'}"><td><b>${t}</b></td><td>${[...on.map(v => `${v} 점령`), ...heldOff, ...add.map(v => `${v} 더 이음`)].join('<br>') || '<b class="warn">없음</b>'}</td><td>${no.join('<br>') || '—'}</td></tr>` };
     });
@@ -68,24 +70,27 @@
     $('types').innerHTML = '<tr><th>종류</th><th>연결됨 (추천안 + 더 잇기)</th><th>못 이음 (소유)</th></tr>' + rows.map(r => r.html).join('');
     $('fl').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x, +b.dataset.y); });
     const r = D.res, sum = a => a.reduce((s, v) => s + v, 0), rs = a => `빵 ${a[0]}·나무 ${a[1]}·돌 ${a[2]}·철 ${a[3]}`;
+    const sw = (D.assume || {}).swap, RC = (D.resfill || {}).count || {}, RV = D.review || {}, cl = D.corners || [];
+    const arm = sw ? D.held.find(h => h.x === sw.take[0] && h.y === sw.take[1]) : null;
     $('check').innerHTML = [
-      `점령 거점 6곳(게임 '거점 쟁탈 → 점령 완료'에서 확인): ${D.held.map(h => `${h.name} ${xy(h.x, h.y)}`).join(', ')}.`,
-      'Lv.2 무기 창고(X:867 Y:1068)는 바로 옆이 KR6 본부·영토라 지금도 KOR 영토와 이어져 있지 않은데 점령이 유지되고 있습니다. 그래서 추천안은 나머지 5곳만 잇고, 6곳 전부 잇는 안은 따로 보여 줍니다.',
-      `v2 깃발은 곰덫 주변만 지키고, 본부 북쪽 위쪽 깃발 ${D.up.used.length + D.up.unused.length}개(예전 거점 연결용, 곰덫2 안전 반경 42칸 밖)는 새 경로에 쓰는 ${D.up.used.length}개만 남기고 ${D.up.unused.length}개는 ⑤에서 본부에서 먼 것부터 철거합니다(11-11 사용자: 필요하면 바깥쪽부터 철거 가능). /banner/v1·v2는 이전 이력 확인용으로만 두고 고치지 않습니다.`,
-      '두 본부 모두 영토의 뿌리입니다(지금 황야 본부 쪽 깃발 덩어리는 평원 본부와 끊겨 있는데도 유지됨). 그래서 거점마다 평원 본부 쪽이나 황야 본부 쪽 중 한 곳에 깃발로 이어지면 되는 것으로 계산했습니다.',
-      `거점과 맞닿는 면: 남는 깃발로 점령 거점마다 금지 구역과 맞닿는 길이를 깃발 두 개 폭(13칸 이상)으로 넓혔습니다 — ${Object.entries(D.main.contact || {}).map(([k, v]) => `${k} ${v}칸`).join(', ')} (보강 깃발 ${(D.main.reinforce || []).length}개 포함).`,
-      `깃발 영역 겹침: 깃발 수와 연결은 그대로 두고 깃발마다 ±3칸 옮겨 보며 다른 깃발·평원 쪽 v2 영토·황야 본부 영역과 겹치는 칸을 줄였습니다 — 추천안 ${D.main.overlap ? `${D.main.overlap[0]}칸 → ${D.main.overlap[1]}칸` : '0칸'}(이미 있는 v2 위쪽 깃발은 고정). 주변 거점 연결 깃발도 같은 방법으로 0칸.`,
-      '연결 규칙: 깃발 영역 7×7은 변이 1칸 이상 맞닿아야 이어진 것으로 봄(꼭짓점만 닿아도 게임에서는 이어지므로 금지하지 않고, 깃발 0.6개 몫 감점만 줘서 깃발이 줄 때만 씀 — 11-12 사용자 규칙). 금지 구역(거점 15×15·성채 60) 안에는 영토가 안 생기므로 깃발 영역은 금지 구역과 한 칸도 겹치지 않게 놓고, 깃발끼리·거점과는 금지 구역 밖에서 맞닿게 함(11-11 사용자 지적 반영). 거점은 금지 구역 바로 바깥에 영토가 맞닿으면 연결. 깃발은 산·호수·연맹 자원지·구조물·금지 구역(거점 15, 성채·성소 60)에 못 세움. 성채·유적으로는 잇지 않음.',
-      '다른 연맹 영토는 PC 화면(11-11, 110단계 축소 지도 18장)의 덧칠 색으로 읽었고, 새 깃발의 7×7 영역은 다른 연맹 칸과 겹치지 않게 잡았습니다(11-12: 1칸 여유 조건 삭제 — 바로 붙는 자리 허용). 11-12 고침: 풀밭 위 EoB 노란 영토(색 H60·채도 0.64)를 절반쯤 땅으로 읽고 있어 노란색을 따로 잡도록 고쳤습니다 — 그 때문에 노란 영토를 지나던 Lv.3 연구소(NYX) 길을 돌아가는 길로 바꿨습니다(추천안 경로는 그대로). 다른 연맹은 계속 깃발을 늘리니 짓기 전에 그 자리가 비어 있는지 게임에서 확인하세요.',
-      `지금 거점 연결 깃발은 게임 총 ${D.count.now}개에서 평원 쪽(v2 ${D.count.v2}개·여분 최대 ${D.count.extra}개)을 뺀 약 ${D.count.now - D.count.v2 - D.count.extra}~${D.count.now - D.count.v2}개입니다. 지도에 회색 점선으로 그린 ${D.now.length}개는 화면의 KOR 영토 모양을 7×7 최소 개수로 덮어 추정한 것이라(많이 겹친 깃발은 하나로 잡힘) 실제보다 적고 좌표도 1~3칸 다를 수 있습니다. ④ 철거는 "새 경로(주황)에 없는 거점 연결 깃발은 모두 철거"가 기준이고, 목록 좌표는 찾아가는 길잡이입니다.`,
-      `황야 본부 자리는 황야(왕국 300~899 평원 고리 밖) 중 3×3이 비어 있고 영토 15×15에 다른 연맹이 없는 곳 ${'1.9만'}여 곳을 모두 계산해 골랐습니다. ${D.plainOnly ? `평원 본부 하나로만 5곳을 이으면 깃발 약 ${D.plainOnly}개가 듭니다.` : '황야 본부 없이 평원 본부 하나로는 5곳을 다 이을 수 없습니다(건설소·방어구 창고 둘레가 다른 연맹 영토·금지 구역에 막힘).'}${D.stay ? '' : ' 황야 본부를 지금 자리에 두면 5곳을 다 이을 수 없어 이전이 필요합니다.'}`,
-      `연맹 자원지(깃발 범위 안에 있어야 깃발 추가·자원 생산): 새 경로 영토 안 ${sum(r.new)}곳(${rs(r.new)}) · 지금 ${sum(r.now)}곳(${rs(r.now)}). 같은 깃발 수라면 자원지를 더 많이 덮는 자리를 고르게 했습니다.`,
-      '주변 거점 더 잇기: "혼자 붙이면"은 추천안에 그 거점 하나만 이을 때, "차례로 붙이면"은 가장 적게 드는 거점부터 하나씩 붙여 앞 거점 길을 함께 쓸 때 더 드는 깃발입니다동쪽 Lv.3 연구소(X:867 Y:867)는 THE 소유라 뺐습니다. FUN의 Lv.2 훈련 캠프(X:768 Y:1038)는 점령 중인 Lv.2 훈련 캠프와 종류·레벨이 같아(중복) 뺐고, 채집 제단·풍작 제단(FUN)은 일단 보류입니다(11-13). 무기 창고 Lv.2는 우리 거점(X:867 Y:1068, 59개)보다 FUN 거점(14개)을 잇는 쪽이 깃발이 적게 들어 FUN 쪽으로 잡았습니다. Lv.3 건설소(NYX, X:327 Y:666)는 11-13에 추가했습니다. "지금은 못 이음"은 다른 연맹 영토에 막혀 있거나 화면에서 확인하지 못한 곳입니다.',
-      `Lv.2 무기 창고(FUN, X:438 Y:1068): 지금 KOR 깃발 X:440 Y:1080이 북쪽 변에 닿아 있습니다(게임에서 확인). 이 깃발을 그대로 쓰고 깃발 ${(D.cands.find(c => c.name.startsWith('Lv.2 무기 창고')) || {}).add}개로 잇습니다. 남쪽·동쪽 둘레는 FN5(X:438 Y:1058)·CMS(X:445 Y:1058·X:450 Y:1064) 땅이라 북쪽으로만 닿습니다.`,
-      (() => { const cl = [...(D.main.corner || []), ...D.cands.filter(c => c.rank).flatMap(c => c.corner || [])]; return cl.length ? `깃발이 꼭짓점으로만 이어지는 자리 ${cl.length}곳: ${cl.map(([p, q]) => `${xy(...p)} ↔ ${xy(...q)}`).join(', ')}.` : '꼭짓점으로만 이어지는 자리는 없습니다.'; })(),
+      sw ? `<b>가정:</b> ${sw.with}과 Lv.2 무기 창고 교환이 성사된 것으로 계산했습니다 — 우리 무기 창고(${xy(...sw.give)})를 넘기고 ${sw.with} 무기 창고(${xy(...sw.take)})를 받습니다. <b>작업 순서는 교환을 끝낸 뒤 시작하세요</b> — 먼저 시작하면 ① 도중에 ${xy(...sw.kept)} 깃발이 한동안 본부와 끊겨, 받는 거점을 공격할 때 영토가 닿지 않을 수 있습니다. 교환이 안 되면 다시 계산해야 합니다.` : '',
+      `점령 거점 ${D.held.length}곳: ${D.held.map(h => `${h.name} ${xy(h.x, h.y)}`).join(', ')}.`,
+      sw && arm ? `받는 Lv.2 무기 창고(${xy(...sw.take)}): 지금 KOR 깃발 ${xy(...sw.kept)}이 북쪽 변에 닿아 있습니다(게임에서 확인). 이 깃발은 그대로 두고 여기까지 잇습니다. 남쪽·동쪽 둘레는 FN5(X:438 Y:1058)·CMS(X:445 Y:1058·X:450 Y:1064) 땅(게임에서 확인)이고 서쪽은 FUN 영토라, 맞닿는 길이는 ${(D.main.contact || {})[arm.name]}칸이 한계입니다.` : '',
+      `v2 깃발은 곰덫 주변만 지키고, 본부 북쪽 위쪽 깃발 ${D.up.used.length + D.up.unused.length}개(예전 거점 연결용, 곰덫2 안전 반경 42칸 밖)는 새 계획에 쓰는 ${D.up.used.length}개만 남기고 ${D.up.unused.length}개는 ⑤에서 본부에서 먼 것부터 철거합니다. /banner/v1·v2는 이전 이력 확인용으로만 두고 고치지 않습니다.`,
+      '두 본부 모두 영토의 뿌리입니다(지금 황야 본부 쪽 깃발 덩어리는 평원 본부와 끊겨 있는데도 유지됨). 그래서 거점마다 평원 본부 쪽이나 황야 본부 쪽 중 한 곳에 이어지면 되는 것으로 계산했습니다.',
+      `황야 본부 자리: 황야(왕국 300~899 평원 고리 밖) 중 3×3이 비어 있고 영토 15×15에 다른 연맹·금지 구역이 없는 ${RV.wCount ? RV.wCount.toLocaleString('ko-KR') : '수만'}곳을 모두 계산해 골랐습니다${D.main.direct && D.main.direct.length ? ` — 새 자리는 본부 영토가 ${D.main.direct.join('·')} 금지 구역에 변으로 바로 닿아 깃발 없이 이어집니다` : ''}.${RV.plainOnly ? ` 평원 본부 하나로만 ${D.held.length}곳을 다 이으면 깃발 약 ${Math.round(RV.plainOnly)}개가 듭니다.` : ''}`,
+      `거점과 맞닿는 길이(금지 구역 둘레 칸 중 우리 영토인 칸, 최종 영토 기준 · 13칸 이상이 목표): ${Object.entries(D.main.contact || {}).map(([k, v]) => `${k} ${v}칸`).join(', ')} (보강 깃발 ${(D.main.reinforce || []).length}개 포함). 11-13 고침: 이전 판은 뒤 거점을 보강하다 앞 거점의 보강 깃발이 지워져, 표시(방어구 창고 19칸·연구소 15칸)와 실제(7칸·1칸)가 달랐습니다.`,
+      `깃발 영역 겹침: 깃발마다 ±3칸 옮겨 보며 줄였습니다 — 거점 연결 깃발끼리·평원 쪽 v2 영토·황야 본부 영역과 ${D.main.overlap ? D.main.overlap[1] : 0}칸, 주변 거점·자원지 보강까지 합쳐 ${D.overlapAll}칸. 다듬는 순서는 자원지(빵·나무 우선) → 꼭짓점 연결 수 → 겹침 → 맞닿는 변입니다(11-12 규칙).`,
+      '연결 규칙: 깃발 영역 7×7은 변이 1칸 이상 맞닿으면 이어집니다. 꼭짓점만 닿아도 게임에서는 이어지므로 금지하지 않고, 깃발 0.6개 몫 감점만 줘서 깃발이 줄 때만 씁니다(11-12 규칙). 금지 구역(거점 15×15·성채 60) 안에는 영토가 안 생기므로 깃발 영역은 금지 구역과 한 칸도 겹치지 않게 놓고, 거점은 금지 구역 바로 바깥에 영토가 변으로 맞닿으면 연결입니다. 깃발은 산·호수·연맹 자원지·구조물·금지 구역에 못 세웁니다. 성채·유적으로는 잇지 않습니다.',
+      `다른 연맹 영토는 PC 화면(11-11, 북서쪽은 11-13 · 110단계 축소 지도)의 덧칠 색으로 읽었고, 새 깃발의 7×7 영역은 다른 연맹 칸과 겹치지 않게 잡았습니다(1칸 여유 없음 — 11-12 규칙). 게임에서 눌러 확인한 칸(CMS X:445 Y:1058·X:450 Y:1064)은 화면 판독보다 우선해 다른 연맹 땅으로 넣었습니다. <b>거점 아이콘·이름표에 가린 둘레와, 다른 연맹 영토에 바로 붙는 자리는 화면 판독이 1칸쯤 틀릴 수 있습니다. 짓기 전에 그 자리를 눌러 '소속 연맹'을 확인하세요.</b>${D.verify ? ` 새로 짓는 ${D.verify.builds}개 중 ${D.verify.any}개가 그런 자리입니다(다른 연맹에 바로 붙음 ${D.verify.adj}개, 가려진 둘레 ${D.verify.hid}개 — 작업 순서에 ⚠ 표시).` : ''} 다른 연맹은 계속 깃발을 늘립니다.`,
+      `지금 거점 연결 깃발은 게임 총 ${D.count.now}개에서 평원 쪽(v2 ${D.count.v2}개·여분 최대 ${D.count.extra}개)을 뺀 약 ${D.count.now - D.count.v2 - D.count.extra}~${D.count.now - D.count.v2}개입니다. 지도에 회색 점선으로 그린 ${D.now.length}개는 화면의 KOR 영토 모양을 7×7 최소 개수로 덮어 추정한 것이라(많이 겹친 깃발은 하나로 잡힘) 실제보다 적고 좌표도 1~3칸 다를 수 있습니다. 그래서 ④ 끝에 '남은 옛 깃발 정리' 단계를 넣었습니다 — 새 계획에 없는 거점 연결 깃발은 목록에 없어도 모두 철거합니다.`,
+      `연맹 자원지(2×2 네 칸이 모두 영토 안이어야 셈, 하나당 시간당 3,600): 추천안까지 ${sum(RC.main || [])}곳 → 주변 거점까지 ${sum(RC.cand || [])}곳 → 자원지 보강까지 ${sum(RC.res || [])}곳(${rs(RC.res || [0, 0, 0, 0])}). 지금 게임은 111곳(빵 33·나무 29·돌 30·철 19). 자원지 보강은 빵·나무가 고르게 늘도록 골랐습니다 — 깃발 하나에 빵·나무가 같은 양 들어서 적은 쪽이 병목이기 때문입니다${RV.resSumOnly ? `(합계만 최대로 하면 빵 ${RV.resSumOnly[0]}·나무 ${RV.resSumOnly[1]}곳)` : ''}.`,
+      `주변 거점 ${D.cands.filter(c => c.rank).length}곳은 한꺼번에 최소 깃발로 잇도록 계산했습니다(거점 묶음마다 가장 적게 드는 길, 묶음 나누기는 모두 비교). "혼자 붙이면"은 추천안에 그 거점 하나만 이을 때, "차례로 붙이면"은 앞 거점 길을 함께 쓸 때 그 거점 몫(맞닿는 면 보강 포함)입니다. 뺀 거점: THE 소유 3곳(점령 불가), FUN Lv.2 훈련 캠프(점령 중인 것과 종류·레벨 중복), 채집 제단·풍작 제단(보류 — 11-13).`,
+      cl.length ? `깃발이 꼭짓점으로만 이어지는 자리 ${cl.length}곳: ${cl.map(c => `${xy(...c.a)} ↔ ${xy(...c.b)}`).join(', ')}. 이 자리가 끊기면 그 뒤 깃발이 본부와 떨어집니다.${RV.noCornerFlags ? ` 꼭짓점 연결을 전혀 안 쓰면 거점 연결 깃발이 ${D.main.flags.length}개 → ${RV.noCornerFlags}개로 늘어납니다.` : ''}` : '꼭짓점으로만 이어지는 자리는 없습니다.',
+      '작업 순서 ⑥~⑧: 추천안(①~⑤)을 마친 뒤 ⑥ 추천안 영토에서 바로 이을 수 있는 자원지 보강 묶음(빵·나무 수입을 먼저 늘림, 값이 큰 묶음부터) → ⑦ 주변 거점 연결(영토가 닿아야 공격해 점령할 수 있음) → ⑧ 주변 거점 길에서 이어 가는 자원지 보강 묶음. ⑥~⑧의 깃발 수 표시는 ④에서 옛 깃발을 모두 철거했다고 보고 센 값입니다.',
       '깃발 1개 비용(276~285개 구간, 팬 사이트 표): 빵·나무 250,800, 돌 167,200, 철 91,200. 건설 약 33분.',
-    ].map(s => `<li>${s}</li>`).join('');
-    $('src').textContent = '지형·연맹 자원지·거점 위치: mapdata.js(ksmapper). 영토·깃발: 2026-11-11 PC 게임 화면에서 읽음.';
+    ].filter(Boolean).map(s => `<li>${s}</li>`).join('');
+    $('src').textContent = '지형·연맹 자원지·거점 위치: mapdata.js(ksmapper). 영토·깃발: 2026-11-11(북서쪽 11-13) PC 게임 화면에서 읽음.';
     setupSteps(); setPlan('main');
   }
   function renderFacts() {
@@ -98,20 +103,20 @@
   }
   function renderFlags() {
     $('flsum').textContent = `${PLAN.flags.length}개`;
-    const nowSet = new Set(D.now.map(f => f[0] * G + f[1]));
+    const nowSet = new Set([...D.now, ...D.v2].map(f => f[0] * G + f[1]));
     $('fl').innerHTML = PLAN.flags.map(f => `<li><button class="lnk" data-x="${f[0]}" data-y="${f[1]}">${xy(f[0], f[1])}</button>${nowSet.has(f[0] * G + f[1]) ? ' <small>(지금 있음)</small>' : ''}</li>`).join('');
   }
 
   // ---------- 작업 순서 ----------
   let steps, done = 0, stepCur = null;
-  const OP = { build: '깃발 건설', remove: '깃발 철거', hq: '황야 본부 이전' };
-  const PHASE = { 1: '① 평원 본부 쪽 새 경로 건설 (빈 칸 없으면 옛 깃발 먼저 철거)', 2: '② 황야 본부 이전', 3: '③ 새 황야 본부 쪽 경로 건설', 4: '④ 남은 옛 거점 연결 깃발 철거', 5: '⑤ v2 위쪽 깃발 정리 (곰덫 반경 밖 · 본부에서 먼 것부터)' };
+  const OP = { build: '깃발 건설', remove: '깃발 철거', hq: '황야 본부 이전', sweep: '남은 옛 깃발 정리' }, opc = st => (st.op === 'sweep' ? 'remove' : st.op);
+  const PHASE = { 1: '① 평원 본부 쪽 새 경로 건설 (빈 칸 없으면 옛 깃발 먼저 철거)', 2: '② 황야 본부 이전', 3: '③ 새 황야 본부 쪽 경로 건설', 4: '④ 남은 옛 거점 연결 깃발 철거', 5: '⑤ v2 위쪽 깃발 정리 (곰덫 반경 밖 · 본부에서 먼 것부터)', 6: '⑥ 자원지 보강 — 추천안 영토에서 바로 잇는 묶음 (빵·나무 우선)', 7: '⑦ 주변 거점 연결 (닿아야 공격해 점령 가능)', 8: '⑧ 자원지 보강 — 주변 거점 길에서 잇는 묶음' };
   const KEY = 'banner-v3-steps', keyOf = st => `${st.op}${st.x},${st.y}`;
   function setupSteps() {
     steps = D.steps;
     try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && Array.isArray(v.keys)) while (done < steps.length && v.keys[done] === keyOf(steps[done])) done++; } catch (_) { /* 저장소 못 씀 */ }
     let ph = 0;
-    $('stepl').innerHTML = steps.map((st, i) => `${st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : ''}<li value="${i + 1}" data-k="${i}"><button class="lnk" data-k="${i}"><b class="opw op-${st.op}">${OP[st.op].slice(-2)}</b> ${where(st)}</button></li>`).join('');
+    $('stepl').innerHTML = steps.map((st, i) => `${st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : ''}<li value="${i + 1}" data-k="${i}"><button class="lnk" data-k="${i}"><b class="opw op-${opc(st)}">${OP[st.op].slice(-2)}</b> ${where(st)}${st.chk ? ' <small title="짓기 전에 이 자리를 눌러 소속 연맹 확인">⚠</small>' : ''}${st.phase >= 6 && st.why ? ` <small>${st.why}</small>` : ''}</button></li>`).join('');
     $('stepl').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { const st = steps[+b.dataset.k]; goTo(st.x, st.y); } });
     $('stepcopy').addEventListener('click', () => { if (steps[done]) copy(steps[done]); });
     $('stepdone').addEventListener('click', () => { if (done < steps.length) { done++; save(); renderStep(); if (steps[done]) copy(steps[done], `${done}번 완료 · `); } });
@@ -119,7 +124,7 @@
     $('stepmap').addEventListener('click', () => { const st = steps[done]; if (st) goTo(st.x, st.y); });
     renderStep();
   }
-  const where = st => (st.op === 'hq' ? `${xy(...st.from)} → ${xy(st.x, st.y)}` : xy(st.x, st.y));
+  const where = st => (st.op === 'hq' ? `${xy(...st.from)} → ${xy(st.x, st.y)}` : st.op === 'sweep' ? `약 ${st.left}개 — 목록에 없어도 새 계획 밖 거점 연결 깃발은 모두 철거` : xy(st.x, st.y));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf) })); } catch (_) { /* 저장소 못 씀 */ } };
   function copy(st, pre = '') {
     const t = `X:${st.x} Y:${st.y}`;
@@ -129,9 +134,10 @@
     const st = steps[done]; stepCur = st || null;
     $('stepsum').textContent = `${done}/${steps.length} 완료`;
     $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
-    $('stepop').innerHTML = st ? `<span class="opb op-${st.op}">${OP[st.op]}</span>` : '';
+    $('stepop').innerHTML = st ? `<span class="opb op-${opc(st)}">${OP[st.op]}</span>${st.phase >= 6 && st.why ? ` <small>${st.why}</small>` : ''}` : '';
     $('stepxy').textContent = st ? where(st) : '';
-    $('stepcard').className = `stepnow${st ? ` op-${st.op}` : ''}`;
+    if (st && st.chk) $('stepmsg').textContent = `⚠ 짓기 전에 이 자리를 눌러 소속 연맹을 확인하세요 (${st.chk.includes('adj') ? '다른 연맹 영토에 바로 붙는 자리' : '거점 아이콘·이름표에 가려 화면 판독이 불확실한 자리'}).`; else if ($('stepmsg').textContent.startsWith('⚠')) $('stepmsg').textContent = '';
+    $('stepcard').className = `stepnow${st ? ` op-${opc(st)}` : ''}`;
     for (const id of ['stepcopy', 'stepdone', 'stepmap']) $(id).disabled = !st;
     $('stepundo').disabled = !done;
     document.querySelectorAll('#stepl li[data-k]').forEach(li => { const k = +li.dataset.k; li.classList.toggle('done', k < done); li.classList.toggle('cur', k === done); });
@@ -202,6 +208,8 @@
     if (view.now) for (const [x, y] of D.now) { sq(x, y, 3, C['c-old'], 1.2, [4, 3]); dot(x, y, C['c-old']); }
     // 주변 거점
     if (view.cand) for (const c of D.cands) { sq(c.x + 1, c.y + 1, 7, C['c-cand'], 2, [6, 4]); dot(c.x, c.y, C['c-cand'], 3); if (planKey === 'main' && c.rank) for (const [x, y] of c.flags) sq(x, y, 3, C['c-cand'], 1.2, [2, 2]); }
+    if (view.cand) for (const g of ((D.resfill || {}).groups || [])) for (const [x, y] of g.flags) sq(x, y, 3, C.ok, 1, [2, 2]);   // 자원지 보강 깃발(⑥·⑧)
+    for (const c of (D.corners || [])) { gx.strokeStyle = C.bad; gx.lineWidth = 2 / s; gx.beginPath(); gx.arc((c.a[0] + c.b[0] + 1) / 2, (c.a[1] + c.b[1] + 1) / 2, 2.6, 0, 2 * Math.PI); gx.stroke(); }   // 꼭짓점으로만 이어지는 자리
     // 점령 거점
     for (const hq of D.held) { sq(hq.x + 1, hq.y + 1, 7, C['c-t2'], 2.4); gx.fillStyle = C['c-t2']; gx.fillRect(hq.x, hq.y, 3, 3); }
     // 본부
@@ -210,7 +218,7 @@
     if (PLAN.w) { sq(PLAN.w[0] + 1, PLAN.w[1] + 1, 7, C['c-wild'], 3.2); gx.fillStyle = C['c-wild']; gx.fillRect(PLAN.w[0], PLAN.w[1], 3, 3); }
     // 새 경로
     for (const [x, y] of PLAN.flags) { sq(x, y, 3, C['c-new'], 2.2); dot(x, y, C['c-new']); }
-    if (planKey === 'main' && stepCur) { const p = stepCur, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = p.op === 'remove' ? C.bad : p.op === 'build' ? C.ok : C['c-wild']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 4, 0, Math.PI * 2); gx.stroke(); }
+    if (planKey === 'main' && stepCur) { const p = stepCur, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = p.op === 'remove' || p.op === 'sweep' ? C.bad : p.op === 'build' ? C.ok : C['c-wild']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 4, 0, Math.PI * 2); gx.stroke(); }
     if (view.mark) { gx.strokeStyle = C['c-pick']; gx.lineWidth = 3 / s; gx.strokeRect(view.mark.x, view.mark.y, 1, 1); gx.beginPath(); gx.arc(view.mark.x + 0.5, view.mark.y + 0.5, 3, 0, Math.PI * 2); gx.stroke(); }
     // 글자
     gx.setTransform(dpr, 0, 0, dpr, 0, 0); gx.textAlign = 'center'; gx.textBaseline = 'middle';
@@ -228,6 +236,7 @@
     const inSq = (f, r) => Math.abs(f[0] - x) <= r && Math.abs(f[1] - y) <= r;
     const pf = PLAN.flags.find(f => f[0] === x && f[1] === y); if (pf) parts.push('새 경로 깃발 자리');
     else if (PLAN.flags.some(f => inSq(f, 3))) parts.push('새 경로 영토');
+    if (D.cands.some(c => c.flags.some(f => f[0] === x && f[1] === y))) parts.push('주변 거점 연결 깃발 자리'); else if (((D.resfill || {}).groups || []).some(g => g.flags.some(f => f[0] === x && f[1] === y))) parts.push('자원지 보강 깃발 자리');
     if (D.now.some(f => f[0] === x && f[1] === y)) parts.push('지금 깃발(추정)');
     for (const hq of D.held) if (x >= hq.x - 6 && x <= hq.x + 8 && y >= hq.y - 6 && y <= hq.y + 8) parts.push(`${hq.name} 금지 구역`);
     for (const c of D.cands) if (x >= c.x - 6 && x <= c.x + 8 && y >= c.y - 6 && y <= c.y + 8) parts.push(`${c.name} 금지 구역`);
