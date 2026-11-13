@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e9ece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
+<title>KOR 거점 연결 경로</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/v2/guide.css">
+<style>
+  :root { --c-new: #d2691e; --c-old: #6b7280; --c-wild: #b07d1a; --c-cand: #8e44ad; --c-oth: #c2417f; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-new: #ff9f4a; --c-old: #9aa3b2; --c-wild: #e0b04a; --c-cand: #c48ce0; --c-oth: #e66aa6; } }
+  :root[data-theme="dark"] { --c-new: #ff9f4a; --c-old: #9aa3b2; --c-wild: #e0b04a; --c-cand: #c48ce0; --c-oth: #e66aa6; }
+  .plans { display: grid; gap: 6px; margin-top: 6px; }
+  .plans label { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: var(--bg); }
+  .plans label:has(input:checked) { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .plans b { display: block; font-size: .9rem; }
+  .plans small { color: var(--muted); font-size: .76rem; line-height: 1.45; }
+  table.ct { width: 100%; border-collapse: collapse; font-size: .8rem; margin-top: 6px; }
+  table.ct th, table.ct td { padding: 4px 4px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  table.ct td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.ct tr.no td { color: var(--muted); }
+  .lnk { font: inherit; background: none; border: 0; padding: 0 2px; color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; border-radius: 3px; }
+  ol.fl { columns: 2; font-size: .8rem; padding-left: 2.6em; margin: 6px 0 0; }
+  ol.fl li { break-inside: avoid; }
+  .check { margin: 6px 0 0; padding-left: 1.2em; font-size: .8rem; color: var(--muted); line-height: 1.55; }
+  .warn { color: var(--bad); }
+  .legend i.new { background: transparent; outline: 2px solid var(--c-new); outline-offset: -2px; }
+  .legend i.old { background: transparent; outline: 1.5px dashed var(--c-old); outline-offset: -1.5px; }
+  .legend i.kor { background: color-mix(in srgb, var(--c-terr) 30%, transparent); }
+  .legend i.oth { background: color-mix(in srgb, var(--c-oth) 30%, transparent); }
+  .legend i.zone { background: transparent; outline: 2px solid var(--c-t2); outline-offset: -2px; }
+  .legend i.cz { background: transparent; outline: 2px dashed var(--c-cand); outline-offset: -2px; }
+  .legend i.unk { background: color-mix(in srgb, var(--m-void) 70%, var(--m-ground)); }
+  /* 작업 순서 */
+  .stepnow { margin: 8px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; background: var(--bg); }
+  .stepnow.op-build { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, var(--bg)); }
+  .stepnow.op-remove { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--bg)); }
+  .stepnow.op-hq { border-left-color: var(--c-wild); background: color-mix(in srgb, var(--c-wild) 10%, var(--bg)); }
+  .stepph { margin: 0; font-size: .74rem; color: var(--muted); }
+  .stepop { margin: 4px 0 2px; font-size: .95rem; }
+  .stepop b { font-size: 1.25rem; display: block; margin-top: 2px; }
+  .opb { display: inline-block; border-radius: 999px; font-weight: 700; color: var(--accent-ink); padding: 2px 12px; font-size: 1.05rem; }
+  .opb.op-build { background: var(--ok); } .opb.op-remove { background: var(--bad); } .opb.op-hq { background: var(--c-wild); }
+  .stepbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .stepbtns .btn:disabled { opacity: .45; cursor: default; }
+  .stepmsg { margin: 6px 0 0; font-size: .78rem; color: var(--ok); min-height: 1.2em; }
+  ol.stepl { max-height: 300px; overflow: auto; margin: 8px 0 0; padding-left: 2.8em; font-size: .8rem; line-height: 1.6; }
+  ol.stepl li.grp { list-style: none; margin: 6px 0 2px -2.8em; font-weight: 600; }
+  ol.stepl li.done .lnk { color: var(--muted); text-decoration: line-through; }
+  ol.stepl li.cur { background: color-mix(in srgb, var(--c-pick) 28%, transparent); border-radius: 3px; }
+  .opw.op-build { color: var(--ok); font-weight: 700; } .opw.op-remove { color: var(--bad); font-weight: 700; } .opw.op-hq { color: var(--c-wild); font-weight: 700; }
+  @media (max-width: 900px) {
+    #stepbox { order: 1; }
+    .stepbtns .btn { min-height: 48px; }
+    ol.stepl { max-height: 45svh; font-size: .88rem; line-height: 1.9; }
+    .mapbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .mapbar .btn { flex: 0 0 auto; min-height: 36px; padding: 6px 10px; font-size: .8rem; }
+  }
+</style>
+</head>
+<body>
+<!-- /banner/v3/ — KOR 점령 거점 연결 최적 경로(11-13: FUN과 무기 창고 교환 가정). 2026-11-11·13 PC 게임 화면(110단계 축소 지도)으로 읽은 영토와 mapdata.js 지형·연맹 자원지로 계산(banner/v3/data.json). -->
+<div class="page">
+  <header class="top">
+    <div>
+      <p class="eyebrow">KINGSHOT · 2382 KOR</p>
+      <h1>KOR 거점 연결 경로</h1>
+      <p class="stamp" id="stamp"></p>
+    </div>
+    <dl class="facts" id="facts"></dl>
+  </header>
+
+  <p class="notice" id="notice" role="status">불러오는 중…</p>
+
+  <div class="grid" id="main" hidden>
+    <aside class="panel">
+      <details open id="planbox">
+        <summary>추천안</summary>
+        <div class="plans" id="plans"></div>
+      </details>
+      <details open id="stepbox">
+        <summary>작업 순서 <span class="sumx" id="stepsum"></span></summary>
+        <div class="stepnow" id="stepcard">
+          <p class="stepph" id="stepph"></p>
+          <p class="stepop"><span id="stepop"></span><b class="mono" id="stepxy"></b></p>
+          <div class="stepbtns">
+            <button class="btn strong" id="stepcopy" type="button">좌표 복사</button>
+            <button class="btn copy" id="stepdone" type="button">작업완료 · 다음</button>
+            <button class="btn" id="stepundo" type="button">완료 취소</button>
+            <button class="btn" id="stepmap" type="button">지도에서 보기</button>
+          </div>
+          <p class="stepmsg" id="stepmsg" role="status"></p>
+        </div>
+        <details id="steplbox">
+          <summary>전체 순서</summary>
+          <ol class="stepl" id="stepl"></ol>
+        </details>
+      </details>
+      <details open id="candbox">
+        <summary>주변 거점 더 잇기 <span class="sumx" id="candsum"></span></summary>
+        <table class="ct" id="cand"></table>
+      </details>
+      <details open id="typebox">
+        <summary>모두 연결한 뒤 거점 종류 <span class="sumx" id="typesum"></span></summary>
+        <table class="ct" id="types"></table>
+      </details>
+      <details id="chkbox">
+        <summary>계산 기준과 한계</summary>
+        <ul class="check" id="check"></ul>
+      </details>
+      <details id="flbox">
+        <summary>새 경로 깃발 <span class="sumx" id="flsum"></span></summary>
+        <ol class="fl" id="fl"></ol>
+      </details>
+    </aside>
+
+    <section class="mapcol">
+      <div class="mapbar">
+        <button class="btn" id="rot" type="button" aria-pressed="true">게임 시점</button>
+        <button class="btn" id="nowb" type="button" aria-pressed="true">지금 깃발</button>
+        <button class="btn" id="othb" type="button" aria-pressed="true">다른 연맹</button>
+        <button class="btn" id="candb" type="button" aria-pressed="true">주변 거점</button>
+        <button class="btn" id="resb" type="button" aria-pressed="false">연맹 자원지 강조</button>
+      </div>
+      <div class="mapwrap">
+        <canvas id="cv"></canvas>
+        <div class="zoom">
+          <button class="btn" id="zin" type="button" aria-label="확대">＋</button>
+          <button class="btn" id="zout" type="button" aria-label="축소">－</button>
+          <button class="btn" id="fit" type="button" aria-label="전체 보기">전체</button>
+        </div>
+        <div class="readout" id="readout" role="status"></div>
+      </div>
+      <details class="legend" id="legend" open>
+        <summary>범례</summary>
+        <div class="keys">
+          <span><i class="new"></i>새 경로 깃발 (7×7)</span>
+          <span><i class="old"></i>지금 깃발 (화면에서 추정 · 새 경로에 없으면 철거)</span>
+          <span><i class="kor"></i>KOR 영토 (지금)</span>
+          <span><i style="background:var(--c-banner)"></i>평원 본부 쪽 v2 깃발 (그대로)</span>
+          <span><i style="background:transparent;outline:1.5px dashed var(--bad);outline-offset:-1.5px"></i>v2 위쪽 깃발 중 철거 가능 (곰덫 반경 밖)</span>
+          <span><i style="background:var(--c-hq)"></i>평원 본부 X:521 Y:750</span>
+          <span><i style="background:var(--c-wild)"></i>황야 본부 (지금 → 새 자리 굵은 테두리)</span>
+          <span><i class="zone"></i>점령 거점과 금지 구역 15×15</span>
+          <span><i class="cz"></i>주변 미점령 거점 · 그 연결 깃발(보라 점선)</span>
+          <span><i style="background:transparent;outline:1.5px dashed var(--ok);outline-offset:-1.5px"></i>자원지 보강 깃발 (⑥·⑧)</span>
+          <span><i style="background:transparent;outline:2px solid var(--bad);outline-offset:-2px;border-radius:50%"></i>깃발이 꼭짓점으로만 이어지는 자리</span>
+          <span><i class="oth"></i>다른 연맹 영토 (화면에서 읽음)</span>
+          <span><i style="background:var(--m-node)"></i>연맹 자원지 (2×2)</span>
+          <span><i style="background:var(--m-mount)"></i>산</span>
+          <span><i style="background:var(--m-lake)"></i>호수</span>
+          <span><i class="unk"></i>화면 밖 (확인 안 된 곳)</span>
+        </div>
+      </details>
+    </section>
+  </div>
+  <footer><span class="hint" id="src"></span></footer>
+</div>
+<script src="/mapdata.js"></script>
+<script src="/v2/core.js"></script>
+<script src="/v2/plan.js"></script>
+<script src="/banner/v3/v3.js"></script>
+</body>
+</html>

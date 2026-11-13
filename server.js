@@ -54,8 +54,8 @@ function checkToken(hash, req) {
   const m = /^Bearer (\d+)\.([0-9a-f]{64})$/.exec(req.headers.authorization || '');
   return !!m && !!hash && Number(m[1]) >= Date.now() && same(hmac(hash, m[1]), m[2]);
 }
-const STEPS = { '/api/banner/v2/steps': null };
-const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && /^(build|remove|hq)\d{1,4},\d{1,4}$/.test(k));
+const STEPS = { '/api/banner/v2/steps': null, '/api/banner/v3/steps': null };
+const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && /^(build|remove|hq|sweep)\d{1,4},\d{1,4}$/.test(k));
 const validLayout = list => Array.isArray(list) && list.length <= 5000 && list.every(o =>
   o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
   (o.nickname === undefined || (typeof o.nickname === 'string' && o.nickname.length <= 80)));
@@ -169,7 +169,7 @@ http.createServer((req, res) => {
   }
   const to = REDIRECTS[url.pathname];
   if (to) { res.writeHead(302, { Location: to + url.search }); return res.end(); }
-  const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html', '/sgd': '/sgd/index.html', '/sgd/': '/sgd/index.html', '/sword': '/sword/index.html', '/sword/': '/sword/index.html', '/castle': '/castle/index.html', '/castle/': '/castle/index.html', '/castle2': '/castle/index.html', '/castle2/': '/castle/index.html', '/castle2/index.html': '/castle/index.html', '/castle/kor': '/castle/kor.html', '/castle/kor/': '/castle/kor.html', '/castle/map': '/castle/index.html', '/castle/map/': '/castle/index.html', '/castle/map.html': '/castle/index.html', '/banner/v1': '/banner/v1/index.html', '/banner/v1/': '/banner/v1/index.html', '/banner/v2': '/banner/v2/index.html', '/banner/v2/': '/banner/v2/index.html', '/war': '/war/index.html', '/war/': '/war/index.html' };
+  const PAGES = { '/v2': '/v2/index.html', '/v2/': '/v2/index.html', '/v2/plan': '/v2/plan.html', '/v2/map': '/v2/map.html', '/sgd': '/sgd/index.html', '/sgd/': '/sgd/index.html', '/sword': '/sword/index.html', '/sword/': '/sword/index.html', '/castle': '/castle/index.html', '/castle/': '/castle/index.html', '/castle2': '/castle/index.html', '/castle2/': '/castle/index.html', '/castle2/index.html': '/castle/index.html', '/castle/kor': '/castle/kor.html', '/castle/kor/': '/castle/kor.html', '/castle/map': '/castle/index.html', '/castle/map/': '/castle/index.html', '/castle/map.html': '/castle/index.html', '/banner/v1': '/banner/v1/index.html', '/banner/v1/': '/banner/v1/index.html', '/banner/v2': '/banner/v2/index.html', '/banner/v2/': '/banner/v2/index.html', '/war': '/war/index.html', '/war/': '/war/index.html', '/banner/v3': '/banner/v3/index.html', '/banner/v3/': '/banner/v3/index.html', '/banner/v3/final': '/banner/v3/final/index.html', '/banner/v3/final/': '/banner/v3/final/index.html' };
   const page = V1_PAGES.includes(url.pathname) ? '/v1/index.html' : PAGES[url.pathname] || url.pathname;
   const rel = decodeURIComponent(page);
   const file = path.normalize(path.join(ROOT, rel));
