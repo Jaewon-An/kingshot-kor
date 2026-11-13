@@ -3,7 +3,7 @@
  *   v2(평원 본부 쪽 깃발 — 그대로), now(지금 깃발: 화면에서 추정), main/alts/stay/all6(연결안: w 황야 본부, flags, cost, A 평원 쪽 거점, B 황야 쪽, direct 바로 닿음),
  *   res{now,new}(영토 안 연맹 자원지 [빵,나무,돌,철]), steps(작업 순서 — main 기준), others/known/kor([y,x0,x1] 줄).
  *   11-13: assume.swap(무기 창고 교환 가정), gave, corners[{a,b,grp}], resfill.groups[{flags,got,early}], steps phase ⑥~⑧·op sweep, review.
- * 지형·연맹 자원지는 mapdata.js(KSPlan.loadMap). 진행은 이 브라우저 localStorage.
+ * 지형·연맹 자원지는 mapdata.js(KSPlan.loadMap). 진행은 서버 /api/banner/v3/steps(모든 기기 공유) + 이 브라우저 localStorage.
  */
 (function () {
   'use strict';
@@ -128,9 +128,39 @@
     $('stepundo').addEventListener('click', () => { if (done) { done--; save(); renderStep(); } });
     $('stepmap').addEventListener('click', () => { const st = steps[done]; if (st) goTo(st.x, st.y); });
     renderStep();
+    pull(); setInterval(() => { if (!document.hidden) pull(); }, 20000); document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
   }
   const where = st => (st.op === 'hq' ? `${xy(...st.from)} → ${xy(st.x, st.y)}` : st.op === 'sweep' ? `약 ${st.left}개 — 목록에 없어도 새 계획 밖 거점 연결 깃발은 모두 철거` : xy(st.x, st.y));
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf) })); } catch (_) { /* 저장소 못 씀 */ } };
+  const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf) })); } catch (_) { /* 저장소 못 씀 */ } };
+  // 진행 기록 서버 공유(11-13): /api/banner/v3/steps {keys, ver} — 누구나 PUT, base≠ver면 409(낡은 화면이 덮어쓰지 않음). 서버가 안 되면 이 기기에만 저장했다가 연결되면 올림.
+  const API = '/api/banner/v3/steps'; let ver = null, dirty = false;
+  const prefix = keys => { let n = 0; while (n < steps.length && keys[n] === keyOf(steps[n])) n++; return n; };
+  function syncMsg(at, note) {
+    let el = $('stepsync');
+    if (!el) { el = document.createElement('small'); el.id = 'stepsync'; el.style.cssText = 'display:block;margin-top:.4em;opacity:.75'; $('stepmsg').after(el); }
+    el.textContent = ver === null || dirty ? '서버에 연결되지 않아 이 기기에만 저장했습니다 — 연결되면 올립니다' : `모든 기기 공유${at ? ` · 마지막 저장 ${new Date(at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}${note ? ` · ${note}` : ''}`;
+  }
+  async function pull() {
+    try {
+      const r = await fetch(API, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status);
+      const j = await r.json(); ver = j.ver || 0;
+      if (dirty || (!Array.isArray(j.keys) && done)) return push();
+      if (Array.isArray(j.keys)) { const n = prefix(j.keys); if (n !== done) { done = n; saveLocal(); renderStep(); } }
+      syncMsg(j.updated_at);
+    } catch (_) { syncMsg(); }
+  }
+  async function push() {
+    saveLocal();
+    if (ver === null) { dirty = true; syncMsg(); return; }
+    try {
+      const r = await fetch(API, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ base: ver, keys: steps.slice(0, done).map(keyOf) }) });
+      const j = await r.json();
+      if (r.status === 409) { ver = j.ver; dirty = false; done = prefix(j.keys || []); saveLocal(); renderStep(); syncMsg(j.updated_at, '다른 기기에서 먼저 바뀌어 그 기록을 따랐습니다'); }
+      else if (r.ok) { ver = j.ver; dirty = false; syncMsg(j.updated_at); }
+      else throw new Error(r.status);
+    } catch (_) { dirty = true; syncMsg(); }
+  }
+  const save = push;
   function copy(st, pre = '') {
     const t = `X:${st.x} Y:${st.y}`;
     if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => { $('stepmsg').textContent = `${pre}${t} 복사됨`; }, () => { $('stepmsg').textContent = `${pre}복사 안 됨: ${t}`; });

@@ -54,8 +54,8 @@ function checkToken(hash, req) {
   const m = /^Bearer (\d+)\.([0-9a-f]{64})$/.exec(req.headers.authorization || '');
   return !!m && !!hash && Number(m[1]) >= Date.now() && same(hmac(hash, m[1]), m[2]);
 }
-const STEPS = { '/api/banner/v2/steps': null };
-const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && /^(build|remove|hq)\d{1,4},\d{1,4}$/.test(k));
+const STEPS = { '/api/banner/v2/steps': null, '/api/banner/v3/steps': null };
+const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && /^(build|remove|hq|sweep)\d{1,4},\d{1,4}$/.test(k));
 const validLayout = list => Array.isArray(list) && list.length <= 5000 && list.every(o =>
   o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
   (o.nickname === undefined || (typeof o.nickname === 'string' && o.nickname.length <= 80)));
