@@ -47,10 +47,10 @@
     // 주변 거점
     const cs = D.cands.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99));
     let acc = D.main.flags.length;
-    $('candsum').textContent = `${cs.filter(c => c.rank).length}곳 더 이을 수 있음`;
+    $('candsum').textContent = `${cs.filter(c => c.rank).length}곳 더 이음${cs.some(c => c.must) ? ` (필수 ${cs.filter(c => c.must && c.rank).length}곳)` : ''}`;
     $('cand').innerHTML = '<tr><th>거점</th><th>좌표</th><th class="n">혼자 붙이면</th><th class="n">차례로 붙이면</th><th class="n">누적</th></tr>' + cs.map(c => {
       if (!c.rank) return `<tr class="no"><td>${c.name}</td><td><button class="lnk" data-x="${c.x}" data-y="${c.y}">${xy(c.x, c.y)}</button></td><td class="n" colspan="3">지금은 못 이음</td></tr>`;
-      acc += c.add; return `<tr><td>${c.rank}. ${c.name}</td><td><button class="lnk" data-x="${c.x}" data-y="${c.y}">${xy(c.x, c.y)}</button></td><td class="n">${c.alone != null ? `+${c.alone}` : '—'}</td><td class="n">+${c.add}</td><td class="n">${acc}</td></tr>`;
+      acc += c.add; return `<tr><td>${c.rank}. ${c.name}${c.must ? ' <small>필수</small>' : ''}</td><td><button class="lnk" data-x="${c.x}" data-y="${c.y}">${xy(c.x, c.y)}</button></td><td class="n">${c.alone != null ? `+${c.alone}` : '—'}</td><td class="n">+${c.add}</td><td class="n">${acc}</td></tr>`;
     }).join('');
     $('cand').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x + 1, +b.dataset.y + 1); });
     // 거점 종류 요약: 추천안 + 이을 수 있는 주변 거점까지 모두 이은 뒤
@@ -58,12 +58,12 @@
     const typeOf = n => TYPES.find(t => n.includes(t)) || '기타', lvOf = n => (n.match(/Lv\.\d/) || [''])[0];
     const ownOf = n => (n.match(/\(([^)]*)\)/) || [, ''])[1];
     const rows = TYPES.map(t => {
-      const on = D.held.filter(h => typeOf(h.name) === t).map(h => lvOf(h.name));
+      const on = D.held.filter(h => typeOf(h.name) === t).map(h => `${lvOf(h.name)} ${(D.retake || []).some(r => r.x === h.x && r.y === h.y) ? '되찾을 거점(지금 FUN)' : '점령'}`);
       const heldOff = [];
       const add = D.cands.filter(c => typeOf(c.name) === t && c.rank).map(c => `${lvOf(c.name)} ${ownOf(c.name)} +${c.add}`);
       const no = D.cands.filter(c => typeOf(c.name) === t && !c.rank).map(c => `${lvOf(c.name)} ${ownOf(c.name)}`).concat((D.gave || []).filter(c => typeOf(c.name) === t).map(c => `${lvOf(c.name)} ${xy(c.x, c.y)} — 교환으로 FUN에 넘김`)).concat((D.lost || []).filter(c => typeOf(c.name) === t).map(c => `${lvOf(c.name)} ${xy(c.x, c.y)} — 지금 ${c.to} 소유`)).concat((D.excluded || []).filter(c => typeOf(c.name) === t).map(c => `${lvOf(c.name)} ${ownOf(c.name)}${ownOf(c.name).includes('·') ? '' : ' (제외)'}`));
       const got = on.length + add.length > 0;
-      return { t, got, html: `<tr class="${got ? '' : 'no'}"><td><b>${t}</b></td><td>${[...on.map(v => `${v} 점령`), ...heldOff, ...add.map(v => `${v} 더 이음`)].join('<br>') || '<b class="warn">없음</b>'}</td><td>${no.join('<br>') || '—'}</td></tr>` };
+      return { t, got, html: `<tr class="${got ? '' : 'no'}"><td><b>${t}</b></td><td>${[...on, ...heldOff, ...add.map(v => `${v} 더 이음`)].join('<br>') || '<b class="warn">없음</b>'}</td><td>${no.join('<br>') || '—'}</td></tr>` };
     });
     const miss = rows.filter(r => !r.got).map(r => r.t);
     $('typesum').textContent = miss.length ? `연결 안 되는 종류 ${miss.length}: ${miss.join('·')}` : '모든 종류 연결';
@@ -74,16 +74,19 @@
     const arm = sw ? D.held.find(h => h.x === sw.take[0] && h.y === sw.take[1]) : null;
     $('check').innerHTML = [
       sw ? `<b>가정:</b> ${sw.with}과 Lv.2 무기 창고 교환이 성사된 것으로 계산했습니다 — 우리 무기 창고(${xy(...sw.give)})를 넘기고 ${sw.with} 무기 창고(${xy(...sw.take)})를 받습니다. 받는 거점을 점령하기 전에 작업을 시작해도 ${xy(...sw.kept)} 깃발이 본부와 끊기지 않게 순서를 잡았습니다 — ① 황야 본부를 먼저 옮기고, 그 깃발에서 새 본부까지 이어지는 남쪽 옛 깃발(Y 1030 이상)은 ④에서 맨 나중에 철거합니다. 그래도 <b>교환을 먼저 끝내고 시작하는 편이 안전합니다.</b> 교환이 안 되면 다시 계산해야 합니다.` : '',
-      `점령 거점 ${D.held.length}곳: ${D.held.map(h => `${h.name} ${xy(h.x, h.y)}`).join(', ')}.`,
-      ...(D.lost || []).map(o => `<b>${o.name}(${xy(o.x, o.y)})는 지금 ${o.to} 소유입니다.</b> 11-11 화면에서는 KOR 표시였는데 11-13 화면에서는 ${o.to} 표시가 붙어 있고 둘레도 ${o.to} 영토라, 점령 거점에서 빼고 계산했습니다. 되찾을 계획이면 다시 계산해야 합니다.`),
+      `점령 거점 ${D.held.length}곳: ${D.held.map(h => `${h.name} ${xy(h.x, h.y)}${(D.retake || []).some(r => r.x === h.x && r.y === h.y) ? ' (되찾을 거점)' : ''}`).join(', ')}.`,
+      D.must ? `<b>반드시 포함할 거점 ${D.must.length}곳(11-13)${D.must.every(m => m.ok) ? '이 모두 이어집니다' : ' 중 ' + D.must.filter(m => !m.ok).map(m => m.name).join('·') + '은(는) 아직 못 이었습니다'}:</b> ${D.must.map(m => `${m.name.replace(/ \(.*\)/, '')} ${xy(m.x, m.y)}${m.status === 'held' ? '' : m.status === 'swap' ? ' (교환으로 받음)' : m.status === 'retake' ? ' (FUN에서 되찾기)' : ` (NYX 소유 · 깃발 +${m.add})`}`).join(', ')}.` : '',
+      ...(D.retake || []).map(o => `<b>${o.name}(${xy(o.x, o.y)})는 지금 ${o.from} 소유입니다</b>(11-11 화면에서는 KOR, 11-13 화면에서는 ${o.from} 표시). 되찾을 거점이라 연결 대상에 그대로 두었습니다 — 둘레가 ${o.from} 영토라 지금은 우리 영토가 금지 구역에 ${(D.main.contact || {})[o.name]}칸만 닿습니다.`),
+      ...cl.filter(c => c.pass).map(c => `${xy(...c.a)} ↔ ${xy(...c.b)}는 ${c.pass.with.join('·') || '다른 연맹'} 깃발 둘이 꼭짓점으로만 닿은 틈을 지나는 자리입니다(11-13 규칙: 그런 곳은 지나갈 수 있음)${c.pass.sure ? ' — 양옆 두 깃발 자리의 네 귀퉁이를 게임에서 눌러 모두 빈 땅임을 확인했습니다.' : ' — 짓기 전에 두 자리의 귀퉁이를 눌러 확인하세요.'}`),
+      ...(D.notes || []),
       sw && arm ? `받는 Lv.2 무기 창고(${xy(...sw.take)}): 지금 KOR 깃발 ${xy(...sw.kept)}이 북쪽 변에 닿아 있습니다(게임에서 확인). 이 깃발은 그대로 두고 여기까지 잇습니다. 남쪽·동쪽 둘레는 FN5(X:438 Y:1058)·CMS(X:445 Y:1058·X:450 Y:1064) 땅(게임에서 확인)이고 서쪽은 FUN 영토라, 맞닿는 길이는 ${(D.main.contact || {})[arm.name]}칸이 한계입니다.` : '',
       `v2 깃발은 곰덫 주변만 지키고, 본부 북쪽 위쪽 깃발 ${D.up.used.length + D.up.unused.length}개(예전 거점 연결용, 곰덫2 안전 반경 42칸 밖)는 새 계획에 쓰는 ${D.up.used.length}개만 남기고 ${D.up.unused.length}개는 ⑤에서 본부에서 먼 것부터 철거합니다. /banner/v1·v2는 이전 이력 확인용으로만 두고 고치지 않습니다.`,
       '두 본부 모두 영토의 뿌리입니다(지금 황야 본부 쪽 깃발 덩어리는 평원 본부와 끊겨 있는데도 유지됨). 그래서 거점마다 평원 본부 쪽이나 황야 본부 쪽 중 한 곳에 이어지면 되는 것으로 계산했습니다. 황야 본부 이전을 ①로 둔 까닭: 옮기자마자 건설소가 본부에 닿고, 남쪽 옛 깃발 띠가 새 본부 영토에 붙어 서쪽 무기 창고 깃발까지 계속 이어지기 때문입니다.',
       `황야 본부 자리: 황야(왕국 300~899 평원 고리 밖) 중 3×3이 비어 있고 영토 15×15에 다른 연맹·금지 구역이 없는 ${RV.wCount ? RV.wCount.toLocaleString('ko-KR') : '수만'}곳을 모두 계산해 골랐습니다${D.main.direct && D.main.direct.length ? ` — 새 자리는 본부 영토가 ${D.main.direct.join('·')} 금지 구역에 변으로 바로 닿아 깃발 없이 이어집니다` : ''}.${RV.plainOnly ? ` 평원 본부 하나로만 ${D.held.length}곳을 다 이으면 깃발 약 ${Math.round(RV.plainOnly)}개가 듭니다.` : ''}`,
       `거점과 맞닿는 길이(금지 구역 둘레 칸 중 우리 영토인 칸, 최종 영토 기준 · 13칸 이상이 목표): ${Object.entries(D.main.contact || {}).map(([k, v]) => `${k} ${v}칸`).join(', ')} (보강 깃발 ${(D.main.reinforce || []).length}개 포함). 13칸이 안 되는 곳은 둘레가 다른 연맹 땅이라 더 넓힐 자리가 없는 거점입니다.`,
       `깃발 영역 겹침: 깃발마다 ±3칸 옮겨 보며 줄였습니다 — 거점 연결 깃발끼리·평원 쪽 v2 영토·황야 본부 영역과 ${D.main.overlap ? D.main.overlap[1] : 0}칸, 주변 거점·자원지 보강까지 합쳐 ${D.overlapAll}칸. 다듬는 순서는 자원지(빵·나무 우선) → 꼭짓점 연결 수 → 겹침 → 맞닿는 변입니다(11-12 규칙).`,
-      '연결 규칙: 깃발 영역 7×7은 변이 1칸 이상 맞닿으면 이어집니다. 꼭짓점만 닿아도 게임에서는 이어지므로 금지하지 않고, 깃발 0.6개 몫 감점만 줘서 깃발이 줄 때만 씁니다(11-12 규칙). 금지 구역(거점 15×15·성채 60) 안에는 영토가 안 생기므로 깃발 영역은 금지 구역과 한 칸도 겹치지 않게 놓고, 거점은 금지 구역 바로 바깥에 영토가 변으로 맞닿으면 연결입니다. 깃발은 산·호수·연맹 자원지·구조물·금지 구역에 못 세웁니다. 성채·유적으로는 잇지 않습니다.',
-      `다른 연맹 영토는 11-13 낮 시간 PC 화면(110단계 축소 지도 19장, 동쪽 끝만 11-11)의 덧칠 색으로 다시 읽었고(게임의 밤 화면은 빈 땅까지 다른 연맹으로 잘못 읽혀 낮 화면만 씀 — 11-11 밤 화면 때문에 막혀 있던 빈 땅이 풀렸습니다), 새 깃발의 7×7 영역은 다른 연맹 칸과 겹치지 않게 잡았습니다(1칸 여유 없음 — 11-12 규칙). 게임에서 칸을 직접 눌러 소속을 확인한 60여 곳(11-11·11-13)은 화면 판독보다 우선해 넣었습니다 — 그 과정에서 거점 아이콘에 가려 안 보이던 NYX·FUN·KoreaAcademy 땅을 찾아 경로를 고쳤습니다. <b>거점 아이콘·이름표에 가린 둘레와, 다른 연맹 영토에 바로 붙는 자리는 화면 판독이 1칸쯤 틀릴 수 있습니다. 짓기 전에 그 자리를 눌러 '소속 연맹'을 확인하세요.</b>${D.verify ? ` 새로 짓는 ${D.verify.builds}개 중 ${D.verify.any}개가 그런 자리입니다(다른 연맹에 바로 붙음 ${D.verify.adj}개, 가려진 둘레 ${D.verify.hid}개 — 작업 순서에 ⚠ 표시).` : ''} 다른 연맹은 계속 깃발을 늘립니다.`,
+      '연결 규칙: 깃발 영역 7×7은 변이 1칸 이상 맞닿으면 이어집니다. 꼭짓점만 닿아도 게임에서는 이어지므로 금지하지 않고, 깃발 0.6개 몫 감점만 줘서 깃발이 줄 때만 씁니다(11-12 규칙). 금지 구역(거점 15×15·성채 60) 안에는 영토가 안 생기므로 깃발 영역은 금지 구역과 한 칸도 겹치지 않게 놓고, 거점은 금지 구역 바로 바깥에 영토가 변으로 맞닿으면 연결입니다. 깃발은 산·호수·연맹 자원지·구조물·금지 구역에 못 세웁니다. 성채·유적으로는 잇지 않습니다. 다른 연맹 깃발끼리 꼭짓점으로만 닿은 곳이나 얇게 이어진 곳은 지나갈 수 있습니다(11-13 규칙) — 이번 경로는 꼭짓점 틈만 지나고, 얇게 이어진 곳을 넘는 자리는 없습니다.',
+      `다른 연맹 영토는 11-13 낮 시간 PC 화면(110단계 축소 지도 19장, 동쪽 끝만 11-11)의 덧칠 색으로 다시 읽었고(게임의 밤 화면은 빈 땅까지 다른 연맹으로 잘못 읽혀 낮 화면만 씀 — 11-11 밤 화면 때문에 막혀 있던 빈 땅이 풀렸습니다), 새 깃발의 7×7 영역은 다른 연맹 칸과 겹치지 않게 잡았습니다(1칸 여유 없음 — 11-12 규칙). 게임에서 칸을 직접 눌러 소속을 확인한 ${D.facts || 150}곳(11-11·11-13)은 화면 판독보다 우선해 넣었습니다 — 그 과정에서 거점 아이콘에 가려 안 보이던 NYX·FUN·KoreaAcademy 땅을 찾아 경로를 고쳤습니다. <b>거점 아이콘·이름표에 가린 둘레와, 다른 연맹 영토에 바로 붙는 자리는 화면 판독이 1칸쯤 틀릴 수 있습니다. 짓기 전에 그 자리를 눌러 '소속 연맹'을 확인하세요.</b>${D.verify ? ` 새로 짓는 ${D.verify.builds}개 중 ${D.verify.any}개가 그런 자리입니다(다른 연맹에 바로 붙음 ${D.verify.adj}개, 가려진 둘레 ${D.verify.hid}개 — 작업 순서에 ⚠ 표시).` : ''} 다른 연맹은 계속 깃발을 늘립니다.`,
       `지금 거점 연결 깃발은 게임 총 ${D.count.now}개에서 평원 쪽(v2 ${D.count.v2}개·여분 최대 ${D.count.extra}개)을 뺀 약 ${D.count.now - D.count.v2 - D.count.extra}~${D.count.now - D.count.v2}개입니다. 지도에 회색 점선으로 그린 ${D.now.length}개는 화면의 KOR 영토 모양을 7×7 최소 개수로 덮어 추정한 것이라(많이 겹친 깃발은 하나로 잡힘) 실제보다 적고 좌표도 1~3칸 다를 수 있습니다. 그래서 ④ 끝에 '남은 옛 깃발 정리' 단계를 넣었습니다 — 새 계획에 없는 거점 연결 깃발은 목록에 없어도 모두 철거합니다.`,
       `연맹 자원지(2×2 네 칸이 모두 영토 안이어야 셈, 하나당 시간당 3,600): 추천안까지 ${sum(RC.main || [])}곳 → 주변 거점까지 ${sum(RC.cand || [])}곳 → 자원지 보강까지 ${sum(RC.res || [])}곳(${rs(RC.res || [0, 0, 0, 0])}). 지금 게임은 111곳(빵 33·나무 29·돌 30·철 19). 자원지 보강은 빵·나무가 고르게 늘도록 골랐습니다 — 깃발 하나에 빵·나무가 같은 양 들어서 적은 쪽이 병목이기 때문입니다${RV.resSumOnly ? `(합계만 최대로 하면 빵 ${RV.resSumOnly[0]}·나무 ${RV.resSumOnly[1]}곳)` : ''}.`,
       `주변 거점 ${D.cands.filter(c => c.rank).length}곳은 한꺼번에 최소 깃발로 잇도록 계산했습니다(거점 묶음마다 가장 적게 드는 길, 묶음 나누기는 모두 비교). "혼자 붙이면"은 추천안에 그 거점 하나만 이을 때, "차례로 붙이면"은 앞 거점 길을 함께 쓸 때 그 거점 몫(맞닿는 면 보강 포함)입니다. 뺀 거점: THE 소유 3곳(점령 불가), FUN Lv.2 훈련 캠프(점령 중인 것과 종류·레벨 중복), 채집 제단·풍작 제단(보류 — 11-13).`,
@@ -224,7 +227,7 @@
     // 글자
     gx.setTransform(dpr, 0, 0, dpr, 0, 0); gx.textAlign = 'center'; gx.textBaseline = 'middle';
     const label = (x, y, t, col) => { const p = { x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] }; gx.font = '600 12px "IBM Plex Sans KR", sans-serif'; const tw = gx.measureText(t).width + 8; gx.fillStyle = C.bg; gx.globalAlpha = 0.85; gx.fillRect(p.x - tw / 2, p.y - 9, tw, 18); gx.globalAlpha = 1; gx.fillStyle = col; gx.fillText(t, p.x, p.y); };
-    for (const hq of D.held) label(hq.x + 1.5, hq.y + 10, hq.name, C['c-t2']);
+    for (const hq of D.held) label(hq.x + 1.5, hq.y + 10, hq.name + ((D.retake || []).some(r => r.x === hq.x && r.y === hq.y) ? ' (되찾기)' : ''), C['c-t2']);
     if (view.cand) for (const c of D.cands) label(c.x + 1.5, c.y + 10, c.name, C['c-cand']);
     label(D.hq.plain[0] + 1.5, D.hq.plain[1] - 8, '평원 본부', C['c-hq']);
     label(D.hq.wild[0] + 1.5, D.hq.wild[1] - 8, '황야 본부(지금)', C['c-wild']);
