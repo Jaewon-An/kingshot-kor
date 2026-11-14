@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KOR 거점 연결 — 최소 시간 안 (v4)</title>
+<title>KOR 거점 연결 — 1차 연결 안 (v4)</title>
 <style>
   :root { --bg: #eef0ea; --panel: #fff; --ink: #1c211d; --muted: #667066; --line: #d5dad1; --accent: #1f6f5c;
-    --land: #dfe6d3; --lake: #9cc3de; --mount: #b9b3a6; --kor: #2f6fd0; --oth: #c2417f; --new: #12853f; --rm: #d9730d; --hold: #7a3fb0; --hq: #b07d1a; }
+    --land: #dfe6d3; --lake: #9cc3de; --mount: #b9b3a6; --kor: #2f6fd0; --oth: #c2417f; --new: #ffd400; --newt: #12853f; --rm: #e5252a; --hold: #7a3fb0; --hq: #b07d1a; }
   @media (prefers-color-scheme: dark) { :root { --bg: #111513; --panel: #1a201d; --ink: #e6ebe4; --muted: #94a096; --line: #2c3530; --accent: #58c7a8;
-    --land: #232b24; --lake: #1f4560; --mount: #4a463e; --kor: #5b9bff; --oth: #e66aa6; --new: #4ade80; --rm: #ffa04a; --hold: #c48ce0; --hq: #e0b04a; } }
+    --land: #232b24; --lake: #1f4560; --mount: #4a463e; --kor: #5b9bff; --oth: #e66aa6; --new: #ffd400; --newt: #4ade80; --rm: #ff5a5a; --hold: #c48ce0; --hq: #e0b04a; } }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 "IBM Plex Sans KR", "Malgun Gothic", system-ui, sans-serif; }
   header, main { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
@@ -28,24 +28,24 @@
   th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; } td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
   ol#steps { columns: 220px 4; padding-left: 2.4em; font-size: .86rem; font-variant-numeric: tabular-nums; }
   ol#steps li { break-inside: avoid; } ol#steps button { font: inherit; color: inherit; background: none; border: 0; padding: 1px 2px; cursor: pointer; text-align: left; }
-  ol#steps button:hover { text-decoration: underline; } .b { color: var(--new); font-weight: 600; } .r { color: var(--rm); font-weight: 600; }
+  ol#steps button:hover { text-decoration: underline; } .b { color: var(--newt); font-weight: 600; } .r { color: var(--rm); font-weight: 600; }
   .warn { border-left: 3px solid var(--rm); padding: 6px 10px; background: var(--panel); border-radius: 0 6px 6px 0; margin: 8px 0; font-size: .88rem; }
   footer { max-width: 1100px; margin: 24px auto; padding: 0 16px 32px; color: var(--muted); font-size: .8rem; }
 </style>
 </head>
 <body>
 <header>
-  <h1>KOR 거점 연결 — 최소 시간 안 (v4)</h1>
-  <p class="muted">가장 짧은 시간에 요구한 거점 10곳을 모두 잇는 안입니다. 지금 깃발과 황야 본부를 그대로 두고, 아직 안 닿은 서쪽 거점 3곳까지 꼭 필요한 깃발만 짓습니다. 황야 본부 이전, 이은 뒤의 동쪽 길 다시 짓기, 옛 깃발 정리는 뺐습니다. <a href="/banner/v3/">v3 작업 순서</a>의 21번부터가 이 안과 같습니다. <span id="at"></span></p>
+  <h1>KOR 거점 연결 — 1차 연결 안 (v4)</h1>
+  <p class="muted">1차 주변 거점(방어구 창고 Lv.4)까지만 잇고, 빼도 손해가 없는 옛 깃발만 철거하는 안입니다. 연구소 Lv.3 · 건설소 Lv.3 길, 황야 본부 이전, 동쪽 길 다시 짓기는 뺐습니다. <a href="/banner/v3/">v3 작업 순서</a>의 21번부터가 이 안과 같습니다. <span id="at"></span></p>
 </header>
 <main>
   <div class="cards" id="cards"></div>
   <div class="warn" id="warn"></div>
   <div id="wrap"><canvas id="map"></canvas><div id="tip">X:– Y:–</div></div>
   <div class="legend">
-    <span><i style="background:var(--kor);opacity:.45"></i>남기는 깃발 영토</span>
-    <span><i style="outline:2px solid var(--new);outline-offset:-2px"></i>새로 지을 깃발 (번호 = 작업 순서)</span>
-    <span><i style="outline:2px solid var(--rm);outline-offset:-2px"></i>철거할 깃발</span>
+    <span><i style="background:var(--kor);opacity:.45"></i>기존 깃발 영토 (파랑)</span>
+    <span><i style="background:#241d00;outline:2px solid var(--new);outline-offset:-2px"></i>새로 지을 깃발 (노랑 번호 = 작업 순서)</span>
+    <span><i style="outline:2px solid var(--rm);outline-offset:-2px"></i>철거할 깃발 (빨강)</span>
     <span><i style="background:var(--oth);opacity:.5"></i>다른 연맹 영토</span>
     <span><i style="outline:2px solid var(--hold);outline-offset:-2px"></i>거점 (금지 구역 15×15)</span>
     <span><i style="outline:2px solid var(--hq);outline-offset:-2px"></i>본부 영토</span>
@@ -57,10 +57,10 @@
   <div class="tablewrap"><table id="holds"><thead><tr><th>순서</th><th>거점</th><th>좌표</th><th>상태</th></tr></thead><tbody></tbody></table></div>
 
   <h2>이전 안과 비교</h2>
-  <div class="tablewrap"><table id="cmp"><thead><tr><th></th><th class="n">v3 끝까지 (다시 짓기 · 정리)</th><th class="n">먼저 잇기 (이전 v4)</th><th class="n">최소 시간 안</th></tr></thead><tbody></tbody></table></div>
+  <div class="tablewrap"><table id="cmp"><thead><tr><th></th><th class="n">v3 끝까지 (다시 짓기 · 정리)</th><th class="n">먼저 잇기 (이전 v4)</th><th class="n">지금 안 (1차 연결만)</th></tr></thead><tbody></tbody></table></div>
 
   <h2>작업 순서</h2>
-  <p class="muted">상한 285개에 맞춰, 빈 칸이 있는 동안은 짓고 꽉 차면 옛 깃발을 하나 철거합니다(끊김 없고 나무 · 빵 자원지를 안 잃는 깃발부터). 누르면 지도에서 그 자리로 갑니다. 진행 체크는 <a href="/banner/v3/">v3 작업 순서</a>에서 합니다(번호 = 여기 번호 + 20).</p>
+  <p class="muted">방어구 창고 Lv.4까지 길을 먼저 짓고, 그 뒤 빼도 끊기는 깃발 · 잃는 자원지가 없는 옛 깃발을 철거합니다(철거는 건설과 상관없이 언제 해도 됩니다). 누르면 지도에서 그 자리로 갑니다. 진행 체크는 <a href="/banner/v3/">v3 작업 순서</a>에서 합니다(번호 = 여기 번호 + 20).</p>
   <ol id="steps"></ol>
 </main>
 <footer>자리 계산은 조사해 둔 깃발 목록과 지도 판독을 썼습니다. 짓기 전에 게임에서 그 자리의 소속 연맹을 확인하세요.</footer>
@@ -74,11 +74,11 @@
     .map(([b, s]) => `<div class="card"><b>${b}</b><small>${s}</small></div>`).join('');
   const chk = D.holds.filter(h => h.st === 'chk');
   $('warn').innerHTML = (chk.length ? `<b>확인 필요:</b> ${chk.map(h => h.name).join(', ')} — 조사한 깃발 목록에는 맞닿는 깃발이 없습니다(못 읽은 깃발 ${C.unread}개가 있음). 게임에서 영토가 닿아 있는지 확인하세요. 안 닿아 있으면 X:656 Y:1076에 깃발 1개를 지으면 닿습니다.<br>` : '')
-    + (D.extra && D.extra.length ? `<b>자원지 깃발 ${D.extra.length}개 추가:</b> ${D.extra.map(f => `X:${f[0]} Y:${f[1]}`).join(', ')} — 길에는 필요 없지만 나무 자원지가 늘어 전체 시간이 줄어듭니다.<br>` : '') + `<b>FN4 깃발:</b> X:498~505 · Y:1015~1027 일대는 FN4 영토입니다(11-14 게임 확인). 이 안은 그 자리에 새 깃발을 짓지 않습니다.`;
-  const ST = { ok: '이미 이어져 있음 — 새 깃발 없음', new: '새 깃발로 이음', chk: '확인 필요', hq: '황야 본부 이전으로 이음 — 새 깃발 없음' };
+    + (D.extra && D.extra.length ? `<b>자원지 깃발 ${D.extra.length}개 추가:</b> ${D.extra.map(f => `X:${f[0]} Y:${f[1]}`).join(', ')} — 길에는 필요 없지만 나무 자원지가 늘어납니다(이미 지음).<br>` : '') + `<b>FN4 깃발:</b> X:498~505 · Y:1015~1027 일대는 FN4 영토입니다(11-14 게임 확인). 이 안은 그 자리에 새 깃발을 짓지 않습니다.`;
+  const ST = { ok: '이미 이어져 있음 — 새 깃발 없음', new: '새 깃발로 이음', skip: '이번 계획에서 뺌', chk: '확인 필요', hq: '황야 본부 이전으로 이음 — 새 깃발 없음' };
   $('holds').tBodies[0].innerHTML = D.holds.map(h => `<tr><td>${h.n}</td><td>${h.name}</td><td>X:${h.x} Y:${h.y}</td><td>${ST[h.st]}</td></tr>`).join('');
   const row = (...c) => `<tr><td>${c[0]}</td>${c.slice(1).map(v => `<td class="n">${v}</td>`).join('')}</tr>`, P = D.prev;
-  $('cmp').tBodies[0].innerHTML = row('새로 지을 깃발', P.v3.build, P.v4.build, C.build) + row('철거할 깃발', P.v3.remove, P.v4.remove, C.remove) + row('거점이 모두 이어지는 시점 (재고 0 기준)', `${P.v3.hours}시간`, `${P.v4.hours}시간`, `약 ${D.hours}시간`)
+  $('cmp').tBodies[0].innerHTML = row('새로 지을 깃발', P.v3.build, P.v4.build, C.build) + row('철거할 깃발', P.v3.remove, P.v4.remove, C.remove) + row('건설이 끝나는 시점 (재고 0 기준)', `${P.v3.hours}시간`, `${P.v4.hours}시간`, `약 ${D.hours}시간`)
     + row('황야 본부 이전', '뒤쪽 (6구간 뒤)', '안 함', D.hq.wildNew ? '맨 처음' : '안 함') + row('끝난 뒤 나무 · 빵 자원지', `${P.v3res[1]} · ${P.v3res[0]}`, '30 · 33', `${R.final[1]} · ${R.final[0]}`);
   const num = new Map(); D.steps.forEach((s, i) => num.set(s[1] + ',' + s[2], i + 1));
   $('steps').innerHTML = D.steps.map((s, i) => `<li><button data-i="${i}"><span class="${s[0] === 'remove' ? 'r' : 'b'}">${s[0] === 'build' ? '건설' : s[0] === 'hq' ? '황야 본부 이전 (맹주)' : '철거'}</span> X:${s[1]} Y:${s[2]} <span class="muted">(${s[3]}개)</span></button></li>`).join('');
@@ -106,10 +106,10 @@
     for (const k of ['plain', 'wild', 'wildNew']) { if (!D.hq[k]) continue; const [x, y] = D.hq[k]; g.setLineDash(k === 'wild' && D.hq.wildNew ? [5, 4] : []); g.strokeRect(...rect(x - 6, y - 6, x + 8, y + 8)); g.setLineDash([]); label(k === 'plain' ? '평원 본부' : k === 'wildNew' ? '황야 본부 (새 자리)' : D.hq.wildNew ? '황야 본부 (지금)' : '황야 본부', x + 1, y - 9, css('--hq')); }
     g.strokeStyle = css('--hold');
     for (const h of D.holds) { g.strokeRect(...rect(h.x - 6, h.y - 6, h.x + 8, h.y + 8)); label(`${h.n} ${h.name}`, h.x + 1, h.y + 1, css('--hold')); }
-    const box = (x, y, col, txt) => { if (!vis(x - 3, y - 3, x + 3, y + 3)) return; const r = rect(x - 3, y - 3, x + 3, y + 3); g.strokeStyle = col; g.lineWidth = 2; g.strokeRect(r[0] + 1, r[1] + 1, r[2] - 2, r[3] - 2);
-      if (z >= 1.6) { g.fillStyle = col; g.font = `600 ${Math.max(9, Math.min(14, z * 4))}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, r[0] + r[2] / 2, r[1] + r[3] / 2); } };
+    const box = (x, y, col, txt, dark) => { if (!vis(x - 3, y - 3, x + 3, y + 3)) return; const r = rect(x - 3, y - 3, x + 3, y + 3); if (dark) { g.strokeStyle = '#3a3000'; g.lineWidth = 4; g.strokeRect(r[0] + 1, r[1] + 1, r[2] - 2, r[3] - 2); } g.strokeStyle = col; g.lineWidth = 2; g.strokeRect(r[0] + 1, r[1] + 1, r[2] - 2, r[3] - 2);
+      if (z >= 1.6) { g.font = `700 ${Math.max(9, Math.min(14, z * 4))}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; if (dark) { g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = '#241d00'; g.strokeText(txt, r[0] + r[2] / 2, r[1] + r[3] / 2); } g.fillStyle = col; g.fillText(txt, r[0] + r[2] / 2, r[1] + r[3] / 2); } };
     for (const [x, y] of D.rm) box(x, y, css('--rm'), num.get(x + ',' + y));
-    for (const [x, y] of D.build) box(x, y, css('--new'), num.get(x + ',' + y));
+    for (const [x, y] of D.build) box(x, y, css('--new'), num.get(x + ',' + y), true);
     if (focus) { g.strokeStyle = css('--ink'); g.lineWidth = 3; g.setLineDash([6, 4]); g.strokeRect(...rect(focus[0] - 4, focus[1] - 4, focus[0] + 4, focus[1] + 4)); g.setLineDash([]); }
   }
   function label(t, x, y, col) { if (z < 1) return; g.font = '600 12px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; const w = g.measureText(t).width + 8; g.fillStyle = css('--panel'); g.globalAlpha = .85; g.fillRect(sx(x) - w / 2, sy(y) - 9, w, 18); g.globalAlpha = 1; g.fillStyle = col; g.fillText(t, sx(x), sy(y)); }

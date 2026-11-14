@@ -89,7 +89,8 @@
   const KEY = 'banner-v3-steps', keyOf = st => `${st.op}${st.x},${st.y}`;
   function setupSteps() {
     steps = D.steps;
-    if (D.phases) Object.assign(PHASE, D.phases);   // 11-13: 실제 깃발 기준으로 다시 짠 순서(끊김 최소)
+    if (D.phases) Object.assign(PHASE, D.phases);
+    if (D.resFirst && D.resFirst.first) for (const id of ['candbox', 'typebox', 'flbox']) $(id).hidden = true;   // 11-14 밤: 1차 연결 + 불필요한 깃발 철거만 남김 — 뺀 작업의 목록은 숨김   // 11-13: 실제 깃발 기준으로 다시 짠 순서(끊김 최소)
     try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && Array.isArray(v.keys)) while (done < steps.length && v.keys[done] === keyOf(steps[done])) done++; } catch (_) { /* 저장소 못 씀 */ }
     let ph = 0;
     $('stepl').innerHTML = steps.map((st, i) => `${st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : ''}<li value="${i + 1}" data-k="${i}"><button class="lnk" data-k="${i}"><b class="opw op-${opc(st)}">${OP[st.op].slice(-2)}</b> ${where(st)}${st.chk ? ' <small title="짓기 전에 이 자리를 눌러 소속 연맹 확인">⚠</small>' : ''}${(st.phase >= 6 || D.phases) && st.why ? ` <small>${st.why}</small>` : ''}${st.join ? ` <small>끊긴 깃발 ${st.join}개 다시 이어짐</small>` : ''}${st.cut ? ` <small>✂ 이 단계에서 깃발 ${st.cut}개 끊김</small>` : ''}</button></li>`).join('');
@@ -208,31 +209,37 @@
     put(imgs.unk);
     const sq = (x, y, r, col, lw, dash) => { gx.strokeStyle = col; gx.lineWidth = lw / s; gx.setLineDash(dash ? dash.map(v => v / s) : []); gx.strokeRect(x - r, y - r, 1 + 2 * r, 1 + 2 * r); gx.setLineDash([]); };
     const dot = (x, y, col, sz = 1) => { gx.fillStyle = col; gx.fillRect(x + (1 - sz) / 2, y + (1 - sz) / 2, sz, sz); };
+    // 11-14 밤: 작업 순서가 있으면(slim) 지도에는 기존 깃발 파랑 · 철거 빨강 · 신규 노랑 번호만 — 옛 계획 표시(v2 점 · 철거 가능 점선 · 보류 깃발)는 그리지 않음
+    const slim = planKey === 'main' && steps && D.real, RED = '#e5252a', BLUE = '#2f7bff', YEL = '#ffd400';
     // 평원 쪽 v2 깃발 (위쪽 중 새 경로에 안 쓰는 것은 빨간 점선 = 철거 가능)
-    for (const [x, y] of D.v2) dot(x, y, C['c-banner']);
-    for (const [x, y] of D.up.unused) { sq(x, y, 3, C.bad, 1.6, [3, 3]); dot(x, y, C.bad); }
+    if (!slim) for (const [x, y] of D.v2) dot(x, y, C['c-banner']);
+    if (!slim) for (const [x, y] of D.up.unused) { sq(x, y, 3, C.bad, 1.6, [3, 3]); dot(x, y, C.bad); }
     // 지금 깃발(추정)
-    if (view.now) for (const [x, y] of D.now) { sq(x, y, 3, C['c-old'], 1.2, [4, 3]); dot(x, y, C['c-old']); }
+    if (view.now && !slim) for (const [x, y] of D.now) { sq(x, y, 3, C['c-old'], 1.2, [4, 3]); dot(x, y, C['c-old']); }
     // 주변 거점
-    if (view.cand) for (const c of D.cands) { sq(c.x + 1, c.y + 1, 7, C['c-cand'], 2, [6, 4]); dot(c.x, c.y, C['c-cand'], 3); if (planKey === 'main' && c.rank) for (const [x, y] of c.flags) sq(x, y, 3, C['c-cand'], 1.2, [2, 2]); }
-    if (view.cand) for (const g of ((D.resfill || {}).groups || [])) for (const [x, y] of g.flags) sq(x, y, 3, C.ok, 1, [2, 2]);   // 자원지 보강 깃발(⑥·⑧)
-    for (const c of (D.corners || [])) { gx.strokeStyle = C.bad; gx.lineWidth = 2 / s; gx.beginPath(); gx.arc((c.a[0] + c.b[0] + 1) / 2, (c.a[1] + c.b[1] + 1) / 2, 2.6, 0, 2 * Math.PI); gx.stroke(); }   // 꼭짓점으로만 이어지는 자리
+    if (view.cand) for (const c of D.cands) { sq(c.x + 1, c.y + 1, 7, C['c-cand'], 2, [6, 4]); dot(c.x, c.y, C['c-cand'], 3); if (planKey === 'main' && c.rank && !slim) for (const [x, y] of c.flags) sq(x, y, 3, C['c-cand'], 1.2, [2, 2]); }
+    if (view.cand && !slim) for (const g of ((D.resfill || {}).groups || [])) for (const [x, y] of g.flags) sq(x, y, 3, C.ok, 1, [2, 2]);   // 자원지 보강 깃발(⑥·⑧)
+    if (!slim) for (const c of (D.corners || [])) { gx.strokeStyle = C.bad; gx.lineWidth = 2 / s; gx.beginPath(); gx.arc((c.a[0] + c.b[0] + 1) / 2, (c.a[1] + c.b[1] + 1) / 2, 2.6, 0, 2 * Math.PI); gx.stroke(); }   // 꼭짓점으로만 이어지는 자리
     // 점령 거점
     for (const hq of D.held) { sq(hq.x + 1, hq.y + 1, 7, C['c-t2'], 2.4); gx.fillStyle = C['c-t2']; gx.fillRect(hq.x, hq.y, 3, 3); }
     // 본부
     sq(D.hq.plain[0] + 1, D.hq.plain[1] + 1, 7, C['c-hq'], 2); gx.fillStyle = C['c-hq']; gx.fillRect(D.hq.plain[0], D.hq.plain[1], 3, 3);
     sq(D.hq.wild[0] + 1, D.hq.wild[1] + 1, 7, C['c-wild'], 1.6, [5, 4]); gx.fillStyle = C['c-wild']; gx.globalAlpha = 0.5; gx.fillRect(D.hq.wild[0], D.hq.wild[1], 3, 3); gx.globalAlpha = 1;
-    if (PLAN.w) { sq(PLAN.w[0] + 1, PLAN.w[1] + 1, 7, C['c-wild'], 3.2); gx.fillStyle = C['c-wild']; gx.fillRect(PLAN.w[0], PLAN.w[1], 3, 3); }
+    if (PLAN.w && !slim) { sq(PLAN.w[0] + 1, PLAN.w[1] + 1, 7, C['c-wild'], 3.2); gx.fillStyle = C['c-wild']; gx.fillRect(PLAN.w[0], PLAN.w[1], 3, 3); }
     // 새 경로
     // 11-14: 남은 작업을 테두리 색으로 — 새로 지을 깃발 녹색, 철거할 깃발 주황, 이미 지은 새 경로 깃발은 회색 실선
-    if (planKey === 'main' && steps) {
-      const tb = new Set(); for (let i = done; i < steps.length; i++) if (steps[i].op === 'build') tb.add(steps[i].x + ',' + steps[i].y);
-      const have = [...(D.real || []), ...steps.slice(0, done).filter(st => st.op === 'build').map(st => [st.x, st.y])], isUp = (x, y) => !D.real || have.some(f => Math.abs(f[0] - x) <= 2 && Math.abs(f[1] - y) <= 2);   // 11-14 밤: 순서에서 뺀(보류) 새 경로 깃발은 점선
-      for (const [x, y] of PLAN.flags) if (!tb.has(x + ',' + y)) { const up = isUp(x, y); sq(x, y, 3, C['c-old'], up ? 1.6 : 1, up ? null : [2, 3]); if (up) dot(x, y, C['c-old']); }
-      for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op === 'remove') { sq(st.x, st.y, 3, C['c-new'], 2.2); dot(st.x, st.y, C['c-new']); } }
-      for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op === 'build') { sq(st.x, st.y, 3, C.ok, 2.2); dot(st.x, st.y, C.ok); } }
+    if (slim) {
+      const have = new Map(D.real.map(f => [f[0] + ',' + f[1], f]));   // 기존 깃발 = 조사한 실제 깃발 + 끝낸 건설 − 끝낸 철거 (실제 지은 자리는 built)
+      for (const st of steps.slice(0, done)) { const k = st.x + ',' + st.y; if (st.op === 'build') have.set(k, [st.x, st.y]); else if (st.op === 'remove') have.delete(k); }
+      for (const [a, b] of (D.built || [])) if (have.has(a[0] + ',' + a[1])) { have.delete(a[0] + ',' + a[1]); have.set(b[0] + ',' + b[1], b); }
+      for (let i = done; i < steps.length; i++) if (steps[i].op === 'remove') have.delete(steps[i].x + ',' + steps[i].y);
+      for (const [x, y] of have.values()) { sq(x, y, 3, BLUE, 1.4); dot(x, y, BLUE); }
+      for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op === 'remove') { sq(st.x, st.y, 3, RED, 2.4); dot(st.x, st.y, RED); } }
+      for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op === 'build') { sq(st.x, st.y, 3, '#3a3000', 3.6); sq(st.x, st.y, 3, YEL, 2.2); } }
+    } else if (planKey === 'main' && steps) {
+      for (const [x, y] of PLAN.flags) { sq(x, y, 3, C['c-old'], 1.6); dot(x, y, C['c-old']); }
     } else for (const [x, y] of PLAN.flags) { sq(x, y, 3, C['c-new'], 2.2); dot(x, y, C['c-new']); }
-    if (planKey === 'main' && stepCur) { const p = stepCur, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = p.op === 'remove' || p.op === 'sweep' ? C['c-new'] : p.op === 'build' ? C.ok : C['c-wild']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 4, 0, Math.PI * 2); gx.stroke(); }
+    if (planKey === 'main' && stepCur) { const p = stepCur, sz = p.op === 'hq' ? 3 : 1; gx.strokeStyle = p.op === 'remove' || p.op === 'sweep' ? RED : p.op === 'build' ? YEL : C['c-wild']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(p.x + sz / 2, p.y + sz / 2, sz / 2 + 4, 0, Math.PI * 2); gx.stroke(); }
     if (view.mark) { gx.strokeStyle = C['c-pick']; gx.lineWidth = 3 / s; gx.strokeRect(view.mark.x, view.mark.y, 1, 1); gx.beginPath(); gx.arc(view.mark.x + 0.5, view.mark.y + 0.5, 3, 0, Math.PI * 2); gx.stroke(); }
     // 글자
     gx.setTransform(dpr, 0, 0, dpr, 0, 0); gx.textAlign = 'center'; gx.textBaseline = 'middle';
@@ -240,9 +247,9 @@
     for (const hq of D.held) label(hq.x + 1.5, hq.y + 10, hq.name + ((D.retake || []).some(r => r.x === hq.x && r.y === hq.y) ? ' (되찾기)' : ''), C['c-t2']);
     if (view.cand) for (const c of D.cands) label(c.x + 1.5, c.y + 10, c.name, C['c-cand']);
     label(D.hq.plain[0] + 1.5, D.hq.plain[1] - 8, '평원 본부', C['c-hq']);
-    label(D.hq.wild[0] + 1.5, D.hq.wild[1] - 8, '황야 본부(지금)', C['c-wild']);
-    if (PLAN.w && (PLAN.w[0] !== D.hq.wild[0] || PLAN.w[1] !== D.hq.wild[1])) label(PLAN.w[0] + 1.5, PLAN.w[1] - 8, '황야 본부(새 자리)', C['c-wild']);
-    // 작업 순서 번호(11-14): 남은 단계의 깃발 자리에 번호 — 건설 초록, 철거 주황. 멀리서 보면 다음 30단계만, 가까이 보면 모두.
+    label(D.hq.wild[0] + 1.5, D.hq.wild[1] - 8, slim ? '황야 본부' : '황야 본부(지금)', C['c-wild']);
+    if (PLAN.w && !slim && (PLAN.w[0] !== D.hq.wild[0] || PLAN.w[1] !== D.hq.wild[1])) label(PLAN.w[0] + 1.5, PLAN.w[1] - 8, '황야 본부(새 자리)', C['c-wild']);
+    // 작업 순서 번호(11-14): 남은 단계의 깃발 자리에 번호 — 건설 노랑, 철거 빨강. 멀리서 보면 다음 30단계만, 가까이 보면 모두.
     if (planKey === 'main' && steps) {
       const all = s >= 3.2, fs = Math.max(9, Math.min(15, s * 2.2));
       gx.font = `700 ${fs}px "IBM Plex Sans KR", sans-serif`; gx.lineJoin = 'round';
@@ -251,8 +258,9 @@
         if (!all && i >= done + 30) continue;
         const px = m[0] * (st.x + 0.5) + m[2] * (st.y + 0.5) + m[4], py = m[1] * (st.x + 0.5) + m[3] * (st.y + 0.5) + m[5];
         if (px < -20 || py < -20 || px > w + 20 || py > h + 20) continue;
-        gx.lineWidth = 3; gx.strokeStyle = C.bg; gx.strokeText(i + 1, px, py);
-        gx.fillStyle = st.op === 'build' ? C.ok : C['c-new']; gx.fillText(i + 1, px, py);
+        const nb = st.op === 'build';   // 신규 = 노랑 번호(어두운 테두리), 철거 = 빨강 번호
+        gx.lineWidth = nb ? 4 : 3; gx.strokeStyle = nb ? '#241d00' : C.bg; gx.strokeText(i + 1, px, py);
+        gx.fillStyle = nb ? '#ffd400' : '#e5252a'; gx.fillText(i + 1, px, py);
       }
     }
   }
