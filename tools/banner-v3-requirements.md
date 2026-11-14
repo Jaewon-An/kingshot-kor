@@ -1,4 +1,6 @@
-# /banner/v3 · /banner/v4 작업 순서 요구사항
+# /banner/v3 작업 순서 요구사항
+
+> `/banner/v4/` 페이지는 2026-11-14 밤 사용자 요청으로 삭제했다. 아래의 v4 언급은 지난 기록이다. 그때 데이터는 `banner_v3/v4_data_1114.json`에 있다.
 
 KOR 거점 연결 깃발의 작업 순서(`banner/v3/data.json`의 `steps`)를 계산할 때 지키는 규칙입니다.
 2026-11-14 밤 기준으로, 지금 돌아가는 계산(`banner_v3/min_connect.py --nohq` → `banner_v3/apply_min.py`)이 하는 일을 그대로 적었습니다. 새 요구가 여기 적힌 것과 부딪치면 새 것을 따르고, 계산과 이 문서를 함께 고칩니다.
@@ -131,7 +133,7 @@ KOR 거점 연결 깃발의 작업 순서(`banner/v3/data.json`의 `steps`)를 �
 | 할 일 | 명령 |
 |---|---|
 | 최소 시간 안 다시 계산 | `python min_connect.py --v4b --nohq --write` → `min_plan.json` (`--nohq`를 빼면 본부 이전을 넣은 안) |
-| 화면 데이터에 넣기 | `python apply_min.py --write` → `banner/v3/data.json`, `banner/v4/data.json` |
+| 화면 데이터에 넣기 | `python apply_min.py --write` → `banner/v3/data.json` (v4는 삭제돼 건너뜀) |
 | 게임에서 칸 확인 | `gk/corners.ps1 <목록>` |
 | (보류분) 깃발 빼기 · 옮기기, 전체 순서 | `move_1114b.py`, `reorder_res.py … --hqlate --multi --seg --pair --thr=0` |
 
