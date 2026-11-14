@@ -90,7 +90,7 @@
   function setupSteps() {
     steps = D.steps;
     if (D.phases) Object.assign(PHASE, D.phases);
-    if (D.resFirst && D.resFirst.first) for (const id of ['candbox', 'typebox', 'flbox']) $(id).hidden = true;   // 11-14 밤: 1차 연결 + 불필요한 깃발 철거만 남김 — 뺀 작업의 목록은 숨김   // 11-13: 실제 깃발 기준으로 다시 짠 순서(끊김 최소)
+    if (D.resFirst && D.resFirst.min) for (const id of ['typebox', 'flbox']) $(id).hidden = true;   // 11-14 밤: 주변 거점 연결 + 불필요한 깃발 철거만 남김 — 뺀 작업(동쪽 길 다시 짓기 등)의 목록은 숨김   // 11-13: 실제 깃발 기준으로 다시 짠 순서(끊김 최소)
     try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && Array.isArray(v.keys)) while (done < steps.length && v.keys[done] === keyOf(steps[done])) done++; } catch (_) { /* 저장소 못 씀 */ }
     let ph = 0;
     $('stepl').innerHTML = steps.map((st, i) => `${st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : ''}<li value="${i + 1}" data-k="${i}"><button class="lnk" data-k="${i}"><b class="opw op-${opc(st)}">${OP[st.op].slice(-2)}</b> ${where(st)}${st.chk ? ' <small title="짓기 전에 이 자리를 눌러 소속 연맹 확인">⚠</small>' : ''}${(st.phase >= 6 || D.phases) && st.why ? ` <small>${st.why}</small>` : ''}${st.join ? ` <small>끊긴 깃발 ${st.join}개 다시 이어짐</small>` : ''}${st.cut ? ` <small>✂ 이 단계에서 깃발 ${st.cut}개 끊김</small>` : ''}</button></li>`).join('');
