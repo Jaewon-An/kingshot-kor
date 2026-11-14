@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KOR 거점 연결 — 지금 깃발 유지안 (v4)</title>
+<title>KOR 거점 연결 — 최소 시간 안 (v4)</title>
 <style>
   :root { --bg: #eef0ea; --panel: #fff; --ink: #1c211d; --muted: #667066; --line: #d5dad1; --accent: #1f6f5c;
     --land: #dfe6d3; --lake: #9cc3de; --mount: #b9b3a6; --kor: #2f6fd0; --oth: #c2417f; --new: #12853f; --rm: #d9730d; --hold: #7a3fb0; --hq: #b07d1a; }
@@ -35,8 +35,8 @@
 </head>
 <body>
 <header>
-  <h1>KOR 거점 연결 — 지금 깃발 유지안 (v4)</h1>
-  <p class="muted">지금 있는 깃발과 황야 본부를 그대로 두고, 아직 안 닿은 서쪽 거점 3곳만 새로 잇는 안입니다. 이 작업이 끝나면 요구한 거점이 모두 이어지고, 그 뒤에는 <a href="/banner/v3/">v3 작업 순서</a>(21~92번이 이 안과 같음)로 이어서 깃발을 줄이고 자원지를 늘립니다. <span id="at"></span></p>
+  <h1>KOR 거점 연결 — 최소 시간 안 (v4)</h1>
+  <p class="muted">가장 짧은 시간에 요구한 거점 10곳을 모두 잇는 안입니다. 황야 본부를 먼저 건설소 Lv.1 옆으로 옮기고(자원 0), 아직 안 닿은 서쪽 거점 3곳까지 꼭 필요한 깃발만 짓습니다. 이은 뒤의 동쪽 길 다시 짓기와 옛 깃발 정리는 뺐습니다. <a href="/banner/v3/">v3 작업 순서</a>의 21번부터가 이 안과 같습니다. <span id="at"></span></p>
 </header>
 <main>
   <div class="cards" id="cards"></div>
@@ -56,11 +56,11 @@
   <h2>거점별 상태</h2>
   <div class="tablewrap"><table id="holds"><thead><tr><th>순서</th><th>거점</th><th>좌표</th><th>상태</th></tr></thead><tbody></tbody></table></div>
 
-  <h2>v3만 할 때와 비교</h2>
-  <div class="tablewrap"><table id="cmp"><thead><tr><th></th><th class="n">v3 (다시 짓기)</th><th class="n">v4 (지금 깃발 유지)</th></tr></thead><tbody></tbody></table></div>
+  <h2>이전 안과 비교</h2>
+  <div class="tablewrap"><table id="cmp"><thead><tr><th></th><th class="n">v3 끝까지 (다시 짓기 · 정리)</th><th class="n">먼저 잇기 (이전 v4)</th><th class="n">최소 시간 안</th></tr></thead><tbody></tbody></table></div>
 
   <h2>작업 순서</h2>
-  <p class="muted">상한 285개에 맞춰, 빈 칸이 있는 동안은 짓고 꽉 차면 옛 깃발을 하나 철거합니다. 누르면 지도에서 그 자리로 갑니다.</p>
+  <p class="muted">상한 285개에 맞춰, 빈 칸이 있는 동안은 짓고 꽉 차면 옛 깃발을 하나 철거합니다(끊김 없고 나무 · 빵 자원지를 안 잃는 깃발부터). 누르면 지도에서 그 자리로 갑니다. 진행 체크는 <a href="/banner/v3/">v3 작업 순서</a>에서 합니다(번호 = 여기 번호 + 20).</p>
   <ol id="steps"></ol>
 </main>
 <footer>자리 계산은 조사해 둔 깃발 목록과 지도 판독을 썼습니다. 짓기 전에 게임에서 그 자리의 소속 연맹을 확인하세요.</footer>
@@ -74,14 +74,14 @@
     .map(([b, s]) => `<div class="card"><b>${b}</b><small>${s}</small></div>`).join('');
   const chk = D.holds.filter(h => h.st === 'chk');
   $('warn').innerHTML = (chk.length ? `<b>확인 필요:</b> ${chk.map(h => h.name).join(', ')} — 조사한 깃발 목록에는 맞닿는 깃발이 없습니다(못 읽은 깃발 ${C.unread}개가 있음). 게임에서 영토가 닿아 있는지 확인하세요.<br>` : '')
-    + `<b>FN4 깃발:</b> X:498~505 · Y:1015~1027 일대는 FN4 영토입니다(11-14 게임 확인). 이 안은 그 자리에 새 깃발을 짓지 않습니다.`;
-  const ST = { ok: '이미 이어져 있음 — 새 깃발 없음', new: '새 깃발로 이음', chk: '확인 필요' };
+    + (D.extra && D.extra.length ? `<b>자원지 깃발 ${D.extra.length}개 추가:</b> ${D.extra.map(f => `X:${f[0]} Y:${f[1]}`).join(', ')} — 길에는 필요 없지만 나무 자원지가 늘어 전체 시간이 줄어듭니다.<br>` : '') + `<b>FN4 깃발:</b> X:498~505 · Y:1015~1027 일대는 FN4 영토입니다(11-14 게임 확인). 이 안은 그 자리에 새 깃발을 짓지 않습니다.`;
+  const ST = { ok: '이미 이어져 있음 — 새 깃발 없음', new: '새 깃발로 이음', chk: '확인 필요', hq: '황야 본부 이전으로 이음 — 새 깃발 없음' };
   $('holds').tBodies[0].innerHTML = D.holds.map(h => `<tr><td>${h.n}</td><td>${h.name}</td><td>X:${h.x} Y:${h.y}</td><td>${ST[h.st]}</td></tr>`).join('');
-  const row = (a, b, c) => `<tr><td>${a}</td><td class="n">${b}</td><td class="n">${c}</td></tr>`;
-  $('cmp').tBodies[0].innerHTML = row('새로 지을 깃발', D.v3.build, C.build) + row('철거할 깃발', D.v3.remove, C.remove) + row('예상 소요 (재고 0 기준)', `${D.v3.hours}시간`, `약 ${D.hours}시간`)
-    + row('끝난 뒤 나무 자원지', D.res.v3[1], R.final[1]) + row('끝난 뒤 빵 자원지', D.res.v3[0], R.final[0]) + row('끝난 뒤 돌 · 철 자원지', `${D.res.v3[2]} · ${D.res.v3[3]}`, `${R.final[2]} · ${R.final[3]}`) + row('황야 본부', '건설소 Lv.1 옆으로 이전', '지금 자리 그대로');
+  const row = (...c) => `<tr><td>${c[0]}</td>${c.slice(1).map(v => `<td class="n">${v}</td>`).join('')}</tr>`, P = D.prev;
+  $('cmp').tBodies[0].innerHTML = row('새로 지을 깃발', P.v3.build, P.v4.build, C.build) + row('철거할 깃발', P.v3.remove, P.v4.remove, C.remove) + row('거점이 모두 이어지는 시점 (재고 0 기준)', `${P.v3.hours}시간`, `${P.v4.hours}시간`, `약 ${D.hours}시간`)
+    + row('황야 본부 이전', '뒤쪽 (6구간 뒤)', '안 함', '맨 처음') + row('끝난 뒤 나무 · 빵 자원지', `${P.v3res[1]} · ${P.v3res[0]}`, '30 · 33', `${R.final[1]} · ${R.final[0]}`);
   const num = new Map(); D.steps.forEach((s, i) => num.set(s[1] + ',' + s[2], i + 1));
-  $('steps').innerHTML = D.steps.map((s, i) => `<li><button data-i="${i}"><span class="${s[0] === 'build' ? 'b' : 'r'}">${s[0] === 'build' ? '건설' : '철거'}</span> X:${s[1]} Y:${s[2]} <span class="muted">(${s[3]}개)</span></button></li>`).join('');
+  $('steps').innerHTML = D.steps.map((s, i) => `<li><button data-i="${i}"><span class="${s[0] === 'remove' ? 'r' : 'b'}">${s[0] === 'build' ? '건설' : s[0] === 'hq' ? '황야 본부 이전 (맹주)' : '철거'}</span> X:${s[1]} Y:${s[2]} <span class="muted">(${s[3]}개)</span></button></li>`).join('');
 
   const cv = $('map'), g = cv.getContext('2d'), V = D.view;
   let cx = 430, cy = 760, z = 2.2, W = 0, H = 0, focus = null;
@@ -103,7 +103,7 @@
     for (const [t, x, y] of D.nodes) if (vis(x, y, x + 1, y + 1)) { g.fillStyle = NC[t]; g.fillRect(...rect(x, y, x + 1, y + 1)); }
     if (z >= 3) { g.fillStyle = css('--kor'); for (const [x, y] of D.keep) if (vis(x, y, x, y)) g.fillRect(...rect(x, y, x, y)); }
     g.lineWidth = 2; g.strokeStyle = css('--hq');
-    for (const k of ['plain', 'wild']) { const [x, y] = D.hq[k]; g.strokeRect(...rect(x - 6, y - 6, x + 8, y + 8)); label(k === 'plain' ? '평원 본부' : '황야 본부', x + 1, y + 1, css('--hq')); }
+    for (const k of ['plain', 'wild', 'wildNew']) { if (!D.hq[k]) continue; const [x, y] = D.hq[k]; g.setLineDash(k === 'wild' && D.hq.wildNew ? [5, 4] : []); g.strokeRect(...rect(x - 6, y - 6, x + 8, y + 8)); g.setLineDash([]); label(k === 'plain' ? '평원 본부' : k === 'wildNew' ? '황야 본부 (새 자리)' : D.hq.wildNew ? '황야 본부 (지금)' : '황야 본부', x + 1, y - 9, css('--hq')); }
     g.strokeStyle = css('--hold');
     for (const h of D.holds) { g.strokeRect(...rect(h.x - 6, h.y - 6, h.x + 8, h.y + 8)); label(`${h.n} ${h.name}`, h.x + 1, h.y + 1, css('--hold')); }
     const box = (x, y, col, txt) => { if (!vis(x - 3, y - 3, x + 3, y + 3)) return; const r = rect(x - 3, y - 3, x + 3, y + 3); g.strokeStyle = col; g.lineWidth = 2; g.strokeRect(r[0] + 1, r[1] + 1, r[2] - 2, r[3] - 2);
