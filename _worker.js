@@ -37,6 +37,8 @@ const STEP_KEY = /^(build|remove|hq|sweep)\d{1,4},\d{1,4}$/;
 const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && STEP_KEY.test(k));
 // optional `moves` on a steps record: planned flags dragged to another tile on the page ({ "x,y" of the plan: [x, y] now }); a PUT without it keeps the stored one
 const validMoves = m => !!m && typeof m === 'object' && !Array.isArray(m) && Object.keys(m).length <= 400 && Object.entries(m).every(([k, v]) => /^\d{1,4},\d{1,4}$/.test(k) && Array.isArray(v) && v.length === 2 && v.every(n => Number.isInteger(n) && n >= 0 && n <= 1300));
+// optional `adds`: flags added on the page ([x, y, position in the step list]); a PUT may leave `keys` out to store only moves/adds (a page whose step list is older than the record must not rewrite the progress)
+const validAdds = a => Array.isArray(a) && a.length <= 100 && a.every(v => Array.isArray(v) && (v.length === 3 || (v.length === 4 && (v[3] === 0 || v[3] === 1))) && v.every(n => Number.isInteger(n) && n >= 0 && n <= 2000));   // 4th = 1: a removal step for a standing flag
 const device = ua => (/Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'Mac' : 'other');
 
 const enc = new TextEncoder();
@@ -141,14 +143,15 @@ async function api(request, env, url) {
     if (text.length > 64 * 1024) return json({ error: '진행 기록이 너무 큽니다' }, 413);
     let body;
     try { body = JSON.parse(text); } catch (_) { return json({ error: 'JSON 형식이 아닙니다' }, 400); }
-    if (!body || !Number.isInteger(body.base) || body.base < 0 || !validStepKeys(body.keys) || (body.moves !== undefined && !validMoves(body.moves))) return json({ error: '진행 기록 형식이 아닙니다' }, 400);
+    if (!body || !Number.isInteger(body.base) || body.base < 0 || (body.keys !== undefined ? !validStepKeys(body.keys) : body.moves === undefined && body.adds === undefined) || (body.moves !== undefined && !validMoves(body.moves)) || (body.adds !== undefined && !validAdds(body.adds))) return json({ error: '진행 기록 형식이 아닙니다' }, 400);
     const cur = (await env.LAYOUT_KV.get(SK, 'json')) || { keys: null, ver: 0, log: [] };
-    if (body.base !== cur.ver) return json({ error: '다른 기기에서 먼저 바뀌었습니다', keys: cur.keys, moves: cur.moves, ver: cur.ver, updated_at: cur.updated_at }, 409);
+    if (body.base !== cur.ver) return json({ error: '다른 기기에서 먼저 바뀌었습니다', keys: cur.keys, moves: cur.moves, adds: cur.adds, ver: cur.ver, updated_at: cur.updated_at }, 409);
     const now = new Date().toISOString(), ver = cur.ver + 1;
-    const log = [...(cur.log || []), { ver, n: body.keys.length, from: cur.keys ? cur.keys.length : null, at: now, dev: device(request.headers.get('User-Agent') || '') }].slice(-100);
+    const keys = body.keys !== undefined ? body.keys : (cur.keys || []), adds = body.adds !== undefined ? body.adds : cur.adds;
+    const log = [...(cur.log || []), { ver, n: keys.length, from: cur.keys ? cur.keys.length : null, at: now, dev: device(request.headers.get('User-Agent') || '') }].slice(-100);
     const moves = body.moves !== undefined ? body.moves : cur.moves;
-    await env.LAYOUT_KV.put(SK, JSON.stringify({ keys: body.keys, ...(moves ? { moves } : {}), ver, updated_at: now, log }));
-    return json({ ok: true, ver, n: body.keys.length, updated_at: now });
+    await env.LAYOUT_KV.put(SK, JSON.stringify({ keys, ...(moves ? { moves } : {}), ...(adds && adds.length ? { adds } : {}), ver, updated_at: now, log }));
+    return json({ ok: true, ver, n: keys.length, updated_at: now });
   }
 
   if (path === '/api/login' && request.method === 'POST') {
