@@ -55,6 +55,8 @@ function checkToken(hash, req) {
   return !!m && !!hash && Number(m[1]) >= Date.now() && same(hmac(hash, m[1]), m[2]);
 }
 const STEPS = { '/api/banner/v2/steps': null, '/api/banner/v3/steps': null, '/api/sgd/steps': null };
+// optional `moves` on a steps record: planned flags dragged to another tile on the page ({ "x,y" of the plan: [x, y] now }); a PUT without it keeps the stored one
+const validMoves = m => !!m && typeof m === 'object' && !Array.isArray(m) && Object.keys(m).length <= 400 && Object.entries(m).every(([k, v]) => /^\d{1,4},\d{1,4}$/.test(k) && Array.isArray(v) && v.length === 2 && v.every(n => Number.isInteger(n) && n >= 0 && n <= 1300));
 const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && /^(build|remove|hq|sweep)\d{1,4},\d{1,4}$/.test(k));
 const validLayout = list => Array.isArray(list) && list.length <= 5000 && list.every(o =>
   o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
@@ -151,12 +153,13 @@ async function api(req, res, url) {
   if (url.pathname in STEPS && req.method === 'PUT') {
     let body;
     try { body = JSON.parse(await readBody(req, 64 * 1024)); } catch (_) { return send(res, 400, { error: 'JSON 형식이 아닙니다' }); }
-    if (!body || !Number.isInteger(body.base) || body.base < 0 || !validStepKeys(body.keys)) return send(res, 400, { error: '진행 기록 형식이 아닙니다' });
+    if (!body || !Number.isInteger(body.base) || body.base < 0 || !validStepKeys(body.keys) || (body.moves !== undefined && !validMoves(body.moves))) return send(res, 400, { error: '진행 기록 형식이 아닙니다' });
     const cur = STEPS[url.pathname] || { keys: null, ver: 0, log: [] };
-    if (body.base !== cur.ver) return send(res, 409, { error: '다른 기기에서 먼저 바뀌었습니다', keys: cur.keys, ver: cur.ver, updated_at: cur.updated_at });
+    if (body.base !== cur.ver) return send(res, 409, { error: '다른 기기에서 먼저 바뀌었습니다', keys: cur.keys, moves: cur.moves, ver: cur.ver, updated_at: cur.updated_at });
     const now = new Date().toISOString(), ver = cur.ver + 1;
     const log = [...cur.log, { ver, n: body.keys.length, from: cur.keys ? cur.keys.length : null, at: now, dev: 'local' }].slice(-100);
-    STEPS[url.pathname] = { keys: body.keys, ver, updated_at: now, log };
+    const moves = body.moves !== undefined ? body.moves : cur.moves;
+    STEPS[url.pathname] = { keys: body.keys, ...(moves ? { moves } : {}), ver, updated_at: now, log };
     return send(res, 200, { ok: true, ver, n: body.keys.length, updated_at: now });
   }
   return send(res, 404, { error: 'not found' });

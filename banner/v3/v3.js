@@ -86,24 +86,67 @@
   let steps, done = 0, stepCur = null;
   const OP = { build: '깃발 건설', remove: '깃발 철거', hq: '황야 본부 이전', sweep: '남은 옛 깃발 정리' }, opc = st => (st.op === 'sweep' ? 'remove' : st.op);
   const PHASE = { 1: '① 황야 본부 이전 (건설소가 처음부터 본부에 닿게 먼저)', 2: '② 새 황야 본부 쪽 경로 건설', 3: '③ 평원 본부 쪽 새 경로 건설 (빈 칸 없으면 옛 깃발 먼저 철거)', 4: '④ 남은 옛 거점 연결 깃발 철거', 5: '⑤ v2 위쪽 깃발 정리 (곰덫 반경 밖 · 본부에서 먼 것부터)', 6: '⑥ 자원지 보강 — 추천안 영토에서 바로 잇는 묶음 (빵·나무 우선)', 7: '⑦ 주변 거점 연결 (닿아야 공격해 점령 가능)', 8: '⑧ 자원지 보강 — 주변 거점 길에서 잇는 묶음' };
-  const KEY = 'banner-v3-steps', keyOf = st => `${st.op}${st.x},${st.y}`;
+  const KEY = 'banner-v3-steps', keyOf = st => st.k || `${st.op}${st.x},${st.y}`;
+  // 깃발 옮기기(11-14 밤): 아직 안 지은 건설 깃발을 지도에서 끌어 옮김. moves = { '계획 x,y': [지금 x, y] } — 진행 키(st.k)는 계획 좌표 그대로라 진행 기록과 안 어긋남. 서버 진행 기록에 함께 저장(모든 기기 공유).
+  let moves = {}, mvOn = false, drag = null; const mvUndo = [];
+  const mk = st => st.ox + ',' + st.oy;
+  function applyMoves() { for (const st of steps) { const v = st.op === 'build' ? moves[mk(st)] : null; st.x = v ? v[0] : st.ox; st.y = v ? v[1] : st.oy; } }
+  function setMoves(m) { moves = m && typeof m === 'object' ? m : {}; applyMoves(); renderList(); renderStep(); mvButtons(); }
+  function mvButtons() { const n = Object.keys(moves).length; $('mvundo').disabled = !mvUndo.length; $('mvreset').hidden = !n; $('mvreset').textContent = `옮긴 ${n}개 모두 원래 자리로`; }
+  function haveFlags() {   // 지금 서 있는 깃발 = 조사한 실제 깃발 + 끝낸 건설 − 끝낸 철거 (실제 지은 자리는 built)
+    const have = new Map((D.real || []).map(f => [f[0] + ',' + f[1], f]));
+    for (const st of steps.slice(0, done)) { if (st.op === 'build') have.set(mk(st), [st.x, st.y]); else if (st.op === 'remove') have.delete(mk(st)); }
+    for (const [a, b] of (D.built || [])) if (have.has(a[0] + ',' + a[1])) have.set(a[0] + ',' + a[1], b);
+    return have;
+  }
+  function placeCheck(st, x, y) {   // → { bad } 못 놓는 자리 | { warn } 놓되 알림 | {}
+    if (x < VX || y < VY || x >= VX + VW || y >= VY + VH) return { bad: '지도 밖' };
+    const kn = ['', '산', '호수', '연맹 자원지', '구조물'][kind[(y - VY) * VW + x - VX]]; if (kn) return { bad: kn + ' 칸' };
+    const zone = (o, n) => (x >= o[0] - 6 && x <= o[0] + 8 && y >= o[1] - 6 && y <= o[1] + 8 ? n : null);
+    for (const h of [...D.held, ...D.cands]) { const z = zone([h.x, h.y], h.name + ' 금지 구역'); if (z) return { bad: z }; }
+    const hqz = zone(D.hq.plain, '평원 본부 자리') || zone(D.hq.wild, '황야 본부 자리'); if (hqz) return { bad: hqz };
+    const all = [...haveFlags().values(), ...steps.slice(done).filter(t => t.op === 'build' && t !== st).map(t => [t.x, t.y])];
+    if (all.some(f => f[0] === x && f[1] === y)) return { bad: '다른 깃발 자리' };
+    const w = [];
+    if (masks && masks.oth[(y - VY) * VW + x - VX]) w.push('다른 연맹 영토');
+    const near = f => Math.abs(f[0] - x) <= 7 && Math.abs(f[1] - y) <= 7, hqNear = o => Math.abs(o[0] + 1 - x) <= 11 && Math.abs(o[1] + 1 - y) <= 11;
+    if (!all.some(near) && !hqNear(D.hq.plain) && !hqNear(D.hq.wild)) w.push('이어지는 깃발이 없음');
+    return w.length ? { warn: w.join(' · ') } : {};
+  }
+  function pickFlag(wx, wy) {   // 끌 수 있는 깃발 = 아직 안 지은 건설
+    const tol = Math.max(1.5, 12 / view.s); let best = null, bd = 1e9;
+    for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op !== 'build') continue; const d = Math.max(Math.abs(st.x + 0.5 - wx), Math.abs(st.y + 0.5 - wy)); if (d <= tol && d < bd) { bd = d; best = st; } }
+    return best;
+  }
+  function commitMove(st, x, y) {
+    const k = mk(st), prev = moves[k] || null;
+    if (x === st.ox && y === st.oy) delete moves[k]; else moves[k] = [x, y];
+    mvUndo.push([k, prev]); setMoves(moves); save();
+  }
+
   function setupSteps() {
-    steps = D.steps;
+    steps = D.steps; for (const st of steps) { st.ox = st.x; st.oy = st.y; st.k = `${st.op}${st.x},${st.y}`; }
     if (D.phases) Object.assign(PHASE, D.phases);
     if (D.resFirst && D.resFirst.min) for (const id of ['typebox', 'flbox']) $(id).hidden = true;   // 11-14 밤: 주변 거점 연결 + 불필요한 깃발 철거만 남김 — 뺀 작업(동쪽 길 다시 짓기 등)의 목록은 숨김   // 11-13: 실제 깃발 기준으로 다시 짠 순서(끊김 최소)
-    try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && Array.isArray(v.keys)) while (done < steps.length && v.keys[done] === keyOf(steps[done])) done++; } catch (_) { /* 저장소 못 씀 */ }
-    let ph = 0;
-    $('stepl').innerHTML = steps.map((st, i) => `${st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : ''}<li value="${i + 1}" data-k="${i}"><button class="lnk" data-k="${i}"><b class="opw op-${opc(st)}">${OP[st.op].slice(-2)}</b> ${where(st)}${st.chk ? ' <small title="짓기 전에 이 자리를 눌러 소속 연맹 확인">⚠</small>' : ''}${(st.phase >= 6 || D.phases) && st.why ? ` <small>${st.why}</small>` : ''}${st.join ? ` <small>끊긴 깃발 ${st.join}개 다시 이어짐</small>` : ''}${st.cut ? ` <small>✂ 이 단계에서 깃발 ${st.cut}개 끊김</small>` : ''}</button></li>`).join('');
+    try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && v.moves && typeof v.moves === 'object') { moves = v.moves; applyMoves(); } if (v && Array.isArray(v.keys)) while (done < steps.length && v.keys[done] === keyOf(steps[done])) done++; } catch (_) { /* 저장소 못 씀 */ }
+    renderList();
     $('stepl').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { const st = steps[+b.dataset.k]; goTo(st.x, st.y); } });
     $('stepcopy').addEventListener('click', () => { if (steps[done]) copy(steps[done]); });
     $('stepdone').addEventListener('click', () => { if (done < steps.length) { done++; save(); renderStep(); if (steps[done]) copy(steps[done], `${done}번 완료 · `); } });
     $('stepundo').addEventListener('click', () => { if (done) { done--; save(); renderStep(); } });
     $('stepmap').addEventListener('click', () => { const st = steps[done]; if (st) goTo(st.x, st.y); });
-    renderStep();
+    $('mvb').addEventListener('click', () => { mvOn = !mvOn; $('mvb').setAttribute('aria-pressed', String(mvOn)); cv.style.cursor = mvOn ? 'move' : ''; $('readout').textContent = mvOn ? '옮기기 켬 — 노랑 번호 깃발(아직 안 지은 건설)을 끌어 새 자리에 놓으세요. 다시 누르면 끕니다.' : ''; });
+    $('mvundo').addEventListener('click', () => { const u = mvUndo.pop(); if (!u) return; if (u[1]) moves[u[0]] = u[1]; else delete moves[u[0]]; setMoves(moves); save(); $('readout').textContent = '옮긴 것 하나를 되돌렸습니다'; });
+    $('mvreset').addEventListener('click', () => { if (!confirm('옮긴 깃발을 모두 계획 자리로 되돌릴까요?')) return; for (const [k, v] of Object.entries(moves)) mvUndo.push([k, v]); setMoves({}); save(); $('readout').textContent = '모두 계획 자리로 되돌렸습니다 (변경 취소로 다시 살릴 수 있음)'; });
+    mvButtons(); renderStep();
     pull(); setInterval(() => { if (!document.hidden) pull(); }, 20000); document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
   }
+  function renderList() {
+    let ph = 0;
+    $('stepl').innerHTML = steps.map((st, i) => `${st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : ''}<li value="${i + 1}" data-k="${i}"><button class="lnk" data-k="${i}"><b class="opw op-${opc(st)}">${OP[st.op].slice(-2)}</b> ${where(st)}${st.x !== st.ox || st.y !== st.oy ? ` <small>옮김 (계획 ${xy(st.ox, st.oy)})</small>` : ''}${st.chk ? ' <small title="짓기 전에 이 자리를 눌러 소속 연맹 확인">⚠</small>' : ''}${(st.phase >= 6 || D.phases) && st.why ? ` <small>${st.why}</small>` : ''}${st.join ? ` <small>끊긴 깃발 ${st.join}개 다시 이어짐</small>` : ''}${st.cut ? ` <small>✂ 이 단계에서 깃발 ${st.cut}개 끊김</small>` : ''}</button></li>`).join('');
+  }
   const where = st => (st.op === 'hq' ? `${xy(...st.from)} → ${xy(st.x, st.y)}` : st.op === 'sweep' ? `약 ${st.left}개 — 목록에 없어도 새 계획 밖 거점 연결 깃발은 모두 철거` : xy(st.x, st.y));
-  const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf) })); } catch (_) { /* 저장소 못 씀 */ } };
+  const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf), moves })); } catch (_) { /* 저장소 못 씀 */ } };
   // 진행 기록 서버 공유(11-13): /api/banner/v3/steps {keys, ver} — 누구나 PUT, base≠ver면 409(낡은 화면이 덮어쓰지 않음). 서버가 안 되면 이 기기에만 저장했다가 연결되면 올림.
   const API = '/api/banner/v3/steps'; let ver = null, dirty = false;
   const prefix = keys => { let n = 0; while (n < steps.length && keys[n] === keyOf(steps[n])) n++; return n; };
@@ -117,6 +160,7 @@
       const r = await fetch(API, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status);
       const j = await r.json(); ver = j.ver || 0;
       if (dirty || (!Array.isArray(j.keys) && done)) return push();
+      if (!drag && JSON.stringify(j.moves || {}) !== JSON.stringify(moves)) { mvUndo.length = 0; setMoves(j.moves || {}); saveLocal(); }
       if (Array.isArray(j.keys)) { const n = prefix(j.keys); if (n !== done) { done = n; saveLocal(); renderStep(); } }
       syncMsg(j.updated_at);
     } catch (_) { syncMsg(); }
@@ -125,9 +169,9 @@
     saveLocal();
     if (ver === null) { dirty = true; syncMsg(); return; }
     try {
-      const r = await fetch(API, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ base: ver, keys: steps.slice(0, done).map(keyOf) }) });
+      const r = await fetch(API, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ base: ver, keys: steps.slice(0, done).map(keyOf), moves }) });
       const j = await r.json();
-      if (r.status === 409) { ver = j.ver; dirty = false; done = prefix(j.keys || []); saveLocal(); renderStep(); syncMsg(j.updated_at, '다른 기기에서 먼저 바뀌어 그 기록을 따랐습니다'); }
+      if (r.status === 409) { ver = j.ver; dirty = false; mvUndo.length = 0; setMoves(j.moves || {}); done = prefix(j.keys || []); saveLocal(); renderStep(); syncMsg(j.updated_at, '다른 기기에서 먼저 바뀌어 그 기록을 따랐습니다'); }
       else if (r.ok) { ver = j.ver; dirty = false; syncMsg(j.updated_at); }
       else throw new Error(r.status);
     } catch (_) { dirty = true; syncMsg(); }
@@ -174,13 +218,13 @@
     view.s = Math.max(0.8, Math.min(40, view.rot ? Math.min(w, h) / ((bw + bh) * SQ) : Math.min(w / bw, h / bh)));
     draw();
   }
-  let imgs = null;
+  let imgs = null, masks = null;
   const resIcon = new Image(); resIcon.onload = () => draw(); resIcon.src = '../res-icons.png';   // 게임 자원 아이콘 4개(빵·나무·돌·철, 28px씩 한 줄)
   function buildImages() {
     const mk = () => { const c = document.createElement('canvas'); c.width = VW; c.height = VH; return c; };
     const paint = (fn) => { const c = mk(), g = c.getContext('2d'), im = g.createImageData(VW, VH), d = im.data; for (let i = 0; i < VW * VH; i++) { const v = fn(i); if (!v) continue; d.set(v, 4 * i); } g.putImageData(im, 0, 0); return c; };
     const rows = list => { const m = new Uint8Array(VW * VH); for (const [y, a, b] of list) for (let x = a; x <= b; x++) m[(y - VY) * VW + x - VX] = 1; return m; };
-    const known = rows(D.known), oth = rows(D.others), kor = rows(D.kor);
+    const known = rows(D.known), oth = rows(D.others), kor = rows(D.kor); masks = { oth };
     const col = [rgb(C['m-ground']), rgb(C['m-mount']), rgb(C['m-lake']), rgb(C['m-node']), rgb(C['m-struct'])];
     const nodeHi = [230, 160, 20];
     imgs = {
@@ -233,13 +277,12 @@
     // 새 경로
     // 11-14: 남은 작업을 테두리 색으로 — 새로 지을 깃발 녹색, 철거할 깃발 주황, 이미 지은 새 경로 깃발은 회색 실선
     if (slim) {
-      const have = new Map(D.real.map(f => [f[0] + ',' + f[1], f]));   // 기존 깃발 = 조사한 실제 깃발 + 끝낸 건설 − 끝낸 철거 (실제 지은 자리는 built)
-      for (const st of steps.slice(0, done)) { const k = st.x + ',' + st.y; if (st.op === 'build') have.set(k, [st.x, st.y]); else if (st.op === 'remove') have.delete(k); }
-      for (const [a, b] of (D.built || [])) if (have.has(a[0] + ',' + a[1])) { have.delete(a[0] + ',' + a[1]); have.set(b[0] + ',' + b[1], b); }
-      for (let i = done; i < steps.length; i++) if (steps[i].op === 'remove') have.delete(steps[i].x + ',' + steps[i].y);
+      const have = haveFlags();
+      for (let i = done; i < steps.length; i++) if (steps[i].op === 'remove') have.delete(mk(steps[i]));
       for (const [x, y] of have.values()) { sq(x, y, 3, BLUE, 1.4); dot(x, y, BLUE); }
       for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op === 'remove') { sq(st.x, st.y, 3, RED, 2.4); dot(st.x, st.y, RED); } }
-      for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op === 'build') { sq(st.x, st.y, 3, '#3a3000', 3.6); sq(st.x, st.y, 3, YEL, 2.2); } }
+      for (let i = done; i < steps.length; i++) { const st = steps[i]; if (st.op === 'build') { if (st.x !== st.ox || st.y !== st.oy) { sq(st.ox, st.oy, 3, YEL, 1.2, [3, 3]); gx.strokeStyle = YEL; gx.lineWidth = 1.2 / s; gx.beginPath(); gx.moveTo(st.ox + 0.5, st.oy + 0.5); gx.lineTo(st.x + 0.5, st.y + 0.5); gx.stroke(); }   // 옮긴 깃발: 계획 자리는 점선
+        sq(st.x, st.y, 3, '#3a3000', 3.6); sq(st.x, st.y, 3, drag && drag.st === st && drag.bad ? RED : YEL, 2.2); dot(st.x, st.y, YEL); } }
     } else if (planKey === 'main' && steps) {
       for (const [x, y] of PLAN.flags) { sq(x, y, 3, C['c-old'], 1.6); dot(x, y, C['c-old']); }
     } else for (const [x, y] of PLAN.flags) { sq(x, y, 3, C['c-new'], 2.2); dot(x, y, C['c-new']); }
@@ -287,17 +330,23 @@
   }
   function goTo(x, y) { view.cx = x + 0.5; view.cy = y + 0.5; view.s = Math.max(view.s, 14); view.mark = { x, y }; $('readout').textContent = info(x, y); if (PHONE.matches) cv.scrollIntoView({ block: 'center', behavior: 'smooth' }); draw(); }
   const ptrs = new Map(); let pinch = null, downAt = null;
-  cv.addEventListener('pointerdown', e => { try { cv.setPointerCapture(e.pointerId); } catch (_) { /* 무시 */ } ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); downAt = { x: e.offsetX, y: e.offsetY }; });
+  cv.addEventListener('pointerdown', e => { try { cv.setPointerCapture(e.pointerId); } catch (_) { /* 무시 */ } ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); downAt = { x: e.offsetX, y: e.offsetY };
+    if (mvOn && steps && ptrs.size === 1) { const w = toWorld(e.offsetX, e.offsetY), st = pickFlag(w.x, w.y); if (st) drag = { st, x0: st.x, y0: st.y, bad: null, id: e.pointerId }; } else if (drag) { drag.st.x = drag.x0; drag.st.y = drag.y0; drag = null; draw(); }   // 두 손가락이면 옮기기 그만
+  });
   cv.addEventListener('pointermove', e => {
     const prev = ptrs.get(e.pointerId); if (!prev) return;
     const cur = { x: e.offsetX, y: e.offsetY };
     if (downAt && Math.hypot(cur.x - downAt.x, cur.y - downAt.y) > 5) downAt = null;
-    if (ptrs.size === 1) { const a = toWorld(prev.x, prev.y), b = toWorld(cur.x, cur.y); view.cx += a.x - b.x; view.cy += a.y - b.y; draw(); }
+    if (drag && drag.id === e.pointerId) { const w = toWorld(cur.x, cur.y), x = Math.floor(w.x), y = Math.floor(w.y); if (x !== drag.st.x || y !== drag.st.y) { drag.st.x = x; drag.st.y = y; const c = placeCheck(drag.st, x, y); drag.bad = c.bad || null; $('readout').textContent = `${xy(x, y)}${c.bad ? ` — 못 놓는 자리: ${c.bad}` : c.warn ? ` — ⚠ ${c.warn}` : ''}`; draw(); } }
+    else if (ptrs.size === 1) { const a = toWorld(prev.x, prev.y), b = toWorld(cur.x, cur.y); view.cx += a.x - b.x; view.cy += a.y - b.y; draw(); }
     else if (ptrs.size === 2) { const pts = [...ptrs.entries()].map(([id, p]) => (id === e.pointerId ? cur : p)), d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y); if (pinch) zoomAt((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, d / pinch); pinch = d; }
     ptrs.set(e.pointerId, cur);
   });
   const up = e => {
     ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
+    if (drag && drag.id === e.pointerId) { const d = drag, st = d.st, x = st.x, y = st.y; drag = null; st.x = d.x0; st.y = d.y0;
+      if (e.type === 'pointerup' && !d.bad && (x !== d.x0 || y !== d.y0)) { const c = placeCheck(st, x, y); commitMove(st, x, y); $('readout').textContent = `${steps.indexOf(st) + 1}번 깃발을 ${xy(d.x0, d.y0)} → ${xy(x, y)}로 옮겼습니다${c.warn ? ` — ⚠ ${c.warn}` : ''} · '변경 취소'로 되돌릴 수 있습니다`; downAt = null; return; }
+      if (d.bad) $('readout').textContent = `못 놓는 자리(${d.bad})라 옮기지 않았습니다`; draw(); if (x !== d.x0 || y !== d.y0) { downAt = null; return; } }
     if (!ptrs.size && downAt && kind) { const w = toWorld(e.offsetX, e.offsetY), x = Math.floor(w.x), y = Math.floor(w.y); view.mark = { x, y }; $('readout').textContent = info(x, y); draw(); }
     downAt = null;
   };
