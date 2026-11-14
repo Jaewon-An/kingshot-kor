@@ -203,7 +203,10 @@
     gx.imageSmoothingEnabled = false;
     // 이미지는 행 0 = Y 작은 쪽 → 아래위 뒤집어 그림(지도 좌표 y는 위로 증가)
     const put = (img, a = 1) => { gx.save(); gx.globalAlpha = a; gx.translate(VX, VY); gx.drawImage(img, 0, 0, VW, VH); gx.restore(); };
-    put(imgs.terr); if (view.res) put(imgs.nodeHi);
+    put(imgs.terr);
+    // 연맹 자원지를 종류별 색으로(11-14 밤): 빵 노랑 · 나무 초록 · 돌 회색 · 철 남색. '연맹 자원지 강조'를 켜면 한 칸씩 크게 + 테두리
+    if (D.nodes) { const NC = ['#d9a400', '#2e8b3a', '#8a8f98', '#4a5a8c'], e = view.res ? 1 : 0; for (const [t, x, y] of D.nodes) { gx.fillStyle = NC[t]; gx.fillRect(x - e, y - e, 2 + 2 * e, 2 + 2 * e); if (e) { gx.strokeStyle = C.ink; gx.lineWidth = 1 / view.s; gx.strokeRect(x - e, y - e, 2 + 2 * e, 2 + 2 * e); } } }
+    else if (view.res) put(imgs.nodeHi);
     if (view.oth) put(imgs.oth, 0.32);
     put(imgs.kor, view.now ? 0.28 : 0.12);
     put(imgs.unk);
