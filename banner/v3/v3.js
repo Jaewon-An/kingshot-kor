@@ -175,6 +175,7 @@
     draw();
   }
   let imgs = null;
+  const resIcon = new Image(); resIcon.onload = () => draw(); resIcon.src = '../res-icons.png';   // 게임 자원 아이콘 4개(빵·나무·돌·철, 28px씩 한 줄)
   function buildImages() {
     const mk = () => { const c = document.createElement('canvas'); c.width = VW; c.height = VH; return c; };
     const paint = (fn) => { const c = mk(), g = c.getContext('2d'), im = g.createImageData(VW, VH), d = im.data; for (let i = 0; i < VW * VH; i++) { const v = fn(i); if (!v) continue; d.set(v, 4 * i); } g.putImageData(im, 0, 0); return c; };
@@ -246,6 +247,9 @@
     if (view.mark) { gx.strokeStyle = C['c-pick']; gx.lineWidth = 3 / s; gx.strokeRect(view.mark.x, view.mark.y, 1, 1); gx.beginPath(); gx.arc(view.mark.x + 0.5, view.mark.y + 0.5, 3, 0, Math.PI * 2); gx.stroke(); }
     // 글자
     gx.setTransform(dpr, 0, 0, dpr, 0, 0); gx.textAlign = 'center'; gx.textBaseline = 'middle';
+    // 연맹 자원지에 게임 아이콘(11-14 밤): 가까이 보면(아이콘 11px 이상) 자동, '연맹 자원지 강조'를 켜면 멀리서도 표시
+    if (D.nodes && resIcon.naturalWidth) { const k0 = Math.min(30, s * 2.6), k = view.res ? Math.max(k0, 14) : k0;
+      if (k >= 11) { gx.imageSmoothingEnabled = true; for (const [t, x, y] of D.nodes) { const px = m[0] * (x + 1) + m[2] * (y + 1) + m[4], py = m[1] * (x + 1) + m[3] * (y + 1) + m[5]; if (px < -20 || py < -20 || px > w + 20 || py > h + 20) continue; gx.drawImage(resIcon, t * 28, 0, 28, 28, px - k / 2, py - k / 2, k, k); gx.strokeStyle = ['#d9a400', '#2e8b3a', '#8a8f98', '#4a5a8c'][t]; gx.lineWidth = 2; gx.beginPath(); gx.arc(px, py, k / 2, 0, 2 * Math.PI); gx.stroke(); } } }
     const label = (x, y, t, col) => { const p = { x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] }; gx.font = '600 12px "IBM Plex Sans KR", sans-serif'; const tw = gx.measureText(t).width + 8; gx.fillStyle = C.bg; gx.globalAlpha = 0.85; gx.fillRect(p.x - tw / 2, p.y - 9, tw, 18); gx.globalAlpha = 1; gx.fillStyle = col; gx.fillText(t, p.x, p.y); };
     for (const hq of D.held) label(hq.x + 1.5, hq.y + 10, hq.name + ((D.retake || []).some(r => r.x === hq.x && r.y === hq.y) ? ' (되찾기)' : ''), C['c-t2']);
     if (view.cand) for (const c of D.cands) label(c.x + 1.5, c.y + 10, c.name, C['c-cand']);

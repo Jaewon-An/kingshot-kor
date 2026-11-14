@@ -85,6 +85,7 @@
 
   const cv = $('map'), g = cv.getContext('2d'), V = D.view;
   let cx = 430, cy = 760, z = 2.2, W = 0, H = 0, focus = null;
+  const ico = new Image(); ico.onload = () => draw(); ico.src = '../res-icons.png';
   const sx = x => (x - cx) * z + W / 2, sy = y => (cy - y) * z + H / 2;
   const rect = (x0, y0, x1, y1) => [sx(x0), sy(y1 + 1), (x1 - x0 + 1) * z, (y1 - y0 + 1) * z];   // 칸 [x0..x1]×[y0..y1]
   function draw() {
@@ -101,6 +102,7 @@
     g.globalAlpha = 1;
     const NC = ['#d9a400', '#2e8b3a', '#8a8f98', '#4a5a8c'];
     for (const [t, x, y] of D.nodes) if (vis(x, y, x + 1, y + 1)) { g.fillStyle = NC[t]; g.fillRect(...rect(x, y, x + 1, y + 1)); }
+    if (ico.naturalWidth && z * 2.6 >= 11) { const k = Math.min(30, z * 2.6); for (const [t, x, y] of D.nodes) if (vis(x, y, x + 1, y + 1)) { g.drawImage(ico, t * 28, 0, 28, 28, sx(x + 1) - k / 2, sy(y + 1) - k / 2, k, k); g.strokeStyle = NC[t]; g.lineWidth = 2; g.beginPath(); g.arc(sx(x + 1), sy(y + 1), k / 2, 0, 2 * Math.PI); g.stroke(); } }   // 가까이 보면 게임 자원 아이콘
     if (z >= 3) { g.fillStyle = css('--kor'); for (const [x, y] of D.keep) if (vis(x, y, x, y)) g.fillRect(...rect(x, y, x, y)); }
     g.lineWidth = 2; g.strokeStyle = css('--hq');
     for (const k of ['plain', 'wild', 'wildNew']) { if (!D.hq[k]) continue; const [x, y] = D.hq[k]; g.setLineDash(k === 'wild' && D.hq.wildNew ? [5, 4] : []); g.strokeRect(...rect(x - 6, y - 6, x + 8, y + 8)); g.setLineDash([]); label(k === 'plain' ? '평원 본부' : k === 'wildNew' ? '황야 본부 (새 자리)' : D.hq.wildNew ? '황야 본부 (지금)' : '황야 본부', x + 1, y - 9, css('--hq')); }
