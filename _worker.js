@@ -32,7 +32,7 @@ async function anyToken(env, names, request) {
 // sees the same step. Anyone may update it (no login: R4s mark steps from their phones); `ver` counts writes and a
 // PUT must name the ver it started from, so a stale screen can't overwrite newer progress (409 hands back the current state).
 // The record keeps the last 100 changes in `log` (GET ?log=1) to put a wrong press back.
-const STEPS = { '/api/banner/v2/steps': 'banner_v2_steps', '/api/banner/v3/steps': 'banner_v3_steps' };
+const STEPS = { '/api/banner/v2/steps': 'banner_v2_steps', '/api/banner/v3/steps': 'banner_v3_steps', '/api/sgd/steps': 'sgd_steps' };
 const STEP_KEY = /^(build|remove|hq|sweep)\d{1,4},\d{1,4}$/;
 const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && STEP_KEY.test(k));
 const device = ua => (/Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'Mac' : 'other');

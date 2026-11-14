@@ -28,27 +28,25 @@
   .legend i.line { border-top-color: var(--c-t1); }
   .legend i.rterr { background: color-mix(in srgb, var(--c-rterr) 25%, transparent); outline: 1.5px dashed var(--c-rterr); outline-offset: -1.5px; }
   .legend i.got { background: transparent; outline: 2px solid var(--ink); outline-offset: -2px; }
-  ol.bn.sgd li.wood .gain { color: var(--n-wood); }
-  ol.bn.sgd li.bread .gain { color: var(--n-bread); }
-  ol.bn.sgd li.stone .gain { color: color-mix(in srgb, var(--n-stone) 60%, var(--ink)); }
-  ol.bn.sgd li.iron .gain { color: var(--n-iron); }
-  .tagb { font-size: .7rem; font-weight: 600; padding: 0 5px; border-radius: 4px; border: 1px dashed var(--c-rflag); color: var(--c-rflag); white-space: nowrap; }
-  /* 앞으로 지을 깃발: 패널 맨 위, 다음 깃발 카드 + 좌표 목록 */
-  .nexth { font-family: var(--f-display); font-size: 1.15rem; font-weight: 700; margin: 0; }
-  .nexth .sumx { display: block; font-family: var(--f-body); font-size: .76rem; font-weight: 400; margin-top: 2px; }
-  .nextcard { border-color: var(--c-rflag); }
-  .nextcard .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .nextcard .acts .btn { min-height: 32px; padding: 5px 10px; font-size: .8rem; }
-  ol.bn.sgd.flags { max-height: 46vh; margin: 0; overflow-x: hidden; overflow-y: auto; }
-  ol.bn.sgd.flags li { display: grid; grid-template-columns: 2.1em auto 1fr; column-gap: 8px; align-items: baseline; padding: 5px 4px; border-bottom: 1px solid var(--line); }
-  ol.bn.sgd.flags li.on { background: color-mix(in srgb, var(--c-rflag) 14%, transparent); }
-  ol.bn.sgd.flags .no { font-family: var(--f-mono); font-weight: 600; color: var(--muted); text-align: right; }
-  ol.bn.sgd.flags .lnk { font-family: var(--f-mono); font-size: 1rem; text-decoration: none; }
-  ol.bn.sgd.flags .gain { font-size: .8rem; font-weight: 600; }
-  ol.bn.sgd.flags .why { grid-column: 2 / 4; min-width: 0; overflow-wrap: anywhere; }
+  .gain { font-size: .8rem; font-weight: 600; }
+  li.wood .gain { color: var(--n-wood); } li.bread .gain { color: var(--n-bread); } li.iron .gain { color: var(--n-iron); }
+  li.stone .gain { color: color-mix(in srgb, var(--n-stone) 60%, var(--ink)); }
+  /* 작업 순서 (banner/v3와 같은 구성): 지금 지을 깃발 카드 + 전체 순서 */
+  .stepnow { margin: 8px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 6px; background: color-mix(in srgb, var(--ok) 8%, var(--bg)); }
+  .stepph { margin: 0; font-size: .74rem; color: var(--muted); }
+  .stepop { margin: 4px 0 2px; font-size: .95rem; }
+  .stepop b { font-size: 1.25rem; display: block; margin-top: 2px; }
+  .opb { display: inline-block; border-radius: 999px; font-weight: 700; color: var(--accent-ink); background: var(--ok); padding: 2px 12px; font-size: 1.05rem; }
+  .stepbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .stepbtns .btn:disabled { opacity: .45; cursor: default; }
+  .stepmsg { margin: 6px 0 0; font-size: .78rem; color: var(--ok); min-height: 1.2em; }
+  ol.stepl { max-height: 300px; overflow: auto; margin: 8px 0; padding-left: 2.8em; font-size: .8rem; line-height: 1.6; }
+  ol.stepl .lnk { font-weight: 400; }
+  ol.stepl li.done .lnk { color: var(--muted); text-decoration: line-through; }
+  ol.stepl li.cur { background: color-mix(in srgb, var(--c-pick) 28%, transparent); border-radius: 3px; }
   #seatbox .finder { margin-top: 8px; }
   #seatbox .tbl { margin-top: 8px; }
-  @media (max-width: 900px) { #link { order: 6; } #next { order: 1; } #seatbox { order: 4; } ol.bn.sgd.flags { max-height: 40vh; max-height: 40svh; } }
+  @media (max-width: 900px) { #link { order: 6; } #stepbox { order: 1; } #seatbox { order: 4; } .stepbtns .btn { min-height: 48px; } ol.stepl { max-height: 45svh; font-size: .88rem; line-height: 1.9; } }
 </style>
 </head>
 <body>
@@ -67,17 +65,27 @@
 
   <div class="grid" id="main" hidden>
     <aside class="panel">
-      <section class="next" id="next" hidden>
-        <h2 class="nexth">앞으로 지을 깃발 <span class="sumx" id="ressum"></span></h2>
-        <div class="card nextcard" id="nextcard"></div>
-        <ol class="bn sgd flags" id="reslist"></ol>
-        <button class="btn" id="rescopy" type="button">깃발 좌표 복사 (연맹 채팅용)</button>
-        <details id="resbasis">
-          <summary>계산 기준</summary>
+      <details open id="stepbox" hidden>
+        <summary>작업 순서 <span class="sumx" id="stepsum"></span></summary>
+        <div class="stepnow" id="stepcard">
+          <p class="stepph" id="stepph"></p>
+          <p class="stepop"><span id="stepop"></span><b class="mono" id="stepxy"></b></p>
+          <p class="stepph" id="steprate"></p>
+          <div class="stepbtns">
+            <button class="btn strong" id="stepcopy" type="button">좌표 복사</button>
+            <button class="btn copy" id="stepdone" type="button">작업완료 · 다음</button>
+            <button class="btn" id="stepundo" type="button">완료 취소</button>
+            <button class="btn" id="stepmap" type="button">지도에서 보기</button>
+          </div>
+          <p class="stepmsg" id="stepmsg" role="status"></p>
+        </div>
+        <details id="steplbox">
+          <summary>전체 순서</summary>
+          <ol class="stepl" id="stepl"></ol>
+          <button class="btn" id="rescopy" type="button">남은 깃발 좌표 복사 (연맹 채팅용)</button>
           <p class="hint" id="reshint"></p>
-          <p class="hint">번호 = 설치 순서 (짓는 중인 깃발 먼저, 그다음 생산이 연맹 기술 연구·후반 깃발 비용 비율에 가까워지도록 모자란 자원부터, 깃발 하나가 자원지를 되도록 많이 잡도록 최적화). + 는 그 깃발로 새로 연맹 자원이 되는 자원지(4칸 중 3칸 이상 영토), ← 는 붙는 영토, 뒤 숫자는 그 깃발까지 세웠을 때 예상 생산량(빵·나무·석재·철 K/h). 스크린샷으로 확인한 땅 안에서만 계산했습니다.</p>
         </details>
-      </section>
+      </details>
       <details id="seatbox">
         <summary>자리 찾기 · 자리 명단 <span class="sumx" id="seatsum"></span></summary>
         <div class="finder">
@@ -133,7 +141,7 @@
           <span><i class="old"></i>지금 SGD 깃발</span>
           <span><i class="terr"></i>SGD 영토 (깃발 모두 설치 후)</span>
           <span><i class="line"></i>곰덫1 1~3줄</span>
-          <span id="rflaglegend" hidden><i style="background:var(--c-rflag)"></i>자원 깃발 (번호 = 설치 순서 · 흐린 점선 = 짓는 중 · 번호 없음 = 세움)</span>
+          <span id="rflaglegend" hidden><i style="background:var(--c-rflag)"></i>자원 깃발 (번호 = 작업 순서 · 번호 없음 = 세움 · 동그라미 = 지금 지을 깃발)</span>
           <span id="rterrlegend" hidden><i class="rterr"></i>자원 깃발로 늘어나는 영토</span>
           <span><i class="got"></i>연맹 자원이 되는 자원지 (종류 색 테두리)</span>
           <span><i class="foreign"></i>다른 연맹 영토</span>

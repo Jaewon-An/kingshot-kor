@@ -5,7 +5,8 @@
  * 깃발 번호는 설치 순서: 번호대로 지으면 매번 본부와 이어지고 곰덫 → 앞 번호 자리 순으로 영토가 됩니다.
  * 자원 깃발(layouts/sgd-resource.json, tools/plan-sgd-resources.mjs): 연맹 자원지를 영토에 넣는 깃발 경로 (빵·나무 균형). 짓는 중 깃발이 1번부터, 이미 세운 자원 깃발(built)은 번호 없이 표시.
  *   목표 생산 비율 ratio(빵·나무·석재·철, 연맹 기술·후반 깃발 비용 비율)에 가까워지는 순. rates(연맹 창고 생산량)가 있으면
- *   깃발마다 그 깃발까지 세웠을 때 예상 생산량(rate). "자원 깃발" 버튼으로 켜고 끔. */
+ *   깃발마다 그 깃발까지 세웠을 때 예상 생산량(rate). "자원 깃발" 버튼으로 켜고 끔.
+ * 작업 순서(banner/v3와 같은 구성): 자원 깃발을 번호대로 '작업완료 · 다음'으로 넘김. 진행은 서버 /api/sgd/steps(모든 기기 공유, 키 build<x>,<y>) + 이 브라우저 localStorage. */
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -118,7 +119,7 @@
 
     // ---------- 요약 ----------
     $('facts').innerHTML = [
-      ...(rflags.length ? [['--c-rflag', '다음 깃발', `${rflags[0].no}번 · X:${rflags[0].x} Y:${rflags[0].y}`]] : []),
+      ...(rflags.length ? [['--c-rflag', '다음 깃발', '<span id="fnext"></span>']] : []),
       ['--c-hq', '본부', xy(HQ)], ['--c-t1', '곰덫1', xy(T)], ['--c-banner', '깃발', banners.length + '개'],
       ['--c-city2', '자리', members.length ? `${seats.length} · 연맹원 ${members.length}` : `${seats.length}`],
       ...(rflags.length ? [['--c-rflag', '자원 깃발', `${rflags.length}개 · 자원지 +${rflags.reduce((a, f) => a + f.nodes.length, 0)}`]] : []),
@@ -156,28 +157,12 @@
       $('foreign').hidden = false;
     }
 
-    // ---------- 자원 깃발 경로 (빵·나무 균형) ----------
+    // ---------- 자원 깃발 작업 순서 ----------
     if (rflags.length) {
-      const nb = rflags.filter(f => f.building).length, kindsOf = f => f.nodes.length ? f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') : '연결';
-      const gain = t => rflags.reduce((a, f) => a + f.nodes.filter(n => n[2] === t).length, 0);
-      $('ressum').textContent = `${rflags.length}개 · ` + NODE_NAMES.map((nm, t) => `${nm} +${gain(t)}`).join(' ') + '곳';
-      const ratio = rplan.ratio && rplan.ratio.some((v, t) => t > 1 && v > 0) ? rplan.ratio : null;
-      const first = rflags.find(f => f.needs && f.needs.length);
-      const now = rplan.baseRate || (R && NODE_NAMES.map(nm => R[nm])), est = R && R.nodes && rplan.baseCnt && rplan.baseCnt.some((c, t) => c !== R.nodes[t]);
-      const links = rflags.filter(f => !f.nodes.length && !f.building).length, nNew = rflags.filter(f => !f.building).length, got = rflags.reduce((a, f) => a + f.nodes.length, 0);
-      $('reshint').textContent = (R ? `지금 생산${est ? ' 추정' : ''}: ${rateText({ rate: now })} (${R.at} 연맹 창고 화면${est ? ' + 그 뒤 세운 깃발' : ''}), 자원지 1곳 = ${R.perNode}K/h. ` : '') +
-        (rBuilt.length ? `이미 세운 자원 깃발 ${rBuilt.length}개는 번호 없이 표시했습니다. ` : '') +
-        (nb ? `${nb > 1 ? `1~${nb}번` : '1번'}은 지금 짓는 중인 깃발입니다. ` : '') +
-        (first ? `자원 깃발 ${first.no}번은 배치 ${first.link}번에 붙으니 배치 깃발 ${first.needs.map(n => n.replace('깃발 ', '') + '번').join(' → ')}을 먼저 세우세요. ` : '') +
-        (ratio ? `목표 비율은 빵 ${ratio[0]} : 나무 ${ratio[1]} : 석재 ${ratio[2]} : 철 ${ratio[3]}입니다 (연맹 기술 전체 비용·깃발 211개 이후 비용 비율). ` : '') +
-        `깃발 ${rflags.length}개로 연맹 자원지 ${got}곳을 더 얻습니다 (깃발 1개당 ${(got / rflags.length).toFixed(2)}곳${links ? `, 이어 주기만 하는 깃발 ${links}개` : ''}). ` +
-        (rLast.rate ? `${rLast.no}번까지 세우면 ${rateText(rLast)}입니다.` : '');
-      $('reslist').innerHTML = rflags.map(f => {
-        const cls = f.nodes.length ? ['bread', 'wood', 'stone', 'iron'][f.nodes[0][2]] : '';
-        return `<li data-r="${f.id}"${cls ? ` class="${cls}"` : ''}><span class="no">${f.no}</span><button type="button" class="lnk" data-r="${f.id}">X:${f.x} Y:${f.y}</button><span class="gain">+${kindsOf(f)}${f.building ? ' <span class="tagb">짓는 중</span>' : ''}</span><span class="why">← ${esc(f.link)} · ${rateText(f)}</span></li>`;
-      }).join('');
-      showFlag(rflags[0], false);
-      $('next').hidden = false; $('res').hidden = false;
+      const got = rflags.reduce((a, f) => a + f.nodes.length, 0), now = rplan.baseRate || (R && NODE_NAMES.map(nm => R[nm]));
+      $('reshint').textContent = `+ = 그 깃발로 새로 연맹 자원이 되는 자원지. 깃발 ${rflags.length}개로 자원지 ${got}곳` + (now ? ` · 생산 ${rateText({ rate: now })}` : '') + (rLast.rate ? ` → ${rateText(rLast)}` : '') + (R ? ` (${R.at} 창고 화면 기준)` : '');
+      setupSteps();
+      $('stepbox').hidden = false; $('res').hidden = false;
       for (const id of ['rflaglegend', 'rterrlegend']) if ($(id)) $(id).hidden = false;
     }
 
@@ -269,7 +254,7 @@
   function home() {
     if (rflags.length && view.res) {   // 앞으로 지을 깃발 전체 (+ 세운 자원 깃발), 번호가 안 읽히면 다음 깃발을 가운데로
       fitPts([...rBuilt, ...rflags].map(f => [f.x, f.y, 1]));
-      if (view.s < 10) { view.cx = rflags[0].x + 0.5; view.cy = rflags[0].y + 0.5; view.s = 16; }
+      if (view.s < 10) centerCur();
       return;
     }
     fit();
@@ -320,10 +305,11 @@
     banners.forEach(b => box(b, 1, C['c-banner'], 0.06));
     if (view.res) {
       rBuilt.forEach(f => box(f, 1, C['c-rflag'], 0.06));
-      rflags.forEach(f => { if (f.building) gx.globalAlpha = 0.5; box(f, 1, C['c-rflag'], 0.06); gx.globalAlpha = 1; if (f.building) { gx.strokeStyle = C['c-rflag']; gx.lineWidth = 2 / s; gx.setLineDash([2 / s, 2 / s]); gx.strokeRect(f.x - 0.1, f.y - 0.1, 1.2, 1.2); gx.setLineDash([]); } });
+      rflags.forEach((f, i) => { const bld = f.building && i >= done; if (bld) gx.globalAlpha = 0.5; box(f, 1, C['c-rflag'], 0.06); gx.globalAlpha = 1; if (bld) { gx.strokeStyle = C['c-rflag']; gx.lineWidth = 2 / s; gx.setLineDash([2 / s, 2 / s]); gx.strokeRect(f.x - 0.1, f.y - 0.1, 1.2, 1.2); gx.setLineDash([]); } });
     }
     oldFlags.forEach(f => { if (!f.reuse) { gx.strokeStyle = f.on ? C['bad'] : C['c-real']; gx.lineWidth = 2.2 / s; gx.strokeRect(f.x + 0.12, f.y + 0.12, 0.76, 0.76); } });
     box(HQ, 3, C['c-hq'], 0.05); box(T, 3, C['c-t1'], 0.05);
+    if (view.res && rflags[done]) { const f = rflags[done]; gx.strokeStyle = C['c-rflag']; gx.lineWidth = 3 / s; gx.beginPath(); gx.arc(f.x + 0.5, f.y + 0.5, Math.max(2.4, 14 / s), 0, Math.PI * 2); gx.stroke(); }   // 지금 지을 깃발
     if (view.flag) { // 마우스가 올라간 깃발의 영토
       const f = view.flag, c = f.res ? C['c-rflag'] : C['c-banner'], r = K.BN_COV;
       gx.fillStyle = c; gx.globalAlpha = 0.22; gx.fillRect(f.x - r, f.y - r, 2 * r + 1, 2 * r + 1); gx.globalAlpha = 1;
@@ -350,26 +336,77 @@
       seats.forEach(st => label(st, 2, st.named ? st.n : String(st.no), px, st.named ? C['on-obj'] : C['c-spare'], cellW));
     }
     if (s >= 10) banners.forEach(b => label(b, 1, String(b.no), Math.min(11, s * 0.55), C['on-obj']));
-    if (s >= 10 && view.res) rflags.forEach(f => label(f, 1, String(f.no), Math.min(11, s * 0.55), C['on-obj']));
+    if (s >= 10 && view.res) rflags.forEach((f, i) => { if (i >= done) label(f, 1, String(f.no), Math.min(11, s * 0.55), C['on-obj']); });
     const big = Math.min(15, Math.max(10, s * 0.75));
     label(T, 3, '덫1', big, C['on-obj']); label(HQ, 3, '본부', big, C['on-obj']);
   }
 
-  // ---------- 자원 깃발 카드 (다음 깃발 / 목록에서 고른 깃발) ----------
-  function showFlag(f, picked) {
-    if (!f) return;
-    $('nextcard').innerHTML = `<span class="nm">${picked ? '' : '다음 깃발 · '}자원 깃발 ${f.no}번${f.building ? ' <span class="tagb">짓는 중</span>' : ''}</span><span class="co">X:${f.x} Y:${f.y}</span>
-      <span class="meta">+${f.nodes.length ? f.nodes.map(n => `${NODE_NAMES[n[2]]}(${n[0]},${n[1]})`).join(' ') : '자원 없음 — 다음 깃발로 이어 주는 깃발'} · ${esc(f.link)}에 붙음</span>
-      ${f.rate ? `<span class="meta">여기까지 세우면 ${rateText(f)}</span>` : ''}
-      <span class="acts"><button class="btn" type="button" data-go="${f.id}">지도에서 보기</button><button class="btn" type="button" data-cp="${f.id}">좌표 복사</button>${f.no < rflags.length ? `<button class="btn" type="button" data-nx="${f.no}">다음 ${f.no + 1}번 →</button>` : ''}</span>`;
-    document.querySelectorAll('#reslist li.on').forEach(li => li.classList.remove('on'));
-    const li = document.querySelector(`#reslist li[data-r="${f.id}"]`); if (li) li.classList.add('on');
+  // ---------- 작업 순서: 지금 지을 깃발 카드 · 전체 순서 · 서버 공유 ----------
+  let done = 0;
+  const KEY = 'sgd-steps', API = '/api/sgd/steps', keyOf = f => `build${f.x},${f.y}`;
+  const gainOf = f => f.nodes.length ? '+' + f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') : '연결';
+  const prefix = keys => { let n = 0; while (n < rflags.length && keys[n] === keyOf(rflags[n])) n++; return n; };
+  const centerCur = () => { const f = rflags[done] || rflags[rflags.length - 1]; view.cx = f.x + 0.5; view.cy = f.y + 0.5; view.s = Math.max(view.s, 16); draw(); };
+  function setupSteps() {
+    try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && Array.isArray(v.keys)) done = prefix(v.keys); } catch (_) { /* 저장소 못 씀 */ }
+    $('stepl').innerHTML = rflags.map((f, i) => `<li value="${f.no}" data-k="${i}" class="${f.nodes.length ? ['bread', 'wood', 'stone', 'iron'][f.nodes[0][2]] : ''}"><button type="button" class="lnk" data-k="${i}"><span class="mono">X:${f.x} Y:${f.y}</span> <span class="gain">${gainOf(f)}</span></button></li>`).join('');
+    $('stepl').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) goFlag(rflags[+b.dataset.k]); });
+    $('stepcopy').addEventListener('click', () => { if (rflags[done]) copyXY(rflags[done]); });
+    $('stepdone').addEventListener('click', () => { if (done < rflags.length) { done++; push(); renderStep(); if (rflags[done]) { copyXY(rflags[done], `${done}번 완료 · `); centerCur(); } } });
+    $('stepundo').addEventListener('click', () => { if (done) { done--; push(); renderStep(); centerCur(); } });
+    $('stepmap').addEventListener('click', () => goFlag(rflags[done]));
+    renderStep();
+    pull(true); setInterval(() => { if (!document.hidden) pull(); }, 20000); document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
+  }
+  function copyXY(f, pre = '') {
+    const t = `X:${f.x} Y:${f.y}`, say = m => { $('stepmsg').textContent = pre + m; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => say(`${t} 복사됨`), () => say(`복사 안 됨: ${t}`)); else say(`복사 안 됨: ${t}`);
+  }
+  function renderStep() {
+    const f = rflags[done], n = rflags.length;
+    $('stepsum').textContent = `${done}/${n} 완료`;
+    $('stepph').textContent = f ? `${done + 1}/${n} · 자원 깃발 ${f.no}번${f.building ? ' (짓는 중)' : ''}` : '모든 깃발을 세웠습니다';
+    $('stepop').innerHTML = f ? `<span class="opb">깃발 건설</span> <small>${gainOf(f)} · ${esc(f.link)}에 붙음</small>` : '';
+    $('stepxy').textContent = f ? `X:${f.x} Y:${f.y}` : '';
+    $('steprate').textContent = f && f.rate ? `여기까지 세우면 ${rateText(f)}` : '';
+    for (const id of ['stepcopy', 'stepdone', 'stepmap']) $(id).disabled = !f;
+    $('stepundo').disabled = !done;
+    if ($('fnext')) $('fnext').textContent = f ? `${f.no}번 · X:${f.x} Y:${f.y}` : '모두 세움';
+    document.querySelectorAll('#stepl li[data-k]').forEach(li => { const k = +li.dataset.k; li.classList.toggle('done', k < done); li.classList.toggle('cur', k === done); });
+    draw();
+  }
+  // 진행 기록 서버 공유: {keys, ver} — 누구나 PUT, base≠ver면 409(낡은 화면이 덮어쓰지 않음). 서버가 안 되면 이 기기에만 저장했다가 연결되면 올림.
+  let ver = null, dirty = false;
+  const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: rflags.slice(0, done).map(keyOf) })); } catch (_) { /* 저장소 못 씀 */ } };
+  function syncMsg(at, note) {
+    let el = $('stepsync');
+    if (!el) { el = document.createElement('small'); el.id = 'stepsync'; el.style.cssText = 'display:block;margin-top:.4em;opacity:.75'; $('stepmsg').after(el); }
+    el.textContent = ver === null || dirty ? '서버에 연결되지 않아 이 기기에만 저장했습니다 — 연결되면 올립니다' : `모든 기기 공유${at ? ` · 마지막 저장 ${new Date(at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}${note ? ` · ${note}` : ''}`;
+  }
+  async function pull(first) {
+    try {
+      const r = await fetch(API, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status);
+      const j = await r.json(); ver = j.ver || 0;
+      if (dirty || (!Array.isArray(j.keys) && done)) return push();
+      if (Array.isArray(j.keys)) { const n = prefix(j.keys); if (n !== done) { done = n; saveLocal(); renderStep(); if (first && !location.search) centerCur(); } }
+      syncMsg(j.updated_at);
+    } catch (_) { syncMsg(); }
+  }
+  async function push() {
+    saveLocal();
+    if (ver === null) { dirty = true; syncMsg(); return; }
+    try {
+      const r = await fetch(API, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ base: ver, keys: rflags.slice(0, done).map(keyOf) }) });
+      const j = await r.json();
+      if (r.status === 409) { ver = j.ver; dirty = false; done = prefix(j.keys || []); saveLocal(); renderStep(); syncMsg(j.updated_at, '다른 기기에서 먼저 바뀌어 그 기록을 따랐습니다'); }
+      else if (r.ok) { ver = j.ver; dirty = false; syncMsg(j.updated_at); }
+      else throw new Error(r.status);
+    } catch (_) { dirty = true; syncMsg(); }
   }
   function goFlag(f) {
     if (!f) return;
     if (!view.res) $('res').click();   // 자원 깃발이 꺼져 있으면 켜서 보여 줌
-    showFlag(f, true);
-    goTo(f.x, f.y, `자원 깃발 ${f.no}번${f.building ? ' (짓는 중)' : ''} · X:${f.x} Y:${f.y} · ${f.link}에 붙음 · +${f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') || '연결'} · 여기까지 ${rateText(f)}`);
+    goTo(f.x, f.y, `자원 깃발 ${f.no}번 · X:${f.x} Y:${f.y} · ${f.link}에 붙음 · ${gainOf(f)}${f.rate ? ` · 여기까지 ${rateText(f)}` : ''}`);
     setURL('r', f.no);
   }
 
@@ -490,17 +527,7 @@
     const btn = e.target.closest('button[data-x]');
     if (btn) goTo(+btn.dataset.x, +btn.dataset.y, `${btn.textContent.trim()}`);
   });
-  $('reslist').addEventListener('click', e => {
-    const li = e.target.closest('li[data-r]');
-    if (li) goFlag(rflags.find(o => o.id === li.dataset.r));
-  });
-  $('nextcard').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.go) goFlag(rflags.find(o => o.id === b.dataset.go));
-    else if (b.dataset.cp) { const f = rflags.find(o => o.id === b.dataset.cp); copyTo(b, `X:${f.x} Y:${f.y}`, '좌표 복사'); }
-    else if (b.dataset.nx) goFlag(rflags.find(o => o.no === +b.dataset.nx + 1));
-  });
-  $('rescopy').addEventListener('click', () => copyTo($('rescopy'), ['[SGD 자원 깃발 설치 순서]', ...rflags.map(f => `${f.no}) X:${f.x} Y:${f.y} +${f.nodes.map(n => NODE_NAMES[n[2]]).join(' ') || '연결'}${f.building ? ' (짓는 중)' : ''}`), `지도: ${location.origin}/sgd/`].join('\n'), '깃발 좌표 복사 (연맹 채팅용)'));
+  $('rescopy').addEventListener('click', () => copyTo($('rescopy'), ['[SGD 자원 깃발 설치 순서]', ...rflags.slice(done).map(f => `${f.no}) X:${f.x} Y:${f.y} ${gainOf(f)}`), `지도: ${location.origin}/sgd/`].join('\n'), '남은 깃발 좌표 복사 (연맹 채팅용)'));
   $('fit').addEventListener('click', () => fit(true));
   $('zin').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.35));
   $('zout').addEventListener('click', () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.35));
@@ -541,7 +568,7 @@
       const named = gr.rows.filter(m => m.named);
       if (named.length) { L.push(`■ ${gr.title}`); L.push(named.map(m => `${m.n} ${m.x},${m.y}`).join(' / ')); }
     }
-    if (rflags.length) L.push(`자원 깃발 ${rflags.length}개 (연구·깃발 비용 비율, 설치 순서): ` + rflags.map(f => `${f.no})${f.x},${f.y}${f.building ? '(짓는 중)' : ''}`).join(' '));
+    if (done < rflags.length) L.push(`남은 자원 깃발 ${rflags.length - done}개 (설치 순서): ` + rflags.slice(done).map(f => `${f.no})${f.x},${f.y}`).join(' '));
     L.push(`자리 번호·좌표 보기: ${location.origin}/sgd/`);
     return L.join('\n');
   }

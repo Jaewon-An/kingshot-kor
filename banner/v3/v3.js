@@ -11,7 +11,7 @@
   const KP = window.KSPlan, G = 1200;
   const cv = $('cv'), gx = cv.getContext('2d');
   const PHONE = matchMedia('(max-width: 900px)');
-  if (PHONE.matches) for (const id of ['legend', 'chkbox', 'flbox']) if ($(id)) $(id).open = false;
+  if (PHONE.matches) for (const id of ['legend', 'flbox']) if ($(id)) $(id).open = false;
   const xy = (x, y) => `X:${x} Y:${y}`;
   function fail(msg) { const n = $('notice'); n.textContent = msg; n.className = 'notice err'; n.hidden = false; }
   let D, map, VX, VY, VW, VH, kind, PLAN, planKey = 'main';
@@ -43,7 +43,6 @@
 
   function setup() {
     $('stamp').textContent = `${D.updated} 기준 · 점령 거점 ${D.held.length}곳${(D.assume || {}).swap ? ' (무기 창고 교환 가정)' : ''}`;
-    $('plans').innerHTML = PLANS().map(([k, p, t, s]) => `<label><span><b>${t}</b><small>${s}</small></span></label>`).join('');
     // 주변 거점
     const cs = D.cands.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99));
     let acc = D.main.flags.length;
@@ -69,44 +68,13 @@
     $('typesum').textContent = miss.length ? `연결 안 되는 종류 ${miss.length}: ${miss.join('·')}` : '모든 종류 연결';
     $('types').innerHTML = '<tr><th>종류</th><th>연결됨 (추천안 + 더 잇기)</th><th>못 이음 (소유)</th></tr>' + rows.map(r => r.html).join('');
     $('fl').addEventListener('click', e => { const b = e.target.closest('button[data-x]'); if (b) goTo(+b.dataset.x, +b.dataset.y); });
-    const r = D.res, sum = a => a.reduce((s, v) => s + v, 0), rs = a => `빵 ${a[0]}·나무 ${a[1]}·돌 ${a[2]}·철 ${a[3]}`;
-    const sw = (D.assume || {}).swap, RC = (D.resfill || {}).count || {}, RV = D.review || {}, cl = D.corners || [];
-    const arm = sw ? D.held.find(h => h.x === sw.take[0] && h.y === sw.take[1]) : null;
-    $('check').innerHTML = [
-      sw ? `<b>가정:</b> ${sw.with}과 Lv.2 무기 창고 교환이 성사된 것으로 계산했습니다 — 우리 무기 창고(${xy(...sw.give)})를 넘기고 ${sw.with} 무기 창고(${xy(...sw.take)})를 받습니다. 받는 거점을 점령하기 전에 작업을 시작해도 ${xy(...sw.kept)} 깃발이 본부와 끊기지 않게 순서를 잡았습니다 — ① 황야 본부를 먼저 옮기고, 그 깃발에서 새 본부까지 이어지는 남쪽 옛 깃발(Y 1030 이상)은 ④에서 맨 나중에 철거합니다. 그래도 <b>교환을 먼저 끝내고 시작하는 편이 안전합니다.</b> 교환이 안 되면 다시 계산해야 합니다.` : '',
-      `점령 거점 ${D.held.length}곳: ${D.held.map(h => `${h.name} ${xy(h.x, h.y)}${(D.retake || []).some(r => r.x === h.x && r.y === h.y) ? ' (되찾을 거점)' : ''}`).join(', ')}.`,
-      D.must ? `<b>반드시 포함할 거점 ${D.must.length}곳(11-13)${D.must.every(m => m.ok) ? '이 모두 이어집니다' : ' 중 ' + D.must.filter(m => !m.ok).map(m => m.name).join('·') + '은(는) 아직 못 이었습니다'}:</b> ${D.must.map(m => `${m.name.replace(/ \(.*\)/, '')} ${xy(m.x, m.y)}${m.status === 'held' ? '' : m.status === 'swap' ? ' (교환으로 받음)' : m.status === 'retake' ? ' (FUN에서 되찾기)' : ` (NYX 소유 · 깃발 +${m.add})`}`).join(', ')}.` : '',
-      ...(D.retake || []).map(o => `<b>${o.name}(${xy(o.x, o.y)})는 지금 ${o.from} 소유입니다</b>(11-11 화면에서는 KOR, 11-13 화면에서는 ${o.from} 표시). 되찾을 거점이라 연결 대상에 그대로 두었습니다 — 둘레가 ${o.from} 영토라 지금은 우리 영토가 금지 구역에 ${(D.main.contact || {})[o.name]}칸만 닿습니다.`),
-      ...cl.filter(c => c.pass).map(c => `${xy(...c.a)} ↔ ${xy(...c.b)}는 ${c.pass.with.join('·') || '다른 연맹'} 깃발 둘이 꼭짓점으로만 닿은 틈을 지나는 자리입니다(11-13 규칙: 그런 곳은 지나갈 수 있음)${c.pass.sure ? ' — 양옆 두 깃발 자리의 네 귀퉁이를 게임에서 눌러 모두 빈 땅임을 확인했습니다.' : ' — 짓기 전에 두 자리의 귀퉁이를 눌러 확인하세요.'}`),
-      ...(D.notes || []),
-      sw && arm ? `받는 Lv.2 무기 창고(${xy(...sw.take)}): 지금 KOR 깃발 ${xy(...sw.kept)}이 북쪽 변에 닿아 있습니다(게임에서 확인). 이 깃발은 그대로 두고 여기까지 잇습니다. 남쪽·동쪽 둘레는 FN5(X:438 Y:1058)·CMS(X:445 Y:1058·X:450 Y:1064) 땅(게임에서 확인)이고 서쪽은 FUN 영토라, 맞닿는 길이는 ${(D.main.contact || {})[arm.name]}칸이 한계입니다.` : '',
-      `v2 깃발은 곰덫 주변만 지키고, 본부 북쪽 위쪽 깃발 ${D.up.used.length + D.up.unused.length}개(예전 거점 연결용, 곰덫2 안전 반경 42칸 밖)는 새 계획에 쓰는 ${D.up.used.length}개만 남기고 ${D.up.unused.length}개는 ⑤에서 본부에서 먼 것부터 철거합니다. /banner/v1·v2는 이전 이력 확인용으로만 두고 고치지 않습니다.`,
-      '두 본부 모두 영토의 뿌리입니다(지금 황야 본부 쪽 깃발 덩어리는 평원 본부와 끊겨 있는데도 유지됨). 그래서 거점마다 평원 본부 쪽이나 황야 본부 쪽 중 한 곳에 이어지면 되는 것으로 계산했습니다. 황야 본부 이전을 ①로 둔 까닭: 옮기자마자 건설소가 본부에 닿고, 남쪽 옛 깃발 띠가 새 본부 영토에 붙어 서쪽 무기 창고 깃발까지 계속 이어지기 때문입니다.',
-      `황야 본부 자리: 황야(왕국 300~899 평원 고리 밖) 중 3×3이 비어 있고 영토 15×15에 다른 연맹·금지 구역이 없는 ${RV.wCount ? RV.wCount.toLocaleString('ko-KR') : '수만'}곳을 모두 계산해 골랐습니다${D.main.direct && D.main.direct.length ? ` — 새 자리는 본부 영토가 ${D.main.direct.join('·')} 금지 구역에 변으로 바로 닿아 깃발 없이 이어집니다` : ''}.${RV.plainOnly ? ` 평원 본부 하나로만 ${D.held.length}곳을 다 이으면 깃발 약 ${Math.round(RV.plainOnly)}개가 듭니다.` : ''}`,
-      `거점과 맞닿는 길이(금지 구역 둘레 칸 중 우리 영토인 칸, 최종 영토 기준 · 13칸 이상이 목표): ${Object.entries(D.main.contact || {}).map(([k, v]) => `${k} ${v}칸`).join(', ')} (보강 깃발 ${(D.main.reinforce || []).length}개 포함). 13칸이 안 되는 곳은 둘레가 다른 연맹 땅이라 더 넓힐 자리가 없는 거점입니다.`,
-      `깃발 영역 겹침: 깃발마다 ±3칸 옮겨 보며 줄였습니다 — 거점 연결 깃발끼리·평원 쪽 v2 영토·황야 본부 영역과 ${D.main.overlap ? D.main.overlap[1] : 0}칸, 주변 거점·자원지 보강까지 합쳐 ${D.overlapAll}칸. 다듬는 순서는 자원지(빵·나무 우선) → 꼭짓점 연결 수 → 겹침 → 맞닿는 변입니다(11-12 규칙).`,
-      '연결 규칙: 깃발 영역 7×7은 변이 1칸 이상 맞닿으면 이어집니다. 꼭짓점만 닿아도 게임에서는 이어지므로 금지하지 않고, 깃발 0.6개 몫 감점만 줘서 깃발이 줄 때만 씁니다(11-12 규칙). 금지 구역(거점 15×15·성채 60) 안에는 영토가 안 생기므로 깃발 영역은 금지 구역과 한 칸도 겹치지 않게 놓고, 거점은 금지 구역 바로 바깥에 영토가 변으로 맞닿으면 연결입니다. 깃발은 산·호수·연맹 자원지·구조물·금지 구역에 못 세웁니다. 성채·유적으로는 잇지 않습니다. 다른 연맹 깃발끼리 꼭짓점으로만 닿은 곳이나 얇게 이어진 곳은 지나갈 수 있습니다(11-13 규칙) — 이번 경로는 꼭짓점 틈만 지나고, 얇게 이어진 곳을 넘는 자리는 없습니다.',
-      `다른 연맹 영토는 11-13 낮 시간 PC 화면(110단계 축소 지도 19장, 동쪽 끝만 11-11)의 덧칠 색으로 다시 읽었고(게임의 밤 화면은 빈 땅까지 다른 연맹으로 잘못 읽혀 낮 화면만 씀 — 11-11 밤 화면 때문에 막혀 있던 빈 땅이 풀렸습니다), 새 깃발의 7×7 영역은 다른 연맹 칸과 겹치지 않게 잡았습니다(1칸 여유 없음 — 11-12 규칙). 게임에서 칸을 직접 눌러 소속을 확인한 ${D.facts || 150}곳(11-11·11-13)은 화면 판독보다 우선해 넣었습니다 — 그 과정에서 거점 아이콘에 가려 안 보이던 NYX·FUN·KoreaAcademy 땅을 찾아 경로를 고쳤습니다. <b>거점 아이콘·이름표에 가린 둘레와, 다른 연맹 영토에 바로 붙는 자리는 화면 판독이 1칸쯤 틀릴 수 있습니다. 짓기 전에 그 자리를 눌러 '소속 연맹'을 확인하세요.</b>${D.verify ? ` 새로 짓는 ${D.verify.builds}개 중 ${D.verify.any}개가 그런 자리입니다(다른 연맹에 바로 붙음 ${D.verify.adj}개, 가려진 둘레 ${D.verify.hid}개 — 작업 순서에 ⚠ 표시).` : ''} 다른 연맹은 계속 깃발을 늘립니다.`,
-      D.real ? `지금 깃발 ${D.real.length}개는 11-13 게임 축소 지도의 깃발 표식을 하나씩 읽은 실제 좌표입니다(지도의 회색 점선 = 평원 쪽 v2를 뺀 ${D.now.length}개). 작업 순서는 이 실제 깃발로 한 단계씩 흉내 내어, 빈 칸이 있으면 새 깃발을 먼저 짓고 빈 칸이 없을 때만 '빼도 다른 깃발이 안 끊기는' 옛 깃발부터 철거하게 짰습니다. 어쩔 수 없이 끊기는 단계는 ✂ 로 표시했습니다.${(D.subs || []).length ? ` 계획 자리와 1~2칸 차이로 이미 서 있고 이웃 연결이 그대로인 실제 깃발 ${D.subs.length}개는 다시 짓지 않고 그대로 씁니다.` : ''}` : `지금 거점 연결 깃발은 게임 총 ${D.count.now}개에서 평원 쪽(v2 ${D.count.v2}개·여분 최대 ${D.count.extra}개)을 뺀 약 ${D.count.now - D.count.v2 - D.count.extra}~${D.count.now - D.count.v2}개입니다. 지도에 회색 점선으로 그린 ${D.now.length}개는 화면의 KOR 영토 모양을 7×7 최소 개수로 덮어 추정한 것이라(많이 겹친 깃발은 하나로 잡힘) 실제보다 적고 좌표도 1~3칸 다를 수 있습니다. 그래서 ④ 끝에 '남은 옛 깃발 정리' 단계를 넣었습니다 — 새 계획에 없는 거점 연결 깃발은 목록에 없어도 모두 철거합니다.`,
-      `연맹 자원지(2×2 네 칸 중 3칸 이상이 영토 안이면 셈, 하나당 시간당 3,600): 추천안까지 ${sum(RC.main || [])}곳 → 주변 거점까지 ${sum(RC.cand || [])}곳 → 자원지 보강까지 ${sum(RC.res || [])}곳(${rs(RC.res || [0, 0, 0, 0])}). 지금 게임은 111곳(빵 33·나무 29·돌 30·철 19). 자원지 보강은 빵·나무가 고르게 늘도록 골랐습니다 — 깃발 하나에 빵·나무가 같은 양 들어서 적은 쪽이 병목이기 때문입니다${RV.resSumOnly ? `(합계만 최대로 하면 빵 ${RV.resSumOnly[0]}·나무 ${RV.resSumOnly[1]}곳)` : ''}.`,
-      `주변 거점 ${D.cands.filter(c => c.rank).length}곳은 한꺼번에 최소 깃발로 잇도록 계산했습니다(거점 묶음마다 가장 적게 드는 길, 묶음 나누기는 모두 비교). "혼자 붙이면"은 추천안에 그 거점 하나만 이을 때, "차례로 붙이면"은 앞 거점 길을 함께 쓸 때 그 거점 몫(맞닿는 면 보강 포함)입니다. 뺀 거점: THE 소유 3곳(점령 불가), FUN Lv.2 훈련 캠프(점령 중인 것과 종류·레벨 중복), 채집 제단·풍작 제단(보류 — 11-13).`,
-      cl.length ? `깃발이 꼭짓점으로만 이어지는 자리 ${cl.length}곳: ${cl.map(c => `${xy(...c.a)} ↔ ${xy(...c.b)}`).join(', ')}. 이 자리가 끊기면 그 뒤 깃발이 본부와 떨어집니다.${RV.noCornerFlags ? ` 꼭짓점 연결을 전혀 안 쓰면 거점 연결 깃발이 ${D.main.flags.length}개 → ${RV.noCornerFlags}개로 늘어납니다.` : ''}` : '꼭짓점으로만 이어지는 자리는 없습니다.',
-      D.resFirst && D.resFirst.min ? `작업 순서(${D.resFirst.at} 다시 짬 — 최소 시간 안): 가장 짧은 시간에 요구한 거점을 모두 잇는 작업만 남겼습니다. ${D.resFirst.hq ? '먼저 황야 본부를 건설소 Lv.1 옆으로 옮기고(자원 0, 끊기는 깃발 없음), ' : '황야 본부는 옮기지 않습니다(방어구 창고 Lv.2 ~ 건설소 Lv.1 옛 연결 깃발도 그대로 둠). '}평원 본부 → 방어구 창고 Lv.4 → 연구소 Lv.3 · 건설소 Lv.3(번갈아) 길에 꼭 필요한 깃발 ${D.resFirst.path}개${D.resFirst.extra.length ? `와 넣으면 전체 시간이 줄어드는 자원지 깃발 ${D.resFirst.extra.length}개` : ''}만 짓습니다. 빈 칸이 없으면 '빼도 깃발이 안 끊기고 나무·빵 자원지도 안 잃는' 옛 깃발을 상한 285개를 넘는 만큼만 철거합니다. 건설 ${D.resFirst.build} · 철거 ${D.resFirst.remove}, 자원지 수입만으로(재고 0, 깃발 1개에 나무·빵 250,800씩) 약 ${D.resFirst.hours}시간(${(D.resFirst.hours / 24).toFixed(1)}일)입니다. 영토 안 연맹 자원지: ${rs(D.resFirst.now)} → ${rs(D.resFirst.final)}. <b>거점을 이은 뒤의 동쪽 길 다시 짓기·옛 깃발 정리는 뺐습니다</b>(건설 80개로 나무 자원지 8곳이 늘 뿐이라 효율이 낮음) — 지도에 회색 점선 테두리로 남은 새 경로 깃발이 그 보류분입니다. <a href="/banner/v4/">이 안만 보는 지도</a>.` :
-      D.resFirst && D.resFirst.segs ? `작업 순서(${D.resFirst.at} 다시 짬): 거점 연결 우선순위대로 ① 평원 본부 → 무기 창고 Lv.4 ② 평원 본부 → 원정 캠프 Lv.3 ③ 원정 캠프 → 연구소 Lv.1 ④ 원정 캠프 → 훈련 캠프 Lv.2 ⑤ 훈련 캠프 → 방어구 창고 Lv.2 ⑥ 방어구 창고 → 무기 창고 Lv.2 ⑦ 황야 본부 이전 ⑧ 평원 본부 → 방어구 창고 Lv.4 ⑨ 방어구 창고 Lv.4 → 연구소 Lv.3 ⑩ 방어구 창고 Lv.4 → 건설소 Lv.3 순서로 짓습니다. 구간마다 그 곁의 자원지 보강 깃발을 함께 넣고, 구간 안에서는 나무·빵 자원지가 빨리 느는 깃발부터(나무 1·빵 0.6·돌 0.05·철 0.02), 한 방향만 이어 가지 않고 여러 방향을 번갈아 둡니다(동시에 여러 개 건설 가능). 빈 칸이 없으면 '빼도 깃발이 안 끊기고 자원지도 안 잃는' 옛 깃발부터 철거합니다. 방어구 창고 Lv.2 ~ 건설소 Lv.1 사이 옛 연결 깃발은 황야 본부 이전(⑦) 뒤에만 철거합니다. 영토 안 연맹 자원지: 다시 짤 때 ${rs(D.resFirst.now)} → 최종 ${rs(D.resFirst.final)}. 남은 건설을 자원지 수입만으로(재고 0, 깃발 1개에 나무·빵 250,800씩) 지으면 약 ${D.resFirst.hours}시간(${(D.resFirst.hours / 24).toFixed(1)}일)입니다 — 나무가 병목입니다. 지도의 숫자는 작업 순서 번호이고, 테두리 색은 남은 작업입니다(새로 지을 깃발 녹색·철거할 깃발 주황). 모든 거점 연결 뒤에 짓던 자원지 보강 깃발 14개는 뺐습니다(11-14).` :
-      D.resFirst ? `작업 순서(${D.resFirst.at} 다시 짬 — 연맹 나무 부족): 여유 깃발 ${D.resFirst.spare}개로 ① 나무·빵 자원지가 빨리 느는 묶음부터 짓습니다(늘어나는 값 ÷ 깃발 수가 큰 순서, 나무 1·빵 0.6·돌 0.05·철 0.02로 셈). 빈 칸이 없으면 '빼도 깃발이 안 끊기고 자원지도 안 잃는' 옛 깃발부터 철거합니다. 황야 본부는 옛 본부 둘레 새 깃발 4개를 지은 직후에 옮기고(옮겨도 끊기는 깃발·잃는 자원지 없음), 방어구 창고 Lv.2 ~ 건설소 Lv.1 사이 옛 연결 깃발은 본부 이전 뒤에만 철거합니다(먼저 빼면 건설소가 끊김). 그다음 ② 거점 연결 길 → ③ 자원지 보강 → ④ 주변 거점 연결 → ⑤ 보강 순서입니다. 영토 안 연맹 자원지: 다시 짤 때 ${rs(D.resFirst.now)} → 최종 ${rs(D.resFirst.final)}. 단계마다 자원지 수가 바뀌면 '나무 +1 → 나무 n·빵 m'처럼 적었습니다.` :
-      '작업 순서 ⑥~⑧: 추천안(①~⑤)을 마친 뒤 ⑥ 추천안 영토에서 바로 이을 수 있는 자원지 보강 묶음(빵·나무 수입을 먼저 늘림, 값이 큰 묶음부터) → ⑦ 주변 거점 연결(영토가 닿아야 공격해 점령할 수 있음) → ⑧ 주변 거점 길에서 이어 가는 자원지 보강 묶음. ⑥~⑧의 깃발 수 표시는 ④에서 옛 깃발을 모두 철거했다고 보고 센 값입니다.',
-      '깃발 1개 비용(276~285개 구간, 팬 사이트 표): 빵·나무 250,800, 돌 167,200, 철 91,200. 건설 약 33분.',
-    ].filter(Boolean).map(s => `<li>${s}</li>`).join('');
-    $('src').textContent = '지형·연맹 자원지·거점 위치: mapdata.js(ksmapper). 다른 연맹 영토: 2026-11-13 낮 PC 게임 화면. 지금 우리 깃발(추정): 11-11 화면.';
     setupSteps(); setPlan('main');
   }
-  function renderFacts() {
-    const n = PLAN.flags.length, lo = D.count.now - D.count.v2 - D.count.extra, hi = D.count.now - D.count.v2;   // 게임 총 깃발 − 평원 쪽(v2·여분)
-    const upN = D.up.used.length + D.up.unused.length;   // 지금 연결에 쓰는 v2 위쪽 깃발(새 안에서는 PLAN.flags에 포함된 것만 남음)
-    $('facts').innerHTML = [
-      ['--ok', '새 경로 깃발', `${n}개`], ['--c-old', '지금 거점 연결 깃발', `약 ${lo + upN}~${hi + upN}개`], ['--c-new', '줄어드는 깃발', `약 ${lo + upN - n}~${hi + upN - n}개`],
-      ['--c-wild', '황야 본부', PLAN.w && (PLAN.w[0] !== D.hq.wild[0] || PLAN.w[1] !== D.hq.wild[1]) ? `${xy(...PLAN.w)}로 이전` : '그대로'],
-    ].map(([c, k, v]) => `<div><dt><i style="background:var(${c})"></i>${k}</dt><dd>${v}</dd></div>`).join('');
+  function renderFacts() {   // 11-14: 작업에 필요한 숫자만 — 진행 · 남은 건설 · 남은 철거
+    if (!steps) return;
+    const left = op => steps.slice(done).filter(st => opc(st) === op).length;
+    $('facts').innerHTML = [['--c-pick', '진행', `${done}/${steps.length}`], ['--ok', '남은 건설', `${left('build')}개`], ['--c-new', '남은 철거', `${left('remove')}개`]]
+      .map(([c, k, v]) => `<div><dt><i style="background:var(${c})"></i>${k}</dt><dd>${v}</dd></div>`).join('');
   }
   function renderFlags() {
     $('flsum').textContent = `${PLAN.flags.length}개`;
@@ -171,13 +139,14 @@
   function renderStep() {
     const st = steps[done]; stepCur = st || null;
     $('stepsum').textContent = `${done}/${steps.length} 완료`;
-    $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${PHASE[st.phase]}` : '모든 작업을 마쳤습니다';
+    $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${String(PHASE[st.phase]).split(' — ')[0]}` : '모든 작업을 마쳤습니다';
     $('stepop').innerHTML = st ? `<span class="opb op-${opc(st)}">${OP[st.op]}</span>${(st.phase >= 6 || D.phases) && st.why ? ` <small>${st.why}</small>` : ''}${st.cut ? ` <small>✂ 깃발 ${st.cut}개 끊김</small>` : ''}` : '';
     $('stepxy').textContent = st ? where(st) : '';
     if (st && st.chk) $('stepmsg').textContent = `⚠ 짓기 전에 이 자리를 눌러 소속 연맹을 확인하세요 (${st.chk.includes('adj') ? '다른 연맹 영토에 바로 붙는 자리' : '거점 아이콘·이름표에 가려 화면 판독이 불확실한 자리'}).`; else if ($('stepmsg').textContent.startsWith('⚠')) $('stepmsg').textContent = '';
     $('stepcard').className = `stepnow${st ? ` op-${opc(st)}` : ''}`;
     for (const id of ['stepcopy', 'stepdone', 'stepmap']) $(id).disabled = !st;
     $('stepundo').disabled = !done;
+    renderFacts();
     document.querySelectorAll('#stepl li[data-k]').forEach(li => { const k = +li.dataset.k; li.classList.toggle('done', k < done); li.classList.toggle('cur', k === done); });
     draw();
   }
