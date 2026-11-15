@@ -13,6 +13,7 @@
   const PHONE = matchMedia('(max-width: 900px)');
   if (PHONE.matches) for (const id of ['legend', 'flbox']) if ($(id)) $(id).open = false;
   const xy = (x, y) => `X:${x} Y:${y}`;
+  const no = i => i + 1 - ((D && D.numBase) || 0);   // 화면 번호 — 남은 작업을 1번부터(data.json numBase = 번호를 다시 매길 때 끝나 있던 단계 수)
   function fail(msg) { const n = $('notice'); n.textContent = msg; n.className = 'notice err'; n.hidden = false; }
   let D, map, VX, VY, VW, VH, kind, PLAN, planKey = 'main';
   const C = {};
@@ -108,15 +109,15 @@
     for (const v of haveFlags().values()) { const d = Math.max(Math.abs(v[0] + 0.5 - wx), Math.abs(v[1] + 0.5 - wy)); if (d <= tol && d < bd) { bd = d; f = v; } }
     if (!f) { $('readout').textContent = '서 있는 깃발(파랑)을 눌러 주세요'; return; }
     const i = steps.findIndex((st, k) => k >= done && st.op === 'remove' && st.x === f[0] && st.y === f[1]);
-    if (i >= 0) { $('readout').textContent = `${xy(f[0], f[1])} — 이미 철거 순서에 있습니다 (${i + 1}번)`; return; }
+    if (i >= 0) { $('readout').textContent = `${xy(f[0], f[1])} — 이미 철거 순서에 있습니다 (${no(i)}번)`; return; }
     adds.push([f[0], f[1], done, 1]); mvUndo.push(['add', f[0], f[1]]); setMoves(moves, adds); save(); view.mark = { x: f[0], y: f[1] };
-    $('readout').textContent = `${xy(f[0], f[1])} 깃발을 철거 순서 ${done + 1}번(다음 할 일)에 넣었습니다 — 끊기는 깃발이 있는지는 계산하지 않습니다 · '변경 취소'로 되돌릴 수 있습니다`; draw();
+    $('readout').textContent = `${xy(f[0], f[1])} 깃발을 철거 순서 ${no(done)}번(다음 할 일)에 넣었습니다 — 끊기는 깃발이 있는지는 계산하지 않습니다 · '변경 취소'로 되돌릴 수 있습니다`; draw();
   }
   function addFlag(x, y) {
     const c = placeCheck(null, x, y);
     if (c.bad) { $('readout').textContent = `${xy(x, y)} — 추가 못 하는 자리: ${c.bad}`; return; }
     adds.push([x, y, done]); mvUndo.push(['add', x, y]); setMoves(moves, adds); save();
-    $('readout').textContent = `${xy(x, y)}에 깃발을 추가했습니다 — 작업 순서 ${done + 1}번(다음 할 일)${c.warn ? ` · ⚠ ${c.warn}` : ''} · '변경 취소'로 되돌릴 수 있습니다`;
+    $('readout').textContent = `${xy(x, y)}에 깃발을 추가했습니다 — 작업 순서 ${no(done)}번(다음 할 일)${c.warn ? ` · ⚠ ${c.warn}` : ''} · '변경 취소'로 되돌릴 수 있습니다`;
   }
   function delFlag(have, st) { if (!st.added) return have.delete(mk(st)); for (const [k, v] of have) if (v[0] === st.x && v[1] === st.y) return have.delete(k); return false; }   // 추가한 철거는 실제 자리로 찾음
   function haveFlags() {   // 지금 서 있는 깃발 = 조사한 실제 깃발 + 끝낸 건설 − 끝낸 철거 (실제 지은 자리는 built)
@@ -159,7 +160,7 @@
     renderList();
     $('stepl').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { const st = steps[+b.dataset.k]; goTo(st.x, st.y); } });
     $('stepcopy').addEventListener('click', () => { if (steps[done]) copy(steps[done]); });
-    $('stepdone').addEventListener('click', () => { if (done < steps.length) { done++; save(); renderStep(); if (steps[done]) copy(steps[done], `${done}번 완료 · `); } });
+    $('stepdone').addEventListener('click', () => { if (done < steps.length) { done++; save(); renderStep(); if (steps[done]) copy(steps[done], `${no(done - 1)}번 완료 · `); } });
     $('stepundo').addEventListener('click', () => { if (done) { done--; save(); renderStep(); } });
     $('stepmap').addEventListener('click', () => { const st = steps[done]; if (st) goTo(st.x, st.y); });
     $('rmb').addEventListener('click', () => { rmOn = !rmOn; if (rmOn && mvOn) $('mvb').click(); if (rmOn && addOn) $('addb').click(); $('rmb').setAttribute('aria-pressed', String(rmOn)); cv.style.cursor = rmOn ? 'not-allowed' : ''; $('readout').textContent = rmOn ? '철거 켬 — 철거할 깃발(파랑)을 누르세요. 다음 할 일 자리에 철거 단계로 들어갑니다. 다시 누르면 끕니다.' : ''; });
@@ -176,7 +177,7 @@
   }
   function renderList() {
     let ph = 0;
-    $('stepl').innerHTML = steps.map((st, i) => `${st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : ''}<li value="${i + 1}" data-k="${i}"><button class="lnk" data-k="${i}"><b class="opw op-${opc(st)}">${OP[st.op].slice(-2)}</b> ${where(st)}${st.added ? ' <small>추가</small>' : ''}${st.x !== st.ox || st.y !== st.oy ? ` <small>옮김 (계획 ${xy(st.ox, st.oy)})</small>` : ''}${st.chk ? ' <small title="짓기 전에 이 자리를 눌러 소속 연맹 확인">⚠</small>' : ''}${(st.phase >= 6 || D.phases) && st.why ? ` <small>${st.why}</small>` : ''}${st.join ? ` <small>끊긴 깃발 ${st.join}개 다시 이어짐</small>` : ''}${st.cut ? ` <small>✂ 이 단계에서 깃발 ${st.cut}개 끊김</small>` : ''}</button></li>`).join('');
+    $('stepl').innerHTML = steps.map((st, i) => `${st.phase !== ph ? `<li class="grp">${PHASE[(ph = st.phase)]}</li>` : ''}<li value="${no(i)}"${no(i) < 1 ? ' style="list-style:none"' : ''} data-k="${i}"><button class="lnk" data-k="${i}"><b class="opw op-${opc(st)}">${OP[st.op].slice(-2)}</b> ${where(st)}${st.added ? ' <small>추가</small>' : ''}${st.x !== st.ox || st.y !== st.oy ? ` <small>옮김 (계획 ${xy(st.ox, st.oy)})</small>` : ''}${st.chk ? ' <small title="짓기 전에 이 자리를 눌러 소속 연맹 확인">⚠</small>' : ''}${(st.phase >= 6 || D.phases) && st.why ? ` <small>${st.why}</small>` : ''}${st.join ? ` <small>끊긴 깃발 ${st.join}개 다시 이어짐</small>` : ''}${st.cut ? ` <small>✂ 이 단계에서 깃발 ${st.cut}개 끊김</small>` : ''}</button></li>`).join('');
   }
   const where = st => (st.op === 'hq' ? `${xy(...st.from)} → ${xy(st.x, st.y)}` : st.op === 'sweep' ? `약 ${st.left}개 — 목록에 없어도 새 계획 밖 거점 연결 깃발은 모두 철거` : xy(st.x, st.y));
   const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify({ keys: steps.slice(0, done).map(keyOf), moves, adds })); } catch (_) { /* 저장소 못 씀 */ } };
@@ -222,7 +223,7 @@
   function renderStep() {
     const st = steps[done]; stepCur = st || null;
     $('stepsum').textContent = `${done}/${steps.length} 완료`;
-    $('stepph').textContent = st ? `${done + 1}/${steps.length} · ${String(PHASE[st.phase]).split(' — ')[0]}` : '모든 작업을 마쳤습니다';
+    $('stepph').textContent = st ? `${no(done)}/${no(steps.length - 1)} · ${String(PHASE[st.phase]).split(' — ')[0]}` : '모든 작업을 마쳤습니다';
     $('stepop').innerHTML = st ? `<span class="opb op-${opc(st)}">${OP[st.op]}</span>${(st.phase >= 6 || D.phases) && st.why ? ` <small>${st.why}</small>` : ''}${st.cut ? ` <small>✂ 깃발 ${st.cut}개 끊김</small>` : ''}` : '';
     $('stepxy').textContent = st ? where(st) : '';
     if (st && st.chk) $('stepmsg').textContent = `⚠ 짓기 전에 이 자리를 눌러 소속 연맹을 확인하세요 (${st.chk.includes('adj') ? '다른 연맹 영토에 바로 붙는 자리' : '거점 아이콘·이름표에 가려 화면 판독이 불확실한 자리'}).`; else if ($('stepmsg').textContent.startsWith('⚠')) $('stepmsg').textContent = '';
@@ -350,8 +351,8 @@
         const px = m[0] * (st.x + 0.5) + m[2] * (st.y + 0.5) + m[4], py = m[1] * (st.x + 0.5) + m[3] * (st.y + 0.5) + m[5];
         if (px < -20 || py < -20 || px > w + 20 || py > h + 20) continue;
         const nb = st.op === 'build';   // 신규 = 노랑 번호(어두운 테두리), 철거 = 빨강 번호
-        gx.lineWidth = nb ? 4 : 3; gx.strokeStyle = nb ? '#241d00' : C.bg; gx.strokeText(i + 1, px, py);
-        gx.fillStyle = nb ? '#ffd400' : '#e5252a'; gx.fillText(i + 1, px, py);
+        gx.lineWidth = nb ? 4 : 3; gx.strokeStyle = nb ? '#241d00' : C.bg; gx.strokeText(no(i), px, py);
+        gx.fillStyle = nb ? '#ffd400' : '#e5252a'; gx.fillText(no(i), px, py);
       }
     }
   }
@@ -386,7 +387,7 @@
   const up = e => {
     ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
     if (drag && drag.id === e.pointerId) { const d = drag, st = d.st, x = st.x, y = st.y; drag = null; st.x = d.x0; st.y = d.y0;
-      if (e.type === 'pointerup' && !d.bad && (x !== d.x0 || y !== d.y0)) { const c = placeCheck(st, x, y); commitMove(st, x, y); $('readout').textContent = `${steps.indexOf(st) + 1}번 깃발을 ${xy(d.x0, d.y0)} → ${xy(x, y)}로 옮겼습니다${c.warn ? ` — ⚠ ${c.warn}` : ''} · '변경 취소'로 되돌릴 수 있습니다`; downAt = null; return; }
+      if (e.type === 'pointerup' && !d.bad && (x !== d.x0 || y !== d.y0)) { const c = placeCheck(st, x, y); commitMove(st, x, y); $('readout').textContent = `${no(steps.indexOf(st))}번 깃발을 ${xy(d.x0, d.y0)} → ${xy(x, y)}로 옮겼습니다${c.warn ? ` — ⚠ ${c.warn}` : ''} · '변경 취소'로 되돌릴 수 있습니다`; downAt = null; return; }
       if (d.bad) $('readout').textContent = `못 놓는 자리(${d.bad})라 옮기지 않았습니다`; draw(); if (x !== d.x0 || y !== d.y0) { downAt = null; return; } }
     if (!ptrs.size && downAt && kind && rmOn && steps && e.type === 'pointerup') { const w = toWorld(e.offsetX, e.offsetY); addRemove(w.x, w.y); downAt = null; return; }
     if (!ptrs.size && downAt && kind && addOn && steps && e.type === 'pointerup') { const w = toWorld(e.offsetX, e.offsetY), x = Math.floor(w.x), y = Math.floor(w.y); view.mark = { x, y }; addFlag(x, y); downAt = null; return; }
