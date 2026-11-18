@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>KOR 연맹 깃발 조사 · 킹샷</title>
   <link rel="stylesheet" href="/v2/guide.css">
-  <link rel="stylesheet" href="/banner/v4/survey.css?v=20261118-move">
+  <link rel="stylesheet" href="/banner/v4/survey.css?v=20261118-sim2">
   <script defer src="/mapdata.js"></script>
   <script defer src="/v2/core.js"></script>
   <script defer src="/v2/plan.js"></script>
-  <script defer src="/banner/v4/resource-layer.js"></script>
-  <script defer src="/banner/v4/simulation-model.js?v=20261118-move"></script>
-  <script defer src="/banner/v4/simulation-ui.js?v=20261118-move"></script>
-  <script defer src="/banner/v4/survey.js?v=20261118-move"></script>
+  <script defer src="/banner/v4/resource-layer.js?v=20261118-sim2"></script>
+  <script defer src="/banner/v4/simulation-model.js?v=20261118-sim2"></script>
+  <script defer src="/banner/v4/simulation-ui.js?v=20261118-sim2"></script>
+  <script defer src="/banner/v4/survey.js?v=20261118-sim2"></script>
 </head>
 <body>
   <main class="page">
@@ -72,7 +72,7 @@
             <button type="button" class="btn" data-tool="remove" aria-pressed="false">철거</button>
             <button type="button" class="btn" data-tool="add" aria-pressed="false">건설</button>
           </div>
-          <p class="hint" id="sim-help">지도에서 깃발과 이동할 칸을 차례로 누르거나 좌표를 입력하세요. 깃발을 끌어 놓으면 바로 이동합니다.</p>
+          <p class="hint" id="sim-help">깃발을 누르면 옮길 수 있는 칸이 초록으로 보입니다. 칸을 누르거나 좌표를 입력하세요. 확대한 지도에서는 깃발을 끌어 놓아도 됩니다.</p>
           <fieldset id="sim-from"><legend>기존 깃발</legend>
             <label>X <input type="number" id="from-x" min="0" max="1199" step="1" inputmode="numeric"></label>
             <label>Y <input type="number" id="from-y" min="0" max="1199" step="1" inputmode="numeric"></label>
@@ -91,7 +91,8 @@
         </div>
         <details id="sim-log"><summary>작업 내역 <span id="sim-log-count">0</span>건</summary><ol id="sim-steps" reversed></ol></details>
         <details><summary>거점 연결 상태</summary><ul id="sim-outposts"></ul></details>
-        <p class="hint" id="sim-storage">모의 배치는 이 브라우저에 자동 저장됩니다.</p>
+        <p class="hint" id="sim-storage">공유된 모의 배치를 불러오는 중입니다.</p>
+        <p class="hint">Ctrl+Z 한 단계 취소 · Esc 선택 해제 · 휴대폰은 두 손가락으로 확대</p>
       </section>
       <section class="mapcol" aria-label="KOR 깃발 지도">
         <div class="mapwrap">
@@ -107,8 +108,14 @@
           <div class="keys">
             <span id="marker-key"><img class="flag-key" src="/banner/v4/flag-icon.png" width="18" height="18" alt="">KOR 깃발</span>
             <span><i class="terr"></i><span id="area-key">조사 시점의 깃발 범위 7×7칸</span></span>
-            <span id="sim-map-key" hidden><i class="moved-area"></i>초록 점선은 배치한 7×7 영토 · 빨강 점선은 이동 불가 · 빨강 × 철거 · 마름모 본부 · 네모 거점 · 붉은 원 곰덫</span>
-            <span id="drag-hint" hidden>현재 깃발을 끌어 놓으면 시뮬레이터에서 이동합니다.</span>
+            <label class="oth-toggle" id="foreign-toggle" hidden><input type="checkbox" id="foreign-areas" checked><i class="oth"></i>다른 연맹 영역</label>
+            <span id="sim-map-key" hidden>
+              <span title="고른 깃발을 옮기거나 새 깃발을 지을 수 있는 칸"><i class="target-key"></i>가능한 칸</span>
+              <span title="배치한 깃발의 7×7 영토. 빨강은 놓을 수 없는 자리"><i class="moved-area"></i>배치한 영토</span>
+              <span title="거점 15×15 영역. 빨강은 KOR 영토와 연결이 끊긴 거점"><i class="outpost-area"></i>거점 영역</span>
+              <span title="흐린 깃발은 곰덫 주변이라 옮기거나 철거할 수 없습니다">× 철거 · 점선 원 철거 가능 · 흐린 깃발 고정 · ◆ 본부 · ● 곰덫</span>
+            </span>
+            <span id="drag-hint" hidden>확대한 지도에서 현재 깃발을 끌어 놓으면 시뮬레이터에서 이동합니다.</span>
             <span id="terrain-note" class="hint" role="status"></span>
           </div>
           <div class="resource-legend" hidden id="resource-legend">

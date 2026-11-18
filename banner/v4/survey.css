@@ -99,3 +99,12 @@
   .resource-totals { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .resource-stat { padding: 5px 8px; }
 }
+.legend .target-key { display: inline-block; width: 11px; height: 11px; margin: 0 3px; background: var(--ok); opacity: .55; vertical-align: -1px; }
+.legend .outpost-area { display: inline-block; width: 11px; height: 11px; margin: 0 4px; border: 2px dashed var(--m-struct); background: color-mix(in srgb, var(--m-struct) 18%, transparent); transform: rotate(45deg); vertical-align: -1px; }
+:root { --c-oth: #c2417f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-oth: #e66aa6; } }
+:root[data-theme="dark"] { --c-oth: #e66aa6; }
+.legend i.oth { background: color-mix(in srgb, var(--c-oth) 32%, transparent); outline: 1.5px solid var(--c-oth); outline-offset: -1.5px; }
+.legend .oth-toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); cursor: pointer; }
+#sim-map-key:not([hidden]) { display: contents; }
+.sim-map .legend .keys { column-gap: 10px; }

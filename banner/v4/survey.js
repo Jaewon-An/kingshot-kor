@@ -10,11 +10,15 @@
     absent: ['기존 위치에 KOR 깃발 없음', 'bad'], unchecked: ['재확인 전', 'muted']
   };
   let active, entries = [], visible = [], selected = null, terrain = null, kinds;
-  let nodes = [], mapPromise, nodesPromise, simLoading, model;
+  let nodes = [], mapPromise, nodesPromise, sitesPromise, sites, simLoading, model;
   let priorSurvey = 'compare';
   let comparison = false, group = 'all';
-  let drag = null, autoFit = true;
+  let drag = null, pinch = null, autoFit = true, frame = 0;
   let gesture = 0;
+  const pointers = new Map();
+  // 이보다 작은 배율에서는 깃발 한 칸이 3픽셀도 안 돼 끌어 놓는 자리가 부정확하고, 깃발이 빽빽해 지도를 옮길 틈이 없다.
+  // 그래서 미리 고른 깃발만 끌고, 다른 깃발 위에서 끌면 지도를 옮긴다.
+  const DRAG_SCALE = 3;
   const G = window.KSCore.G;
   const coord = f => `X:${f.x} Y:${f.y}`;
   const positionKey = f => f.y * G + f.x;
@@ -22,6 +26,7 @@
     x: (f.x - f.y) * Math.SQRT1_2,
     y: -(f.x + f.y + 1) * Math.SQRT1_2
   });
+  const clampScale = value => Math.min(30, Math.max(.1, value));
   const simulating = () => byId('survey').value === 'sim';
   const resources = window.KSResources.create(draw);
   const editor = window.KSBannerEditor.create({ onChange: draw, onLocate: focusPoint });
@@ -57,14 +62,37 @@
     return Promise.all([mapPromise, nodesPromise]);
   }
 
+  // 본부·곰덫·거점과 조사된 다른 연맹 영토. 시뮬레이터 판정에 쓰고, 조사 지도에도 다른 연맹 영역을 그린다.
+  function prepareSites() {
+    if (!sitesPromise) {
+      sitesPromise = read('/banner/v4/simulation-sites.json').then(data => {
+        sites = data;
+        byId('foreign-toggle').hidden = false;
+        draw();
+        return data;
+      }).catch(error => {
+        sitesPromise = null;
+        throw error;
+      });
+    }
+    return sitesPromise;
+  }
+
+  // 모든 기기가 같이 보는 모의 배치. 서버에 닿지 않으면 null이고, 편집기는 이 브라우저 저장분으로 시작한다.
+  function readShared() {
+    return fetch('/api/banner/v4/sim', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .catch(() => null);
+  }
+
   function prepareSimulation() {
     if (model) return Promise.resolve();
     if (simLoading) return simLoading;
     const record = snapshots.get('current');
-    simLoading = Promise.all([prepareLayers(), read('/banner/v4/simulation-sites.json')])
-      .then(([[map, nodes], sites]) => {
+    simLoading = Promise.all([prepareLayers(), prepareSites(), readShared()])
+      .then(([[map, nodes], sites, shared]) => {
         const ready = window.KSBannerSimulation.create({ flags: record.flags, capacity: record.capacity, nodes, map, sites });
-        editor.init({ record, model: ready });
+        editor.init({ record, model: ready, shared });
         model = ready;
         if (simulating()) {
           if (autoFit && !drag) fit();
@@ -236,7 +264,7 @@
     });
     byId('history').hidden = false;
     showSurvey();
-    await prepareLayers().catch(() => {});
+    await Promise.all([prepareLayers().catch(() => {}), prepareSites().catch(() => {})]);
   }
 
   function showSurvey() {
@@ -255,7 +283,7 @@
     byId('results').classList.toggle('sim-map', simulation);
     byId('sim-map-key').hidden = !simulation;
     byId('drag-hint').hidden = simulation || key === 'previous' || !latest?.complete;
-    byId('area-key').textContent = simulation ? '모의 영토 7×7칸' : '조사 시점의 깃발 범위 7×7칸';
+    byId('area-key').textContent = simulation ? '모의 영토' : '조사 시점의 깃발 범위 7×7칸';
     if (!simulation) priorSurvey = key;
     const missing = active.total == null ? null : active.total - active.flags.length;
     byId('date').textContent = comparison ? `v3 ${previous.surveyedAt} → v4 ${latest.surveyedAt}` : `${active.surveyedAt} 기준`;
@@ -304,6 +332,7 @@
       byId('selection').textContent = '';
       fit();
       prepareSimulation();
+      if (model) editor.refresh();
     } else filter();
   }
 
@@ -393,7 +422,17 @@
     draw();
   }
 
-  const color = name => getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
+  // CSS 색은 그릴 때마다 다시 읽지 않는다. 테마가 바뀌면 비운다.
+  const palette = new Map();
+  function color(name) {
+    if (!palette.has(name)) palette.set(name, getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim());
+    return palette.get(name);
+  }
+  const rgb = name => {
+    const value = parseInt(color(name).slice(1), 16);
+    return [value >> 16, (value >> 8) & 255, value & 255];
+  };
+
   function buildTerrain() {
     if (!kinds) return;
     terrain = document.createElement('canvas');
@@ -412,6 +451,77 @@
     }
     g.putImageData(im, 0, 0);
   }
+
+  // 깃발·본부 영토를 하나로 합친 그림. 겹친 곳이 더 진하게 칠해지지 않는다. 배치가 바뀔 때만 다시 만든다.
+  let territoryLayer = null;
+  function territoryCanvas(flags, hqs) {
+    const tint = color('c-terr');
+    if (territoryLayer?.flags === flags && territoryLayer.hqs === hqs && territoryLayer.tint === tint) return territoryLayer;
+    const squares = (hqs || []).map(h => [h.x - 6, h.y - 6, 15]);
+    for (const f of flags) if (f.state !== 'unchecked' && f.state !== 'absent') squares.push([f.x - 3, f.y - 3, 7]);
+    territoryLayer = { flags, hqs, tint, canvas: null };
+    if (!squares.length) return territoryLayer;
+    let x0 = G, y0 = G, x1 = 0, y1 = 0;
+    for (const [x, y, w] of squares) {
+      x0 = Math.min(x0, x); y0 = Math.min(y0, y);
+      x1 = Math.max(x1, x + w); y1 = Math.max(y1, y + w);
+    }
+    const layer = document.createElement('canvas');
+    layer.width = x1 - x0;
+    layer.height = y1 - y0;
+    const g = layer.getContext('2d');
+    g.fillStyle = tint;
+    for (const [x, y, w] of squares) g.fillRect(x - x0, y - y0, w, w);
+    Object.assign(territoryLayer, { canvas: layer, x0, y0 });
+    return territoryLayer;
+  }
+
+  // 조사된 다른 연맹 영토([y, x0, x1] 줄). v3와 같은 색으로 칠한다.
+  let foreignLayer = null;
+  function foreignCanvas() {
+    if (!sites?.foreign?.length) return null;
+    const tint = color('c-oth');
+    if (foreignLayer?.tint === tint) return foreignLayer;
+    let x0 = G, y0 = G, x1 = 0, y1 = 0;
+    for (const [y, a, b] of sites.foreign) {
+      x0 = Math.min(x0, a); x1 = Math.max(x1, b);
+      y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    }
+    const layer = document.createElement('canvas');
+    layer.width = x1 - x0 + 1;
+    layer.height = y1 - y0 + 1;
+    const g = layer.getContext('2d');
+    g.fillStyle = tint;
+    for (const [y, a, b] of sites.foreign) g.fillRect(a - x0, y - y0, b - a + 1, 1);
+    foreignLayer = { tint, canvas: layer, x0, y0 };
+    return foreignLayer;
+  }
+
+  // 옮기거나 지을 수 있는 칸(편집기의 빠른 판정 결과)을 칸 단위 그림으로 만든다.
+  let targetLayer = null;
+  function targetCanvas(targets) {
+    if (!targets?.count) return null;
+    const tint = color('ok');
+    if (targetLayer?.source === targets && targetLayer.tint === tint) return targetLayer.canvas;
+    const layer = document.createElement('canvas');
+    layer.width = targets.w;
+    layer.height = targets.h;
+    const g = layer.getContext('2d'), im = g.createImageData(targets.w, targets.h);
+    const [r, gr, b] = rgb('ok');
+    targets.mask.forEach((on, i) => {
+      if (!on) return;
+      im.data[i * 4] = r;
+      im.data[i * 4 + 1] = gr;
+      im.data[i * 4 + 2] = b;
+      im.data[i * 4 + 3] = 255;
+    });
+    g.putImageData(im, 0, 0);
+    targetLayer = { source: targets, tint, canvas: layer };
+    return layer;
+  }
+
+  const inTargets = (targets, p) => Boolean(targets?.count) && p.x >= targets.x0 && p.y >= targets.y0
+    && p.x < targets.x0 + targets.w && p.y < targets.y0 + targets.h && targets.mask[(p.y - targets.y0) * targets.w + p.x - targets.x0] === 1;
 
   function screen(point) {
     return { x: canvas.clientWidth / 2 + (point.x - camera.x) * camera.scale,
@@ -455,23 +565,30 @@
     }
   }
 
-  function drawFootprint(flag, tint, preview) {
-    const p = screen(gamePoint(flag));
-    const radius = 3.5 * camera.scale * Math.SQRT2;
+  // 칸 cell을 중심으로 한 변 2×half칸 정사각형. 게임 시점에서는 마름모로 보인다.
+  function drawArea(cell, half, tint, fillAlpha, lineWidth) {
+    const p = screen(gamePoint(cell));
+    const radius = half * camera.scale * Math.SQRT2;
     const dash = Math.max(1.5, Math.min(7, 1.3 * camera.scale));
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(p.x,p.y-radius); ctx.lineTo(p.x+radius,p.y);
     ctx.lineTo(p.x,p.y+radius); ctx.lineTo(p.x-radius,p.y); ctx.closePath();
-    ctx.fillStyle = tint;
-    ctx.globalAlpha = preview ? .16 : .08;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.lineWidth = preview ? 2.5 : 2;
+    if (fillAlpha) {
+      ctx.fillStyle = tint;
+      ctx.globalAlpha = fillAlpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.lineWidth = lineWidth;
     ctx.strokeStyle = tint;
     ctx.setLineDash([dash, dash*.75]);
     ctx.stroke();
     ctx.restore();
+  }
+
+  function drawFootprint(flag, tint, preview) {
+    drawArea(flag, 3.5, tint, preview ? .16 : .08, preview ? 2.5 : 2);
   }
 
   function drawCross(p, radius) {
@@ -479,6 +596,34 @@
     ctx.moveTo(p.x-radius, p.y-radius); ctx.lineTo(p.x+radius, p.y+radius);
     ctx.moveTo(p.x+radius, p.y-radius); ctx.lineTo(p.x-radius, p.y+radius);
     ctx.stroke();
+  }
+
+  // 거점 15×15 영역. 우리 영토가 네 변 가운데 한 칸이라도 닿으면 연결, 아니면 빨강으로 표시한다.
+  function drawOutpostAreas() {
+    const linked = color('m-struct'), cut = color('bad');
+    for (const p of editor.stats.outposts) {
+      drawArea({ x: p.x + 1, y: p.y + 1 }, 7.5, p.contacts > 0 ? linked : cut, .14, Math.max(1.4, Math.min(2.4, camera.scale * .35)));
+    }
+  }
+
+  function drawOutpostNames() {
+    if (camera.scale < 5) return;
+    ctx.save();
+    ctx.font = `600 ${Math.round(Math.min(13, 8 + camera.scale * .3))}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = color('panel');
+    for (const p of editor.stats.outposts) {
+      const s = screen(gamePoint({ x: p.x + 1, y: p.y + 1 }));
+      const y = s.y + Math.min(11, Math.max(4, camera.scale * .9)) + 3;
+      ctx.fillStyle = p.contacts > 0 ? color('ink') : color('bad');
+      const text = p.contacts > 0 ? p.name : p.name + ' · 연결 끊김';
+      ctx.strokeText(text, s.x, y);
+      ctx.fillText(text, s.x, y);
+    }
+    ctx.restore();
   }
 
   function drawLandmarks() {
@@ -508,22 +653,40 @@
     ctx.restore();
   }
 
-  function drawEditMarkers(flags) {
+  function drawEditMarkers(flags, removable) {
     const current = new Set(flags.map(positionKey));
     const size = Math.min(9, Math.max(4, camera.scale));
     ctx.save();
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = color('bad');
     for (const f of active.flags) if (!current.has(positionKey(f))) drawCross(screen(gamePoint(f)), size);
+    if (removable?.size) {
+      const radius = Math.max(6, iconSize() * .62);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 2]);
+      for (const f of flags) {
+        if (!removable.has(positionKey(f))) continue;
+        const p = screen(gamePoint(f));
+        ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, 2*Math.PI); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
     if (editor.from && !drag?.moved) {
       const p = screen(gamePoint(editor.from));
+      ctx.lineWidth = 2.5;
       ctx.strokeStyle = color('c-pick');
       ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(9,size+3),0,2*Math.PI); ctx.stroke();
     }
     ctx.restore();
   }
 
+  // 끌기·확대처럼 연달아 오는 입력은 화면 한 장에 한 번만 그린다.
+  function requestDraw() {
+    if (!frame) frame = requestAnimationFrame(() => { frame = 0; draw(); });
+  }
+
   function draw() {
+    if (frame) { cancelAnimationFrame(frame); frame = 0; }
     if (!ctx || !canvas.clientWidth) return;
     const w = canvas.clientWidth, h = canvas.clientHeight, dpr = window.devicePixelRatio || 1;
     if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
@@ -534,24 +697,36 @@
     ctx.clearRect(0, 0, w, h);
     const k = camera.scale * Math.SQRT1_2;
     const flags = mapFlags(), editing = simulating() && Boolean(model);
+    const moving = drag?.flag && drag.moved ? drag : null;
+    const hint = editing ? editor.hints : null;
+    const targets = moving ? moving.targets : hint?.targets;
     ctx.save();
     ctx.transform(k, -k, -k, -k, w / 2 - camera.x * camera.scale, h / 2 - camera.y * camera.scale);
     ctx.imageSmoothingEnabled = false;
     if (terrain) ctx.drawImage(terrain, 0, 0);
-    ctx.fillStyle = color('c-terr');
-    ctx.globalAlpha = .22;
-    if (editing) for (const hq of model.hqs) ctx.fillRect(hq.x-6,hq.y-6,15,15);
-    for (const f of flags) {
-      if (f.state !== 'unchecked' && f.state !== 'absent') ctx.fillRect(f.x - 3, f.y - 3, 7, 7);
+    const foreign = byId('foreign-areas').checked ? foreignCanvas() : null;
+    if (foreign) {
+      ctx.globalAlpha = .32;
+      ctx.drawImage(foreign.canvas, foreign.x0, foreign.y0);
+    }
+    const territory = territoryCanvas(flags, editing ? model.hqs : null);
+    if (territory.canvas) {
+      ctx.globalAlpha = .22;
+      ctx.drawImage(territory.canvas, territory.x0, territory.y0);
+    }
+    const overlay = targetCanvas(targets);
+    if (overlay) {
+      ctx.globalAlpha = .42;
+      ctx.drawImage(overlay, targets.x0, targets.y0);
     }
     ctx.restore();
+    if (editing) drawOutpostAreas();
     if (byId('resource-icons').checked) {
       resources.draw(ctx, nodes, camera, { emphasize: true, focusFlags: editing ? flags : entries,
         hqs: model?.hqs, allResources: byId('resource-scope').value === 'all', owned: editing ? editor.stats.owned : undefined,
         baselineOwned: editing ? editor.baseline.owned : undefined });
     }
     if (editing) drawLandmarks();
-    const moving = drag?.flag && drag.moved ? drag : null;
     if (editing) {
       const tint = color('ok');
       for (const f of flags) {
@@ -578,7 +753,8 @@
         ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
         ctx.stroke();
       } else {
-        ctx.globalAlpha = moving?.flag === f ? .3 : 1;
+        // 곰덫 주변의 실측 깃발은 고정이라 흐리게 그린다.
+        ctx.globalAlpha = moving?.flag === f ? .3 : editing && model.isProtected(f) ? .6 : 1;
         drawFlag(p, size);
         if (comparison) {
           ctx.beginPath();
@@ -590,7 +766,8 @@
     }
     if (moving?.target) drawFlag(screen(gamePoint(moving.target)), size);
     if (editing) {
-      drawEditMarkers(flags);
+      drawOutpostNames();
+      drawEditMarkers(flags, hint?.removable);
       if (!drag?.moved) {
         const label = [editor.from && coord(editor.from), editor.to && coord(editor.to)].filter(Boolean).join(' → ');
         const feedback = byId('sim-feedback');
@@ -612,7 +789,7 @@
   }
 
   function zoom(factor) {
-    camera.scale = Math.min(30, Math.max(.1, camera.scale * factor));
+    camera.scale = clampScale(camera.scale * factor);
     autoFit = false;
     draw();
   }
@@ -637,6 +814,7 @@
     draw();
   });
   byId('resource-scope').addEventListener('change', draw);
+  byId('foreign-areas').addEventListener('change', draw);
   function canDragFromView() {
     if (simulating()) return editor.tool === 'move';
     return snapshots.get('current')?.complete && byId('survey').value !== 'previous';
@@ -646,18 +824,32 @@
     return Math.max(event.pointerType === 'touch' ? 14 : 8, iconSize()*.55);
   }
 
+  // 누른 곳에서 끌 수 있는 깃발. 고정 깃발이나 작은 배율의 다른 깃발 위에서는 지도를 옮긴다.
+  function grabbableFlag(location, event) {
+    if (!canDragFromView()) return null;
+    const flags = mapFlags();
+    const flag = flags[nearestFlag(location, flags, pointerRadius(event))];
+    if (!flag || ['absent', 'unchecked'].includes(flag.state) || model?.isProtected(flag)) return null;
+    const chosen = simulating() && editor.from?.x === flag.x && editor.from?.y === flag.y;
+    return camera.scale >= DRAG_SCALE || chosen ? flag : null;
+  }
+
   function dropCell(event, held) {
     const p = eventLocation(event);
     if (p.x < 0 || p.y < 0 || p.x >= canvas.clientWidth || p.y >= canvas.clientHeight) return null;
     return mapCell(p.x - held.grabX, p.y - held.grabY);
   }
 
+  // 손떨림으로 몇 픽셀 움직인 클릭은 끌기가 아니다. 깃발은 놓을 칸까지 바뀌어야 끌기로 본다.
   function startsDrag(e, target) {
     if (drag.moved) return true;
-    if (drag.flag && target) {
-      return target.x !== drag.flag.x || target.y !== drag.flag.y;
-    }
-    return Math.hypot(e.clientX - drag.x, e.clientY - drag.y) >= 4;
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < drag.slop) return false;
+    return !drag.flag || !target || target.x !== drag.flag.x || target.y !== drag.flag.y;
+  }
+
+  function moveProblem(from, to, targets) {
+    if (inTargets(targets, to)) return '';
+    return model.issue(editor.flags, { type: 'move', from, to });
   }
 
   async function finishMove(source, destination, serial) {
@@ -673,22 +865,64 @@
     if (entering) focusPoint(applied ? destination : source);
   }
 
-  canvas.addEventListener('pointerdown', e => {
-    if (!e.isPrimary || e.button !== 0) return;
+  function clearDrag() {
+    const wasMoving = Boolean(drag?.flag && drag.moved);
+    drag = null;
+    canvas.classList.remove('drag');
+    if (wasMoving) { byId('selection').classList.remove('err'); byId('selection').textContent = ''; draw(); }
+  }
+
+  function pinchState() {
+    const [a, b] = [...pointers.values()];
+    const rect = canvas.getBoundingClientRect();
+    return { distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+      x: (a.x + b.x) / 2 - rect.left - canvas.clientWidth / 2, y: (a.y + b.y) / 2 - rect.top - canvas.clientHeight / 2 };
+  }
+
+  // 두 손가락: 끌던 깃발은 내려놓지 않고 취소한다. 두 손가락 가운데의 지점을 붙잡은 채 확대·이동한다.
+  function startPinch() {
+    clearDrag();
     gesture++;
+    const state = pinchState();
+    pinch = { distance: state.distance, scale: camera.scale,
+      anchorX: camera.x + state.x / camera.scale, anchorY: camera.y + state.y / camera.scale };
+    autoFit = false;
+  }
+
+  function movePinch() {
+    const state = pinchState();
+    camera.scale = clampScale(pinch.scale * state.distance / pinch.distance);
+    camera.x = pinch.anchorX - state.x / camera.scale;
+    camera.y = pinch.anchorY - state.y / camera.scale;
+    requestDraw();
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
     canvas.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size >= 2) {
+      startPinch();
+      return;
+    }
+    if (pinch) return;
+    gesture++;
     const location = eventLocation(e);
-    const flags = mapFlags();
-    const index = canDragFromView() ? nearestFlag(location,flags,pointerRadius(e)) : -1;
-    const candidate = flags[index];
-    const flag = candidate && !['absent','unchecked'].includes(candidate.state) ? candidate : null;
+    const flag = grabbableFlag(location, e);
     const center = flag && screen(gamePoint(flag));
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, cx: camera.x, cy: camera.y, moved: false,
+      slop: e.pointerType === 'mouse' ? 4 : 10,
       flag, target: flag, grabX: flag ? location.x-center.x : 0, grabY: flag ? location.y-center.y : 0 };
     if (flag && !model) prepareSimulation();
   });
   canvas.addEventListener('pointermove', e => {
-    if (!drag || !e.isPrimary) return;
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch) {
+      if (pointers.size >= 2) movePinch();
+      return;
+    }
+    if (!drag || e.pointerId !== drag.id) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     const target = drag.flag ? dropCell(e, drag) : null;
     if (!startsDrag(e, target)) return;
@@ -696,8 +930,9 @@
     autoFit = false;
     canvas.classList.add('drag');
     if (drag.flag) {
+      if (model && !drag.targets) drag.targets = editor.targetsFor(drag.flag);
       if (target && model && (drag.target?.x !== target.x || drag.target?.y !== target.y || drag.problem == null)) {
-        drag.problem = model.issue(editor.flags, { type: 'move', from: drag.flag, to: target });
+        drag.problem = moveProblem(drag.flag, target, drag.targets);
       }
       if (!target) drag.problem = '';
       drag.target = target;
@@ -707,23 +942,27 @@
       camera.x = drag.cx - dx / camera.scale;
       camera.y = drag.cy - dy / camera.scale;
     }
-    draw();
+    requestDraw();
   });
   canvas.addEventListener('pointerup', e => {
-    if (!drag || !e.isPrimary) return;
+    if (!pointers.delete(e.pointerId)) return;
+    if (pinch) {
+      if (!pointers.size) pinch = null;
+      return;
+    }
+    if (!drag || e.pointerId !== drag.id) return;
     const location = eventLocation(e);
     const destination = drag.flag ? dropCell(e, drag) : null;
     if (startsDrag(e, destination)) {
-      if (drag.flag) {
-        const from = drag.flag;
-        drag = null;
-        byId('selection').classList.remove('err');
-        byId('selection').textContent = '';
+      const from = drag.flag;
+      clearDrag();
+      if (from) {
         if (destination && (destination.x !== from.x || destination.y !== from.y)) finishMove(from, destination, gesture);
         else draw();
       }
       return;
     }
+    drag = null;
     const flags = mapFlags();
     const nearest = nearestFlag(location, flags, simulating() ? pointerRadius(e) : Math.max(14, pointerRadius(e)));
     if (simulating()) {
@@ -736,30 +975,39 @@
       if (node) byId('selection').textContent = `${['빵','목재','석재','철'][node[0]]} 자원지 · ${coord({x:node[1],y:node[2]})}`;
     }
   });
-  function clearDrag() {
-    const wasMoving = Boolean(drag?.flag && drag.moved);
-    drag = null;
-    canvas.classList.remove('drag');
-    if (wasMoving) { byId('selection').classList.remove('err'); byId('selection').textContent = ''; draw(); }
+  function releasePointer(e) {
+    pointers.delete(e.pointerId);
+    if (pinch && !pointers.size) pinch = null;
+    if (drag && drag.id === e.pointerId) clearDrag();
   }
-  canvas.addEventListener('lostpointercapture', clearDrag);
-  canvas.addEventListener('pointercancel', clearDrag);
+  canvas.addEventListener('lostpointercapture', releasePointer);
+  canvas.addEventListener('pointercancel', releasePointer);
   document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape' || !drag) return;
-    const id = drag.id;
-    clearDrag();
-    if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
+    if (e.key !== 'Escape') return;
+    if (drag) {
+      const id = drag.id;
+      clearDrag();
+      if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
+    } else if (simulating()) editor.clearPick();
   });
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     const p = eventLocation(e), scale = camera.scale;
-    camera.scale = Math.min(30, Math.max(.1, scale * (e.deltaY < 0 ? 1.25 : .8)));
+    camera.scale = clampScale(scale * (e.deltaY < 0 ? 1.25 : .8));
     camera.x += (p.x - canvas.clientWidth/2) * (1/scale - 1/camera.scale);
     camera.y += (p.y - canvas.clientHeight/2) * (1/scale - 1/camera.scale);
+    // 지도를 끄는 중에 휠을 돌리면 끌기 기준을 새 배율에 맞춘다(지도가 튀지 않게).
+    if (drag && !drag.flag) Object.assign(drag, { x: e.clientX, y: e.clientY, cx: camera.x, cy: camera.y });
     autoFit = false;
-    draw();
+    requestDraw();
   }, { passive: false });
   new ResizeObserver(() => autoFit ? fit() : draw()).observe(canvas);
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { buildTerrain(); draw(); });
+  function retheme() {
+    palette.clear();
+    buildTerrain();
+    draw();
+  }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   load();
 })();

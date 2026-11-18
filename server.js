@@ -58,7 +58,13 @@ const STEPS = { '/api/banner/v2/steps': null, '/api/banner/v3/steps': null, '/ap
 // optional `moves` on a steps record: planned flags dragged to another tile on the page ({ "x,y" of the plan: [x, y] now }); a PUT without it keeps the stored one
 const validMoves = m => !!m && typeof m === 'object' && !Array.isArray(m) && Object.keys(m).length <= 400 && Object.entries(m).every(([k, v]) => /^\d{1,4},\d{1,4}$/.test(k) && Array.isArray(v) && v.length === 2 && v.every(n => Number.isInteger(n) && n >= 0 && n <= 1300));
 // optional `adds`: flags added on the page ([x, y, position in the step list]); a PUT may leave `keys` out to store only moves/adds (a page whose step list is older than the record must not rewrite the progress)
-const validAdds = a => Array.isArray(a) && a.length <= 100 && a.every(v => Array.isArray(v) && (v.length === 3 || (v.length === 4 && (v[3] === 0 || v[3] === 1))) && v.every(n => Number.isInteger(n) && n >= 0 && n <= 2000));   // 4th = 1: a removal step for a standing flag
+// /banner/v4/ simulator's shared mock plan (same check as _worker.js)
+const SIM = { '/api/banner/v4/sim': null };
+const SIM_ARGS = { move: 4, remove: 2, add: 2 };
+const validSim = b => !!b && Number.isInteger(b.base) && b.base >= 0 && typeof b.basis === 'string' && /^[0-9a-f]{1,16}$/.test(b.basis)
+  && typeof b.survey === 'string' && b.survey.length <= 40 && Array.isArray(b.steps) && b.steps.length <= 1000
+  && b.steps.every(s => Array.isArray(s) && Object.hasOwn(SIM_ARGS, s[0]) && s.length === SIM_ARGS[s[0]] + 1 && s.slice(1).every(n => Number.isInteger(n) && n >= 0 && n < 1200));
+const validAdds = a =>Array.isArray(a) && a.length <= 100 && a.every(v => Array.isArray(v) && (v.length === 3 || (v.length === 4 && (v[3] === 0 || v[3] === 1))) && v.every(n => Number.isInteger(n) && n >= 0 && n <= 2000));   // 4th = 1: a removal step for a standing flag
 const validStepKeys = keys => Array.isArray(keys) && keys.length <= 2000 && keys.every(k => typeof k === 'string' && /^(build|remove|hq|sweep)\d{1,4},\d{1,4}$/.test(k));
 const validLayout = list => Array.isArray(list) && list.length <= 5000 && list.every(o =>
   o && typeof o.name === 'string' && o.name.length <= 40 && Number.isFinite(o.tx) && Number.isFinite(o.ty) &&
@@ -164,6 +170,24 @@ async function api(req, res, url) {
     const moves = body.moves !== undefined ? body.moves : cur.moves;
     STEPS[url.pathname] = { keys, ...(moves ? { moves } : {}), ...(adds && adds.length ? { adds } : {}), ver, updated_at: now, log };
     return send(res, 200, { ok: true, ver, n: keys.length, updated_at: now });
+  }
+  // /banner/v4/ simulator's shared mock plan — same rules as _worker.js, kept in memory here (lost on restart)
+  if (url.pathname in SIM && req.method === 'GET') {
+    const rec = { ...(SIM[url.pathname] || { basis: null, steps: null, ver: 0 }) };
+    if (!url.searchParams.has('log')) { delete rec.log; delete rec.prev; }
+    return send(res, 200, rec);
+  }
+  if (url.pathname in SIM && req.method === 'PUT') {
+    let body;
+    try { body = JSON.parse(await readBody(req, 64 * 1024)); } catch (_) { return send(res, 400, { error: 'JSON 형식이 아닙니다' }); }
+    if (!validSim(body)) return send(res, 400, { error: '모의 배치 형식이 아닙니다' });
+    const cur = SIM[url.pathname] || { basis: null, steps: null, ver: 0, log: [] };
+    if (body.base !== cur.ver) return send(res, 409, { error: '다른 기기에서 먼저 바뀌었습니다', basis: cur.basis, survey: cur.survey, steps: cur.steps, ver: cur.ver, updated_at: cur.updated_at });
+    const now = new Date().toISOString(), ver = cur.ver + 1;
+    const log = [...(cur.log || []), { ver, n: body.steps.length, from: Array.isArray(cur.steps) ? cur.steps.length : null, at: now, dev: 'local' }].slice(-100);
+    const prev = Array.isArray(cur.steps) ? { basis: cur.basis, survey: cur.survey, steps: cur.steps, ver: cur.ver, updated_at: cur.updated_at } : null;
+    SIM[url.pathname] = { basis: body.basis, survey: body.survey, steps: body.steps, ver, updated_at: now, log, ...(prev ? { prev } : {}) };
+    return send(res, 200, { ok: true, ver, n: body.steps.length, updated_at: now });
   }
   return send(res, 404, { error: 'not found' });
 }

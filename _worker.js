@@ -2,7 +2,8 @@
 // Static files are served from env.ASSETS; /api/* is handled here.
 //
 // Bindings (Pages project ▸ Settings):
-//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2", "sgd", "sword", "castle" and "castle2") and the /banner/v2/ progress ("banner_v2_steps")
+//   LAYOUT_KV   KV namespace holding the published layouts (keys "current", "v2", "sgd", "sword", "castle" and "castle2"), the /banner/v2/ progress ("banner_v2_steps")
+//               and the /banner/v4/ simulator's shared mock plan ("banner_v4_sim")
 //   ADMIN_HASH  secret "salt$sha256hex(salt:id:password)" — made by `node tools/set-admin.mjs`
 //   CASTLE_HASH the same for the /castle editor's own account (castle/admin.txt) — `node tools/set-admin.mjs --castle`
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
@@ -40,6 +41,16 @@ const validMoves = m => !!m && typeof m === 'object' && !Array.isArray(m) && Obj
 // optional `adds`: flags added on the page ([x, y, position in the step list]); a PUT may leave `keys` out to store only moves/adds (a page whose step list is older than the record must not rewrite the progress)
 const validAdds = a => Array.isArray(a) && a.length <= 100 && a.every(v => Array.isArray(v) && (v.length === 3 || (v.length === 4 && (v[3] === 0 || v[3] === 1))) && v.every(n => Number.isInteger(n) && n >= 0 && n <= 2000));   // 4th = 1: a removal step for a standing flag
 const device = ua => (/Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'Mac' : 'other');
+
+// Shared mock plan of the /banner/v4/ flag simulator (?view=sim): the moves made on top of the latest survey, so every phone/PC
+// sees the same plan. Same rules as the steps above: anyone may write, a PUT names the `ver` it started from (409 hands back the record).
+// steps: ['move', fromX, fromY, toX, toY] | ['remove', x, y] | ['add', x, y]; `basis` = hash of the survey the steps start from,
+// `survey` = that survey's time. `prev` keeps the record before the last write and `log` the last 100 writes (GET ?log=1 shows both).
+const SIM = { '/api/banner/v4/sim': 'banner_v4_sim' };
+const SIM_ARGS = { move: 4, remove: 2, add: 2 };
+const validSim = b => !!b && Number.isInteger(b.base) && b.base >= 0 && typeof b.basis === 'string' && /^[0-9a-f]{1,16}$/.test(b.basis)
+  && typeof b.survey === 'string' && b.survey.length <= 40 && Array.isArray(b.steps) && b.steps.length <= 1000
+  && b.steps.every(s => Array.isArray(s) && Object.hasOwn(SIM_ARGS, s[0]) && s.length === SIM_ARGS[s[0]] + 1 && s.slice(1).every(n => Number.isInteger(n) && n >= 0 && n < 1200));
 
 const enc = new TextEncoder();
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -152,6 +163,29 @@ async function api(request, env, url) {
     const moves = body.moves !== undefined ? body.moves : cur.moves;
     await env.LAYOUT_KV.put(SK, JSON.stringify({ keys, ...(moves ? { moves } : {}), ...(adds && adds.length ? { adds } : {}), ver, updated_at: now, log }));
     return json({ ok: true, ver, n: keys.length, updated_at: now });
+  }
+
+  const SIMK = SIM[path];
+  if (SIMK && request.method === 'GET') {
+    const rec = (env.LAYOUT_KV && (await env.LAYOUT_KV.get(SIMK, 'json'))) || { basis: null, steps: null, ver: 0 };
+    if (!url.searchParams.has('log')) { delete rec.log; delete rec.prev; }
+    return json(rec);
+  }
+
+  if (SIMK && request.method === 'PUT') {
+    if (!env.LAYOUT_KV) return json({ error: 'LAYOUT_KV 바인딩이 없습니다' }, 500);
+    const text = await request.text();
+    if (text.length > 64 * 1024) return json({ error: '모의 배치가 너무 큽니다' }, 413);
+    let body;
+    try { body = JSON.parse(text); } catch (_) { return json({ error: 'JSON 형식이 아닙니다' }, 400); }
+    if (!validSim(body)) return json({ error: '모의 배치 형식이 아닙니다' }, 400);
+    const cur = (await env.LAYOUT_KV.get(SIMK, 'json')) || { basis: null, steps: null, ver: 0, log: [] };
+    if (body.base !== cur.ver) return json({ error: '다른 기기에서 먼저 바뀌었습니다', basis: cur.basis, survey: cur.survey, steps: cur.steps, ver: cur.ver, updated_at: cur.updated_at }, 409);
+    const now = new Date().toISOString(), ver = cur.ver + 1;
+    const log = [...(cur.log || []), { ver, n: body.steps.length, from: Array.isArray(cur.steps) ? cur.steps.length : null, at: now, dev: device(request.headers.get('User-Agent') || '') }].slice(-100);
+    const prev = Array.isArray(cur.steps) ? { basis: cur.basis, survey: cur.survey, steps: cur.steps, ver: cur.ver, updated_at: cur.updated_at } : null;
+    await env.LAYOUT_KV.put(SIMK, JSON.stringify({ basis: body.basis, survey: body.survey, steps: body.steps, ver, updated_at: now, log, ...(prev ? { prev } : {}) }));
+    return json({ ok: true, ver, n: body.steps.length, updated_at: now });
   }
 
   if (path === '/api/login' && request.method === 'POST') {
