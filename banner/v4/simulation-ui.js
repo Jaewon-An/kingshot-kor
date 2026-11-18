@@ -50,6 +50,7 @@
 
   function create({ onChange, onLocate }) {
     let model, record, beginning = [], flags = [], stats, steps = [];
+    let baselineKeys, placed = new Set();
     let tool = 'move', storageKey, basis;
     const form = byId('sim-form');
     const applyButton = byId('sim-apply');
@@ -149,6 +150,16 @@
     }
 
     function render() {
+      // 깃발이 두 번 이동하거나 다른 깃발의 원래 자리로 들어간 경우에도 마지막 영역만 표시한다.
+      const origins = new Map();
+      for (const step of steps) {
+        const source = step.from && step.from.y * 1200 + step.from.x;
+        const target = step.to && step.to.y * 1200 + step.to.x;
+        const origin = step.from ? (origins.get(source) ?? source) : (baselineKeys.has(target) ? target : -1);
+        if (step.from) origins.delete(source);
+        if (step.to && target !== origin) origins.set(target, origin);
+      }
+      placed = new Set(origins.keys());
       const connected = stats.outposts.filter(p => p.contacts > 0).length;
       byId('sim-counts').textContent = '깃발 ' + flags.length + ' / ' + record.capacity + '기 · 빈자리 ' + (record.capacity - flags.length) + '개';
       byId('sim-connections').textContent = '본부에 연결된 깃발 ' + stats.connectedFlags.size + '기 · 거점 ' + connected + ' / ' + stats.outposts.length + '곳 연결';
@@ -231,6 +242,7 @@
       stats = model.baseline;
       steps = [];
       const positions = flags.map(p => p.y * 1200 + p.x).sort((a, b) => a - b);
+      baselineKeys = new Set(positions);
       basis = JSON.stringify([record.kingdom, record.alliance, record.surveyedAt, record.capacity, positions]);
       // 좌표·상한이 갱신되면 과거 모의를 다시 적용하지 않는다. 저장값 안에서도 원본 전체를 대조한다.
       let hash = 2166136261;
@@ -276,6 +288,10 @@
       setPoint('to', to);
       say('');
       if (commit()) return true;
+      const reason = preview.textContent;
+      setPoint('to', null);
+      checkForm();
+      say(reason || '이 위치로 옮길 수 없습니다.', true);
       onChange();
       return false;
     }
@@ -334,6 +350,7 @@
     });
     return {
       init, mapPick, drop, setError,
+      get placed() { return placed; },
       get flags() { return flags; }, get stats() { return stats; },
       get baseline() { return model?.baseline; }, get tool() { return tool; },
       get from() { return tool === 'add' ? null : pointAt('from'); },

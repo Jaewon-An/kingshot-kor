@@ -14,6 +14,7 @@
   let priorSurvey = 'compare';
   let comparison = false, group = 'all';
   let drag = null, autoFit = true;
+  let gesture = 0;
   const G = window.KSCore.G;
   const coord = f => `X:${f.x} Y:${f.y}`;
   const positionKey = f => f.y * G + f.x;
@@ -24,6 +25,9 @@
   const simulating = () => byId('survey').value === 'sim';
   const resources = window.KSResources.create(draw);
   const editor = window.KSBannerEditor.create({ onChange: draw, onLocate: focusPoint });
+  const flagIcon = new Image();
+  flagIcon.onload = draw;
+  flagIcon.src = '/banner/v4/flag-icon.png';
 
   function prepareLayers() {
     if (!mapPromise) {
@@ -54,7 +58,8 @@
   }
 
   function prepareSimulation() {
-    if (model || simLoading) return;
+    if (model) return Promise.resolve();
+    if (simLoading) return simLoading;
     const record = snapshots.get('current');
     simLoading = Promise.all([prepareLayers(), read('/banner/v4/simulation-sites.json')])
       .then(([[map, nodes], sites]) => {
@@ -64,6 +69,7 @@
         if (simulating()) fit();
       }).catch(() => editor.setError('시뮬레이션 자료를 불러오지 못했습니다. 새로고침해 주세요.'))
       .finally(() => { simLoading = null; });
+    return simLoading;
   }
 
   async function read(url) {
@@ -244,6 +250,7 @@
     byId('survey-panel').hidden = byId('survey-sources').hidden = simulation;
     byId('results').classList.toggle('sim-map', simulation);
     byId('sim-map-key').hidden = !simulation;
+    byId('drag-hint').hidden = simulation || key === 'previous' || !latest?.complete;
     byId('area-key').textContent = simulation ? '모의 영토 7×7칸' : '조사 시점의 깃발 범위 7×7칸';
     if (!simulation) priorSurvey = key;
     const missing = active.total == null ? null : active.total - active.flags.length;
@@ -263,7 +270,6 @@
     }
     byId('groups').hidden = !comparison;
     byId('state-title').hidden = !comparison;
-    byId('marker-key').hidden = comparison;
     let status;
     if (simulation) {
       status = '최근 실측 배치에서 시작합니다. 철거와 건설 사이에도 본부·거점 연결과 두 곰덫 주변의 방어 영토를 유지합니다.';
@@ -430,15 +436,44 @@
     return nearest;
   }
 
-  function plus(p, radius, diagonal) {
-    ctx.beginPath();
-    if (diagonal) {
-      ctx.moveTo(p.x-radius, p.y-radius); ctx.lineTo(p.x+radius, p.y+radius);
-      ctx.moveTo(p.x+radius, p.y-radius); ctx.lineTo(p.x-radius, p.y+radius);
+  function iconSize() {
+    return Math.min(32, Math.max(10, 5 + camera.scale * 1.8));
+  }
+
+  function drawFlag(p, size) {
+    if (flagIcon.naturalWidth) {
+      const height = size * flagIcon.naturalHeight / flagIcon.naturalWidth;
+      ctx.drawImage(flagIcon, p.x-size/2, p.y-height/2, size, height);
     } else {
-      ctx.moveTo(p.x-radius, p.y); ctx.lineTo(p.x+radius, p.y);
-      ctx.moveTo(p.x, p.y-radius); ctx.lineTo(p.x, p.y+radius);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size*.28, 0, 2*Math.PI);
+      ctx.fill();
     }
+  }
+
+  function drawFootprint(flag, tint, preview) {
+    const p = screen(gamePoint(flag));
+    const radius = 3.5 * camera.scale * Math.SQRT2;
+    const dash = Math.max(1.5, Math.min(7, 1.3 * camera.scale));
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(p.x,p.y-radius); ctx.lineTo(p.x+radius,p.y);
+    ctx.lineTo(p.x,p.y+radius); ctx.lineTo(p.x-radius,p.y); ctx.closePath();
+    ctx.fillStyle = tint;
+    ctx.globalAlpha = preview ? .16 : .08;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = preview ? 2.5 : 2;
+    ctx.strokeStyle = tint;
+    ctx.setLineDash([dash, dash*.75]);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCross(p, radius) {
+    ctx.beginPath();
+    ctx.moveTo(p.x-radius, p.y-radius); ctx.lineTo(p.x+radius, p.y+radius);
+    ctx.moveTo(p.x+radius, p.y-radius); ctx.lineTo(p.x-radius, p.y+radius);
     ctx.stroke();
   }
 
@@ -470,25 +505,15 @@
   }
 
   function drawEditMarkers(flags) {
-    const existing = new Set(active.flags.map(positionKey));
     const current = new Set(flags.map(positionKey));
     const size = Math.min(9, Math.max(4, camera.scale));
     ctx.save();
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = color('bad');
-    for (const f of active.flags) if (!current.has(positionKey(f))) plus(screen(gamePoint(f)), size, true);
-    ctx.strokeStyle = color('ok');
-    for (const f of flags) if (!existing.has(positionKey(f))) plus(screen(gamePoint(f)), size, false);
-    const from = drag?.flag && drag.moved ? drag.flag : editor.from;
-    const to = drag?.flag && drag.moved ? drag.target : editor.to;
-    const a = from && screen(gamePoint(from)), b = to && screen(gamePoint(to));
-    ctx.strokeStyle = color('c-pick');
-    if (a && b) {
-      ctx.setLineDash([5,4]);
-      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    for (const p of [a,b]) if (p) {
+    for (const f of active.flags) if (!current.has(positionKey(f))) drawCross(screen(gamePoint(f)), size);
+    if (editor.from && !drag?.moved) {
+      const p = screen(gamePoint(editor.from));
+      ctx.strokeStyle = color('c-pick');
       ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(9,size+3),0,2*Math.PI); ctx.stroke();
     }
     ctx.restore();
@@ -522,26 +547,41 @@
         baselineOwned: editing ? editor.baseline.owned : undefined });
     }
     if (editing) drawLandmarks();
+    const moving = drag?.flag && drag.moved ? drag : null;
+    if (editing) {
+      const tint = color('ok');
+      for (const f of flags) {
+        if (editor.placed.has(positionKey(f)) && (!moving || f !== moving.flag)) drawFootprint(f, tint, false);
+      }
+    }
+    const target = moving ? moving.target : editing ? editor.to : null;
+    if (target) drawFootprint(target, color(!moving && byId('sim-preview').classList.contains('err') ? 'bad' : 'accent'), true);
     const colors = Object.fromEntries(Object.entries(groups).filter(([, value]) => value[1]).map(([key, value]) => [key, color(value[1])]));
-    const normal = color('c-banner');
-    const radius = Math.min(5, Math.max(2.5, camera.scale * .65));
+    const normal = color('c-banner'), outline = color('panel');
+    const size = iconSize(), radius = Math.max(3, size * .4);
     for (const f of flags) {
       const p = screen(gamePoint(f));
+      if (p.x < -size || p.y < -size || p.x > w+size || p.y > h+size) continue;
       ctx.fillStyle = ctx.strokeStyle = colors[f.state] || normal;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       if (f.state === 'absent') {
-        ctx.moveTo(p.x - radius, p.y - radius);
-        ctx.lineTo(p.x + radius, p.y + radius);
-        ctx.moveTo(p.x + radius, p.y - radius);
-        ctx.lineTo(p.x - radius, p.y + radius);
+        drawCross(p, radius);
+      } else if (f.state === 'unchecked') {
+        ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
         ctx.stroke();
       } else {
-        ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
-        if (f.state === 'unchecked') ctx.stroke();
-        else ctx.fill();
+        ctx.globalAlpha = moving?.flag === f ? .3 : 1;
+        drawFlag(p, size);
+        if (comparison) {
+          ctx.beginPath();
+          ctx.arc(p.x+size*.35, p.y+size*.32, Math.max(2.2,size*.15), 0, 2*Math.PI);
+          ctx.fill(); ctx.strokeStyle = outline; ctx.lineWidth = 1; ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
       }
     }
+    if (moving?.target) drawFlag(screen(gamePoint(moving.target)), size);
     if (editing) {
       drawEditMarkers(flags);
       if (!drag?.moved) {
@@ -587,14 +627,48 @@
     draw();
   });
   byId('resource-scope').addEventListener('change', draw);
+  function canDragFromView() {
+    if (simulating()) return model && editor.tool === 'move';
+    return snapshots.get('current')?.complete && byId('survey').value !== 'previous';
+  }
+
+  function pointerRadius(event) {
+    return Math.max(event.pointerType === 'touch' ? 14 : 8, iconSize()*.55);
+  }
+
+  function dropCell(event, held) {
+    const p = eventLocation(event);
+    if (p.x < 0 || p.y < 0 || p.x >= canvas.clientWidth || p.y >= canvas.clientHeight) return null;
+    return mapCell(p.x - held.grabX, p.y - held.grabY);
+  }
+
+  async function finishMove(source, destination, serial) {
+    if (!simulating()) {
+      byId('survey').value = 'sim';
+      showSurvey();
+      updateLink();
+      await prepareSimulation();
+      if (!model || !simulating() || serial !== gesture) return;
+      const applied = editor.drop(source, destination);
+      focusPoint(applied ? destination : source);
+    } else if (model) {
+      editor.drop(source, destination);
+    }
+  }
+
   canvas.addEventListener('pointerdown', e => {
     if (!e.isPrimary || e.button !== 0) return;
+    gesture++;
     canvas.setPointerCapture(e.pointerId);
     const location = eventLocation(e);
     const flags = mapFlags();
-    const index = simulating() && model && editor.tool === 'move' ? nearestFlag(location,flags,8) : -1;
-    drag = { x: e.clientX, y: e.clientY, cx: camera.x, cy: camera.y, moved: false,
-      flag: flags[index], target: location.cell };
+    const index = canDragFromView() ? nearestFlag(location,flags,pointerRadius(e)) : -1;
+    const candidate = flags[index];
+    const flag = candidate && !['absent','unchecked'].includes(candidate.state) ? candidate : null;
+    const center = flag && screen(gamePoint(flag));
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, cx: camera.x, cy: camera.y, moved: false,
+      flag, target: flag, grabX: flag ? location.x-center.x : 0, grabY: flag ? location.y-center.y : 0 };
+    if (flag && !simulating()) prepareSimulation();
   });
   canvas.addEventListener('pointermove', e => {
     if (!drag || !e.isPrimary) return;
@@ -604,8 +678,8 @@
     autoFit = false;
     canvas.classList.add('drag');
     if (drag.flag) {
-      drag.target = eventLocation(e).cell;
-      byId('selection').textContent = `${coord(drag.flag)} → ${coord(drag.target)}`;
+      drag.target = dropCell(e, drag);
+      byId('selection').textContent = drag.target ? `${coord(drag.flag)} → ${coord(drag.target)}` : '지도 안에 놓으면 이동합니다.';
     } else {
       camera.x = drag.cx - dx / camera.scale;
       camera.y = drag.cy - dy / camera.scale;
@@ -616,16 +690,17 @@
     if (!drag || !e.isPrimary) return;
     const location = eventLocation(e);
     if (drag.moved) {
-      if (simulating() && model && drag.flag) {
-        const from = drag.flag;
+      if (drag.flag) {
+        const from = drag.flag, destination = dropCell(e, drag);
         drag = null;
         byId('selection').textContent = '';
-        editor.drop(from, location.cell);
+        if (destination && (destination.x !== from.x || destination.y !== from.y)) finishMove(from, destination, gesture);
+        else draw();
       }
       return;
     }
     const flags = mapFlags();
-    const nearest = nearestFlag(location, flags, simulating() ? 8 : 14);
+    const nearest = nearestFlag(location, flags, simulating() ? pointerRadius(e) : Math.max(14, pointerRadius(e)));
     if (simulating()) {
       if (model) editor.mapPick(location.cell, flags[nearest] || null);
     } else if (nearest >= 0) {
@@ -636,11 +711,19 @@
       if (node) byId('selection').textContent = `${['빵','목재','석재','철'][node[0]]} 자원지 · ${coord({x:node[1],y:node[2]})}`;
     }
   });
-  canvas.addEventListener('lostpointercapture', () => {
+  function clearDrag() {
     const wasMoving = Boolean(drag?.flag && drag.moved);
     drag = null;
     canvas.classList.remove('drag');
     if (wasMoving) { byId('selection').textContent = ''; draw(); }
+  }
+  canvas.addEventListener('lostpointercapture', clearDrag);
+  canvas.addEventListener('pointercancel', clearDrag);
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || !drag) return;
+    const id = drag.id;
+    clearDrag();
+    if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
   });
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
