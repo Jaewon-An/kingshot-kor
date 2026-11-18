@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>KOR 연맹 깃발 조사 · 킹샷</title>
+  <link rel="stylesheet" href="/v2/guide.css">
+  <link rel="stylesheet" href="/banner/v4/survey.css">
+  <script defer src="/mapdata.js"></script>
+  <script defer src="/v2/core.js"></script>
+  <script defer src="/v2/plan.js"></script>
+  <script defer src="/banner/v4/survey.js"></script>
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <div>
+        <p class="eyebrow" id="kingdom">KINGSHOT · KOR</p>
+        <h1>KOR 연맹 깃발 조사</h1>
+        <p class="stamp" id="date"></p>
+      </div>
+      <dl class="facts" id="facts" hidden>
+        <div><dt>게임 내 완공 깃발</dt><dd id="total"></dd></div>
+        <div><dt>완공 좌표 기록</dt><dd id="located"></dd></div>
+        <div id="missing-fact" hidden><dt>좌표 미확인</dt><dd id="missing"></dd></div>
+        <div id="delta-fact" hidden><dt>v3 대비 총계 변화</dt><dd id="delta"></dd></div>
+      </dl>
+    </header>
+    <div id="history" hidden>
+      <label for="survey">조사 기록</label>
+      <select id="survey"></select>
+    </div>
+    <p class="notice" id="notice" role="status">조사 기록을 불러오는 중입니다.</p>
+    <div class="sources">
+      <p id="source" class="hint"></p>
+      <a id="earlier-count" hidden></a>
+      <a href="/banner/v4/evidence/count.png" id="count-evidence" hidden>완공 총계 화면</a>
+    </div>
+    <div id="construction" hidden>
+      <strong id="construction-title">건설 중인 깃발</strong>
+      <ul id="construction-list"></ul>
+    </div>
+    <div class="groups" id="groups" role="group" aria-label="비교할 좌표 분류" hidden></div>
+    <div class="grid" id="results" hidden>
+      <section class="panel" aria-label="깃발 좌표 목록">
+        <div class="finder">
+          <label for="query">깃발 좌표 찾기</label>
+          <input id="query" type="search" placeholder="X, Y 또는 깃발 번호" autocomplete="off">
+          <span class="hint" id="matches" role="status"></span>
+        </div>
+        <div class="tbl">
+          <table>
+            <thead><tr><th scope="col">깃발 좌표</th><th scope="col" id="state-title" hidden>v3와 비교</th><th scope="col" id="number-title" hidden>게임 번호</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="mapcol" aria-label="KOR 깃발 지도">
+        <div class="mapwrap">
+          <canvas id="map" aria-label="게임 시점으로 본 깃발 위치. 좌표 목록에서도 깃발을 선택할 수 있습니다."></canvas>
+          <div class="readout" id="selection" role="status"></div>
+          <div class="zoom">
+            <button type="button" class="btn" id="zin" aria-label="지도 확대">＋</button>
+            <button type="button" class="btn" id="zout" aria-label="지도 축소">－</button>
+            <button type="button" class="btn" id="fit">전체</button>
+          </div>
+        </div>
+        <div class="legend">
+          <div class="keys">
+            <span id="marker-key"><i class="marker"></i>KOR 깃발 좌표</span>
+            <span><i class="terr"></i>조사 시점의 깃발 범위 7×7칸</span>
+            <span id="terrain-note" class="hint" role="status"></span>
+          </div>
+        </div>
+      </section>
+    </div>
+    <footer><a href="/banner/v3/">v3 거점 연결 계획</a></footer>
+  </main>
+</body>
+</html>

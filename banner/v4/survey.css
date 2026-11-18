@@ -1,0 +1,36 @@
+.page { max-width: 1520px; }
+#history { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
+#history label { font-weight: 600; }
+#survey { font: inherit; color: var(--ink); padding: .45rem .6rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+.grid { grid-template-columns: minmax(300px, 365px) minmax(0, 1fr); }
+.groups { display: flex; flex-wrap: wrap; gap: 6px; }
+.groups .btn { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); }
+.swatch.unrecorded { background: var(--c-fflag); }
+.swatch.absent { background: var(--bad); clip-path: polygon(15% 0,50% 35%,85% 0,100% 15%,65% 50%,100% 85%,85% 100%,50% 65%,15% 100%,0 85%,35% 50%,0 15%); border-radius: 0; }
+.swatch.unchecked { background: transparent; border: 2px solid var(--muted); }
+#rows td.state { white-space: normal; font-size: .75rem; }
+.mapwrap { height: clamp(400px, 65vh, 850px); }
+.mapcol .legend .keys { margin-top: 0; }
+.legend .marker { border-radius: 50%; background: var(--c-banner); }
+.sources { display: flex; align-items: baseline; flex-wrap: wrap; gap: .2rem .65rem; margin-top: -.45rem; }
+.sources a { font-size: .78rem; color: var(--c-banner); text-underline-offset: 2px; }
+#construction { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1rem; padding: .6rem .85rem; background: var(--panel); border-left: 3px solid var(--accent); }
+#construction strong { font-size: .85rem; }
+#construction-list { list-style: none; display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin: 0; padding: 0; font-size: .82rem; }
+#map { cursor: grab; }
+#map.drag { cursor: grabbing; }
+.btn:disabled { opacity: .5; cursor: default; }
+.coord {
+  display: block; width: 100%; text-align: left; border: 0; padding: 5px 7px;
+  background: transparent; color: var(--c-banner); font: 600 .83rem var(--f-mono); cursor: pointer;
+}
+.coord:focus-visible { outline-offset: -2px; }
+.selected { background: var(--bg); box-shadow: inset 3px 0 var(--c-pick); }
+.tbl { max-height: 56vh; }
+.tbl td:first-child { padding: 0; }
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .mapwrap { height: clamp(300px, 47svh, 520px); min-height: 0; }
+  .coord { min-height: 40px; }
+}
