@@ -29,8 +29,45 @@
 .selected { background: var(--bg); box-shadow: inset 3px 0 var(--c-pick); }
 .tbl { max-height: 56vh; }
 .tbl td:first-child { padding: 0; }
+#sim-enter, .btn.sim-primary { border-color: var(--c-banner); background: var(--c-banner); color: var(--panel); }
+#sim-enter { margin-left: auto; }
+.resource-legend, .sim-actions, .sim-summary, .sim-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.resource-legend { margin-top: 8px; gap: 6px 14px; font-size: .78rem; color: var(--muted); }
+.resource-legend label { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); cursor: pointer; }
+.resource-legend select { font: inherit; padding: .18rem .35rem; border: 1px solid var(--line); border-radius: 4px; color: var(--ink); background: var(--panel); }
+.res-icon, .legend i.res-icon { display: inline-block; width: 20px; height: 20px; flex: none; vertical-align: middle; background: url('/banner/res-icons.png') no-repeat; background-size: 400% 100%; }
+.res-icon.res-0 { background-position: 0 0; }
+.res-icon.res-1 { background-position: 33.3333% 0; }
+.res-icon.res-2 { background-position: 66.6667% 0; }
+.res-icon.res-3 { background-position: 100% 0; }
+#sim-overview { display: grid; gap: 8px; }
+.resource-totals { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; }
+.resource-stat { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); padding: 7px 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 3px 7px; font-size: .88rem; }
+.resource-stat small { color: var(--muted); font-size: .75rem; }
+.resource-stat .gain { color: var(--ok); }
+.resource-stat .loss { color: var(--bad); }
+.sim-panel h2 { font: 600 1.15rem var(--f-display); }
+#sim-form { display: grid; gap: 9px; }
+.sim-tools .btn { flex: 1; }
+#sim-form fieldset { margin: 0; padding: 6px 9px 9px; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: 1px solid var(--line); border-radius: var(--r); }
+#sim-form legend { font-size: .8rem; padding: 0 3px; }
+#sim-form label { display: flex; align-items: center; gap: 5px; font: .8rem var(--f-mono); color: var(--muted); }
+#sim-form input { min-width: 0; width: 100%; padding: 6px; font: inherit; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; }
+#sim-feedback { margin: 0; color: var(--ok); font-size: .83rem; }
+#sim-feedback:empty { display: none; }
+#sim-feedback.err, #sim-preview.err { color: var(--bad); }
+#sim-steps, #sim-outposts { margin: 6px 0 0; padding-left: 1.4rem; max-height: 220px; overflow: auto; font-size: .8rem; }
+.sim-panel details { min-width: 0; }
+.sim-panel summary { cursor: pointer; }
+.sim-map #map { cursor: crosshair; }
+.sim-map #map.drag { cursor: grabbing; }
 @media (max-width: 900px) {
   .grid { grid-template-columns: minmax(0, 1fr); }
   .mapwrap { height: clamp(300px, 47svh, 520px); min-height: 0; }
   .coord { min-height: 40px; }
+  #sim-enter { margin-left: 0; }
+  .sim-map > .sim-panel { display: flex; order: 2; }
+  .sim-map > .mapcol { order: 1; }
+  .resource-totals { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .resource-stat { padding: 5px 8px; }
 }

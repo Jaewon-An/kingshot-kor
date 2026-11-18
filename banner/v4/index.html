@@ -9,6 +9,9 @@
   <script defer src="/mapdata.js"></script>
   <script defer src="/v2/core.js"></script>
   <script defer src="/v2/plan.js"></script>
+  <script defer src="/banner/v4/resource-layer.js"></script>
+  <script defer src="/banner/v4/simulation-model.js"></script>
+  <script defer src="/banner/v4/simulation-ui.js"></script>
   <script defer src="/banner/v4/survey.js"></script>
 </head>
 <body>
@@ -16,7 +19,7 @@
     <header class="top">
       <div>
         <p class="eyebrow" id="kingdom">KINGSHOT · KOR</p>
-        <h1>KOR 연맹 깃발 조사</h1>
+        <h1 id="page-title">KOR 연맹 깃발 조사</h1>
         <p class="stamp" id="date"></p>
       </div>
       <dl class="facts" id="facts" hidden>
@@ -27,11 +30,12 @@
       </dl>
     </header>
     <div id="history" hidden>
-      <label for="survey">조사 기록</label>
+      <label for="survey">지도 보기</label>
       <select id="survey"></select>
+      <button id="sim-enter" class="btn" type="button" hidden>깃발 재배치 시뮬레이터</button>
     </div>
     <p class="notice" id="notice" role="status">조사 기록을 불러오는 중입니다.</p>
-    <div class="sources">
+    <div class="sources" id="survey-sources">
       <p id="source" class="hint"></p>
       <a href="/banner/v4/review/">깃발 작업을 위한 자원지 최적화 검토</a>
       <a id="earlier-count" hidden></a>
@@ -42,8 +46,12 @@
       <ul id="construction-list"></ul>
     </div>
     <div class="groups" id="groups" role="group" aria-label="비교할 좌표 분류" hidden></div>
+    <section id="sim-overview" aria-label="모의 배치 결과" hidden>
+      <div class="sim-summary"><strong id="sim-counts"></strong><span class="hint" id="sim-connections"></span></div>
+      <div id="sim-resources" class="resource-totals"></div>
+    </section>
     <div class="grid" id="results" hidden>
-      <section class="panel" aria-label="깃발 좌표 목록">
+      <section class="panel" id="survey-panel" aria-label="깃발 좌표 목록">
         <div class="finder">
           <label for="query">깃발 좌표 찾기</label>
           <input id="query" type="search" placeholder="X, Y 또는 깃발 번호" autocomplete="off">
@@ -55,6 +63,35 @@
             <tbody id="rows"></tbody>
           </table>
         </div>
+      </section>
+      <section class="panel sim-panel" id="sim-panel" aria-label="모의 깃발 편집" hidden>
+        <h2>깃발 배치</h2>
+        <form id="sim-form">
+          <div id="sim-tools" class="sim-tools" role="group" aria-label="작업 선택">
+            <button type="button" class="btn" data-tool="move" aria-pressed="true">이동</button>
+            <button type="button" class="btn" data-tool="remove" aria-pressed="false">철거</button>
+            <button type="button" class="btn" data-tool="add" aria-pressed="false">건설</button>
+          </div>
+          <p class="hint" id="sim-help">지도에서 깃발과 이동할 칸을 차례로 누르거나 좌표를 입력하세요. 깃발을 끌어 놓으면 바로 이동합니다.</p>
+          <fieldset id="sim-from"><legend>기존 깃발</legend>
+            <label>X <input type="number" id="from-x" min="0" max="1199" step="1" inputmode="numeric"></label>
+            <label>Y <input type="number" id="from-y" min="0" max="1199" step="1" inputmode="numeric"></label>
+          </fieldset>
+          <fieldset id="sim-to"><legend>새 위치</legend>
+            <label>X <input type="number" id="to-x" min="0" max="1199" step="1" inputmode="numeric"></label>
+            <label>Y <input type="number" id="to-y" min="0" max="1199" step="1" inputmode="numeric"></label>
+          </fieldset>
+          <p id="sim-preview" class="hint" aria-live="polite"></p>
+          <button id="sim-apply" class="btn sim-primary" type="submit" disabled>이동 적용</button>
+        </form>
+        <p id="sim-feedback" role="status" aria-live="polite"></p>
+        <div class="sim-actions">
+          <button id="sim-undo" class="btn" type="button" disabled>한 단계 취소</button>
+          <button id="sim-reset" class="btn" type="button" disabled>실측 배치로 초기화</button>
+        </div>
+        <details id="sim-log"><summary>작업 내역 <span id="sim-log-count">0</span>건</summary><ol id="sim-steps" reversed></ol></details>
+        <details><summary>거점 연결 상태</summary><ul id="sim-outposts"></ul></details>
+        <p class="hint" id="sim-storage">모의 배치는 이 브라우저에 자동 저장됩니다.</p>
       </section>
       <section class="mapcol" aria-label="KOR 깃발 지도">
         <div class="mapwrap">
@@ -69,13 +106,20 @@
         <div class="legend">
           <div class="keys">
             <span id="marker-key"><i class="marker"></i>KOR 깃발 좌표</span>
-            <span><i class="terr"></i>조사 시점의 깃발 범위 7×7칸</span>
+            <span><i class="terr"></i><span id="area-key">조사 시점의 깃발 범위 7×7칸</span></span>
+            <span id="sim-map-key" hidden>초록 ✚ 신설 · 빨강 × 철거 · 마름모 본부 · 네모 거점 · 붉은 원 곰덫</span>
             <span id="terrain-note" class="hint" role="status"></span>
+          </div>
+          <div class="resource-legend" hidden id="resource-legend">
+            <label><input type="checkbox" id="resource-icons" checked> 자원 아이콘 표시</label>
+            <label>표시 범위 <select id="resource-scope"><option value="near">영지 주변 · 확대 시 전체</option><option value="all">전체 자원지</option></select></label>
+            <span><i class="res-icon res-0"></i>빵</span><span><i class="res-icon res-1"></i>목재</span>
+            <span><i class="res-icon res-2"></i>석재</span><span><i class="res-icon res-3"></i>철</span>
           </div>
         </div>
       </section>
     </div>
-    <footer><a href="/banner/v3/">v3 거점 연결 계획</a></footer>
+    <footer><a href="/banner/v3/">v3 거점 연결 계획</a><a href="/banner/v4/review/">자원지 최적화 검토</a></footer>
   </main>
 </body>
 </html>

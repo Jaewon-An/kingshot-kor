@@ -10,6 +10,8 @@
     absent: ['기존 위치에 KOR 깃발 없음', 'bad'], unchecked: ['재확인 전', 'muted']
   };
   let active, entries = [], visible = [], selected = null, terrain = null, kinds;
+  let nodes = [], mapPromise, nodesPromise, simLoading, model;
+  let priorSurvey = 'compare';
   let comparison = false, group = 'all';
   let drag = null, autoFit = true;
   const G = window.KSCore.G;
@@ -19,6 +21,50 @@
     x: (f.x - f.y) * Math.SQRT1_2,
     y: -(f.x + f.y + 1) * Math.SQRT1_2
   });
+  const simulating = () => byId('survey').value === 'sim';
+  const resources = window.KSResources.create(draw);
+  const editor = window.KSBannerEditor.create({ onChange: draw, onLocate: focusPoint });
+
+  function prepareLayers() {
+    if (!mapPromise) {
+      mapPromise = window.KSPlan.loadMap().then(map => {
+        kinds = map.kind;
+        buildTerrain();
+        draw();
+        return map;
+      }).catch(error => {
+        mapPromise = null;
+        byId('terrain-note').textContent = '지형을 불러오지 못했습니다.';
+        throw error;
+      });
+    }
+    if (!nodesPromise) {
+      nodesPromise = window.KSResources.loadNodes().then(list => {
+        nodes = list;
+        byId('resource-legend').hidden = false;
+        draw();
+        return list;
+      }).catch(error => {
+        nodesPromise = null;
+        byId('terrain-note').textContent = '자원지 위치를 불러오지 못했습니다.';
+        throw error;
+      });
+    }
+    return Promise.all([mapPromise, nodesPromise]);
+  }
+
+  function prepareSimulation() {
+    if (model || simLoading) return;
+    const record = snapshots.get('current');
+    simLoading = Promise.all([prepareLayers(), read('/banner/v4/simulation-sites.json')])
+      .then(([[map, nodes], sites]) => {
+        const ready = window.KSBannerSimulation.create({ flags: record.flags, capacity: record.capacity, nodes, map, sites });
+        editor.init({ record, model: ready });
+        model = ready;
+        if (simulating()) fit();
+      }).catch(() => editor.setError('시뮬레이션 자료를 불러오지 못했습니다. 새로고침해 주세요.'))
+      .finally(() => { simLoading = null; });
+  }
 
   async function read(url) {
     const response = await fetch(url, { cache: 'no-cache' });
@@ -155,6 +201,10 @@
     if (current.status === 'fulfilled') {
       snapshots.set('current', current.value);
       select.add(new Option(`${current.value.surveyedAt} · 최근 조사`, 'current'));
+      if (current.value.complete) {
+        select.add(new Option('깃발 재배치 시뮬레이터', 'sim'));
+        byId('sim-enter').hidden = false;
+      }
     }
     if (previous.status === 'fulfilled') {
       snapshots.set('previous', previous.value);
@@ -168,29 +218,38 @@
     const params = new URLSearchParams(location.search);
     if ([...select.options].some(option => option.value === params.get('view'))) select.value = params.get('view');
     if (select.value === 'compare' && Object.hasOwn(groups, params.get('group'))) group = params.get('group');
+    priorSurvey = snapshots.has('current') && snapshots.has('previous') ? 'compare' : 'current';
     select.addEventListener('change', () => { group = 'all'; showSurvey(); updateLink(); });
+    byId('sim-enter').addEventListener('click', () => {
+      select.value = simulating() ? priorSurvey : 'sim';
+      showSurvey();
+      updateLink();
+    });
     byId('history').hidden = false;
     showSurvey();
-    try {
-      kinds = (await window.KSPlan.loadMap()).kind;
-      buildTerrain();
-      draw();
-    } catch {
-      byId('terrain-note').textContent = '지형을 불러오지 못해 깃발 위치만 표시합니다.';
-    }
+    await prepareLayers().catch(() => {});
   }
 
   function showSurvey() {
     const key = byId('survey').value;
+    const simulation = simulating();
     comparison = key === 'compare';
     const latest = snapshots.get('current');
     const previous = snapshots.get('previous');
-    active = comparison ? latest : snapshots.get(key);
+    active = comparison || simulation ? latest : snapshots.get(key);
     entries = comparison ? compare(latest, previous) : active.flags;
+    byId('page-title').textContent = simulation ? '깃발 재배치 시뮬레이터' : 'KOR 연맹 깃발 조사';
+    byId('sim-enter').textContent = simulation ? '조사 지도로 돌아가기' : '깃발 재배치 시뮬레이터';
+    byId('sim-overview').hidden = byId('sim-panel').hidden = !simulation;
+    byId('survey-panel').hidden = byId('survey-sources').hidden = simulation;
+    byId('results').classList.toggle('sim-map', simulation);
+    byId('sim-map-key').hidden = !simulation;
+    byId('area-key').textContent = simulation ? '모의 영토 7×7칸' : '조사 시점의 깃발 범위 7×7칸';
+    if (!simulation) priorSurvey = key;
     const missing = active.total == null ? null : active.total - active.flags.length;
     byId('date').textContent = comparison ? `v3 ${previous.surveyedAt} → v4 ${latest.surveyedAt}` : `${active.surveyedAt} 기준`;
     byId('kingdom').textContent = `KINGSHOT · ${active.kingdom} ${active.alliance}`;
-    byId('facts').hidden = false;
+    byId('facts').hidden = simulation;
     byId('total').textContent = active.total == null ? '미확인' : `${active.total}개`;
     byId('located').textContent = `${active.flags.length}개`;
     byId('missing-fact').hidden = missing == null;
@@ -206,7 +265,9 @@
     byId('state-title').hidden = !comparison;
     byId('marker-key').hidden = comparison;
     let status;
-    if (comparison) {
+    if (simulation) {
+      status = '최근 실측 배치에서 시작합니다. 철거와 건설 사이에도 본부·거점 연결과 두 곰덫 주변의 방어 영토를 유지합니다.';
+    } else if (comparison) {
       const pastMissing = previous.total - previous.flags.length;
       status = `비교 기준은 ${previous.surveyedAt}의 v3 조사 기록(${previous.sourceCommit.slice(0, 7)})입니다. 당시 깃발 ${previous.total}개 중 ${previous.flags.length}개의 좌표를 기록했습니다.`;
       if (pastMissing) status += ` 당시 미확인 좌표가 ${pastMissing}개여서 ‘v3 미기록’ 깃발의 설치 시점은 알 수 없습니다.`;
@@ -224,11 +285,16 @@
     }
     byId('notice').textContent = status;
     byId('source').textContent = active.source || '';
-    showEvidence(key !== 'previous');
+    showEvidence(key !== 'previous' && !simulation);
     byId('query').value = '';
     byId('results').hidden = !entries.length;
     byId('number-title').hidden = !entries.some(f => f.number != null);
-    filter();
+    if (simulation) {
+      selected = null;
+      byId('selection').textContent = '';
+      fit();
+      prepareSimulation();
+    } else filter();
   }
 
   function matches(flag, query) {
@@ -285,17 +351,29 @@
     const label = comparison ? groups[f.state][0] : f.number != null ? `깃발 ${f.number}번` : 'KOR 깃발';
     byId('selection').textContent = `${label} · ${coord(f)}`;
     if (center) {
-      Object.assign(camera, gamePoint(f));
-      camera.scale = Math.max(camera.scale, 6);
-      autoFit = false;
+      focusPoint(f);
+    } else {
+      draw();
     }
+  }
+
+  function focusPoint(f) {
+    Object.assign(camera, gamePoint(f));
+    camera.scale = Math.max(camera.scale, 8);
+    autoFit = false;
     draw();
+  }
+
+  function mapFlags() {
+    if (simulating()) return model ? editor.flags : active?.flags || [];
+    return visible;
   }
 
   function fit() {
     autoFit = true;
-    if (visible.length && canvas.clientWidth && canvas.clientHeight) {
-      const points = visible.map(gamePoint);
+    const flags = mapFlags();
+    if (flags.length && canvas.clientWidth && canvas.clientHeight) {
+      const points = flags.map(gamePoint);
       const xs = points.map(p => p.x), ys = points.map(p => p.y);
       const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
       camera.x = (x0 + x1) / 2;
@@ -330,6 +408,92 @@
       y: canvas.clientHeight / 2 + (point.y - camera.y) * camera.scale };
   }
 
+  function mapCell(px, py) {
+    const u = camera.x + (px - canvas.clientWidth / 2) / camera.scale;
+    const v = camera.y + (py - canvas.clientHeight / 2) / camera.scale;
+    return { x: Math.floor((u-v) * Math.SQRT1_2), y: Math.floor((-u-v) * Math.SQRT1_2) };
+  }
+
+  function eventLocation(event) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left, y = event.clientY - rect.top;
+    return { x, y, cell: mapCell(x, y) };
+  }
+
+  function nearestFlag(point, flags, radius) {
+    let nearest = -1, distance = radius;
+    flags.forEach((flag, i) => {
+      const p = screen(gamePoint(flag));
+      const d = Math.hypot(point.x - p.x, point.y - p.y);
+      if (d <= distance) { nearest = i; distance = d; }
+    });
+    return nearest;
+  }
+
+  function plus(p, radius, diagonal) {
+    ctx.beginPath();
+    if (diagonal) {
+      ctx.moveTo(p.x-radius, p.y-radius); ctx.lineTo(p.x+radius, p.y+radius);
+      ctx.moveTo(p.x+radius, p.y-radius); ctx.lineTo(p.x-radius, p.y+radius);
+    } else {
+      ctx.moveTo(p.x-radius, p.y); ctx.lineTo(p.x+radius, p.y);
+      ctx.moveTo(p.x, p.y-radius); ctx.lineTo(p.x, p.y+radius);
+    }
+    ctx.stroke();
+  }
+
+  function drawLandmarks() {
+    const size = Math.min(11, Math.max(4, camera.scale * .9));
+    const outline = color('panel');
+    ctx.save();
+    for (const [markers, shape, tint] of [
+      [editor.stats.outposts, 'square', color('m-struct')],
+      [model.hqs, 'diamond', color('c-hq')], [model.traps, 'ring', color('c-t2')]
+    ]) {
+      for (const point of markers) {
+        const p = screen(gamePoint({x: point.x+1, y: point.y+1}));
+        ctx.save();
+        ctx.translate(p.x,p.y);
+        ctx.fillStyle = tint; ctx.strokeStyle = outline; ctx.lineWidth = 1.4;
+        if (shape === 'ring') {
+          ctx.beginPath(); ctx.arc(0,0,size,0,2*Math.PI); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.arc(0,0,size*.4,0,2*Math.PI); ctx.stroke();
+        } else {
+          if (shape === 'diamond') ctx.rotate(Math.PI/4);
+          ctx.fillRect(-size,-size,2*size,2*size);
+          ctx.strokeRect(-size,-size,2*size,2*size);
+        }
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawEditMarkers(flags) {
+    const existing = new Set(active.flags.map(positionKey));
+    const current = new Set(flags.map(positionKey));
+    const size = Math.min(9, Math.max(4, camera.scale));
+    ctx.save();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = color('bad');
+    for (const f of active.flags) if (!current.has(positionKey(f))) plus(screen(gamePoint(f)), size, true);
+    ctx.strokeStyle = color('ok');
+    for (const f of flags) if (!existing.has(positionKey(f))) plus(screen(gamePoint(f)), size, false);
+    const from = drag?.flag && drag.moved ? drag.flag : editor.from;
+    const to = drag?.flag && drag.moved ? drag.target : editor.to;
+    const a = from && screen(gamePoint(from)), b = to && screen(gamePoint(to));
+    ctx.strokeStyle = color('c-pick');
+    if (a && b) {
+      ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    for (const p of [a,b]) if (p) {
+      ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(9,size+3),0,2*Math.PI); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function draw() {
     if (!ctx || !canvas.clientWidth) return;
     const w = canvas.clientWidth, h = canvas.clientHeight, dpr = window.devicePixelRatio || 1;
@@ -340,20 +504,28 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     const k = camera.scale * Math.SQRT1_2;
+    const flags = mapFlags(), editing = simulating() && Boolean(model);
     ctx.save();
     ctx.transform(k, -k, -k, -k, w / 2 - camera.x * camera.scale, h / 2 - camera.y * camera.scale);
     ctx.imageSmoothingEnabled = false;
     if (terrain) ctx.drawImage(terrain, 0, 0);
     ctx.fillStyle = color('c-terr');
     ctx.globalAlpha = .22;
-    for (const f of visible) {
+    if (editing) for (const hq of model.hqs) ctx.fillRect(hq.x-6,hq.y-6,15,15);
+    for (const f of flags) {
       if (f.state !== 'unchecked' && f.state !== 'absent') ctx.fillRect(f.x - 3, f.y - 3, 7, 7);
     }
     ctx.restore();
+    if (byId('resource-icons').checked) {
+      resources.draw(ctx, nodes, camera, { emphasize: true, focusFlags: editing ? flags : entries,
+        hqs: model?.hqs, allResources: byId('resource-scope').value === 'all', owned: editing ? editor.stats.owned : undefined,
+        baselineOwned: editing ? editor.baseline.owned : undefined });
+    }
+    if (editing) drawLandmarks();
     const colors = Object.fromEntries(Object.entries(groups).filter(([, value]) => value[1]).map(([key, value]) => [key, color(value[1])]));
     const normal = color('c-banner');
     const radius = Math.min(5, Math.max(2.5, camera.scale * .65));
-    for (const f of visible) {
+    for (const f of flags) {
       const p = screen(gamePoint(f));
       ctx.fillStyle = ctx.strokeStyle = colors[f.state] || normal;
       ctx.lineWidth = 1.5;
@@ -370,7 +542,16 @@
         else ctx.fill();
       }
     }
-    if (selected != null) {
+    if (editing) {
+      drawEditMarkers(flags);
+      if (!drag?.moved) {
+        const label = [editor.from && coord(editor.from), editor.to && coord(editor.to)].filter(Boolean).join(' → ');
+        const warning = byId('sim-preview').classList.contains('err') ? byId('sim-preview').textContent : '';
+        const status = [label, warning].filter(Boolean).join(' · ') || byId('sim-feedback').textContent;
+        if (byId('selection').textContent !== status) byId('selection').textContent = status;
+      }
+    }
+    if (!simulating() && selected != null) {
       const p = screen(gamePoint(visible[selected]));
       ctx.strokeStyle = color('c-pick');
       ctx.lineWidth = 3;
@@ -401,10 +582,19 @@
   byId('zin').addEventListener('click', () => zoom(1.5));
   byId('zout').addEventListener('click', () => zoom(1 / 1.5));
   byId('fit').addEventListener('click', fit);
+  byId('resource-icons').addEventListener('change', () => {
+    byId('resource-scope').disabled = !byId('resource-icons').checked;
+    draw();
+  });
+  byId('resource-scope').addEventListener('change', draw);
   canvas.addEventListener('pointerdown', e => {
     if (!e.isPrimary || e.button !== 0) return;
     canvas.setPointerCapture(e.pointerId);
-    drag = { x: e.clientX, y: e.clientY, cx: camera.x, cy: camera.y, moved: false };
+    const location = eventLocation(e);
+    const flags = mapFlags();
+    const index = simulating() && model && editor.tool === 'move' ? nearestFlag(location,flags,8) : -1;
+    drag = { x: e.clientX, y: e.clientY, cx: camera.x, cy: camera.y, moved: false,
+      flag: flags[index], target: location.cell };
   });
   canvas.addEventListener('pointermove', e => {
     if (!drag || !e.isPrimary) return;
@@ -413,25 +603,54 @@
     drag.moved = true;
     autoFit = false;
     canvas.classList.add('drag');
-    camera.x = drag.cx - dx / camera.scale;
-    camera.y = drag.cy - dy / camera.scale;
+    if (drag.flag) {
+      drag.target = eventLocation(e).cell;
+      byId('selection').textContent = `${coord(drag.flag)} → ${coord(drag.target)}`;
+    } else {
+      camera.x = drag.cx - dx / camera.scale;
+      camera.y = drag.cy - dy / camera.scale;
+    }
     draw();
   });
   canvas.addEventListener('pointerup', e => {
-    if (!drag || !e.isPrimary || drag.moved) return;
-    const rect = canvas.getBoundingClientRect();
-    let nearest, distance = 14;
-    visible.forEach((f, i) => {
-      const p = screen(gamePoint(f));
-      const d = Math.hypot(e.clientX - rect.left - p.x, e.clientY - rect.top - p.y);
-      if (d <= distance) { nearest = i; distance = d; }
-    });
-    if (nearest != null) pick(nearest, false);
+    if (!drag || !e.isPrimary) return;
+    const location = eventLocation(e);
+    if (drag.moved) {
+      if (simulating() && model && drag.flag) {
+        const from = drag.flag;
+        drag = null;
+        byId('selection').textContent = '';
+        editor.drop(from, location.cell);
+      }
+      return;
+    }
+    const flags = mapFlags();
+    const nearest = nearestFlag(location, flags, simulating() ? 8 : 14);
+    if (simulating()) {
+      if (model) editor.mapPick(location.cell, flags[nearest] || null);
+    } else if (nearest >= 0) {
+      pick(nearest, false);
+    } else if (byId('resource-icons').checked) {
+      const cell = location.cell;
+      const node = nodes.find(([,x,y]) => cell.x >= x && cell.x <= x+1 && cell.y >= y && cell.y <= y+1);
+      if (node) byId('selection').textContent = `${['빵','목재','석재','철'][node[0]]} 자원지 · ${coord({x:node[1],y:node[2]})}`;
+    }
   });
   canvas.addEventListener('lostpointercapture', () => {
+    const wasMoving = Boolean(drag?.flag && drag.moved);
     drag = null;
     canvas.classList.remove('drag');
+    if (wasMoving) { byId('selection').textContent = ''; draw(); }
   });
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const p = eventLocation(e), scale = camera.scale;
+    camera.scale = Math.min(30, Math.max(.1, scale * (e.deltaY < 0 ? 1.25 : .8)));
+    camera.x += (p.x - canvas.clientWidth/2) * (1/scale - 1/camera.scale);
+    camera.y += (p.y - canvas.clientHeight/2) * (1/scale - 1/camera.scale);
+    autoFit = false;
+    draw();
+  }, { passive: false });
   new ResizeObserver(() => autoFit ? fit() : draw()).observe(canvas);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { buildTerrain(); draw(); });
   load();
