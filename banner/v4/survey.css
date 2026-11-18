@@ -57,6 +57,7 @@
 #sim-feedback { margin: 0; color: var(--ok); font-size: .83rem; }
 #sim-feedback:empty { display: none; }
 #sim-feedback.err, #sim-preview.err { color: var(--bad); }
+#selection.err { border-color: var(--bad); color: var(--bad); }
 #sim-steps, #sim-outposts { margin: 6px 0 0; padding-left: 1.4rem; max-height: 220px; overflow: auto; font-size: .8rem; }
 .sim-panel details { min-width: 0; }
 .sim-panel summary { cursor: pointer; }

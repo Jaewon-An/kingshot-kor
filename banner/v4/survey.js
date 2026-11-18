@@ -66,7 +66,10 @@
         const ready = window.KSBannerSimulation.create({ flags: record.flags, capacity: record.capacity, nodes, map, sites });
         editor.init({ record, model: ready });
         model = ready;
-        if (simulating()) fit();
+        if (simulating()) {
+          if (autoFit && !drag) fit();
+          else draw();
+        }
       }).catch(() => editor.setError('시뮬레이션 자료를 불러오지 못했습니다. 새로고침해 주세요.'))
       .finally(() => { simLoading = null; });
     return simLoading;
@@ -237,6 +240,7 @@
   }
 
   function showSurvey() {
+    byId('selection').classList.remove('err');
     const key = byId('survey').value;
     const simulation = simulating();
     comparison = key === 'compare';
@@ -272,7 +276,7 @@
     byId('state-title').hidden = !comparison;
     let status;
     if (simulation) {
-      status = '최근 실측 배치에서 시작합니다. 철거와 건설 사이에도 본부·거점 연결과 두 곰덫 주변의 방어 영토를 유지합니다.';
+      status = '깃발을 놓은 뒤의 본부·거점 연결과 곰덫 방어 영토를 확인합니다. 게임에서 먼저 철거하면 연결이 끊기는 곳은 작업 내역에 표시합니다.';
     } else if (comparison) {
       const pastMissing = previous.total - previous.flags.length;
       status = `비교 기준은 ${previous.surveyedAt}의 v3 조사 기록(${previous.sourceCommit.slice(0, 7)})입니다. 당시 깃발 ${previous.total}개 중 ${previous.flags.length}개의 좌표를 기록했습니다.`;
@@ -555,7 +559,10 @@
       }
     }
     const target = moving ? moving.target : editing ? editor.to : null;
-    if (target) drawFootprint(target, color(!moving && byId('sim-preview').classList.contains('err') ? 'bad' : 'accent'), true);
+    if (target) {
+      const blocked = moving ? moving.problem : byId('sim-preview').classList.contains('err');
+      drawFootprint(target, color(blocked ? 'bad' : 'accent'), true);
+    }
     const colors = Object.fromEntries(Object.entries(groups).filter(([, value]) => value[1]).map(([key, value]) => [key, color(value[1])]));
     const normal = color('c-banner'), outline = color('panel');
     const size = iconSize(), radius = Math.max(3, size * .4);
@@ -586,8 +593,11 @@
       drawEditMarkers(flags);
       if (!drag?.moved) {
         const label = [editor.from && coord(editor.from), editor.to && coord(editor.to)].filter(Boolean).join(' → ');
+        const feedback = byId('sim-feedback');
         const warning = byId('sim-preview').classList.contains('err') ? byId('sim-preview').textContent : '';
-        const status = [label, warning].filter(Boolean).join(' · ') || byId('sim-feedback').textContent;
+        const error = warning || (feedback.classList.contains('err') ? feedback.textContent : '');
+        const status = [label, error].filter(Boolean).join(' · ') || feedback.textContent;
+        byId('selection').classList.toggle('err', Boolean(error));
         if (byId('selection').textContent !== status) byId('selection').textContent = status;
       }
     }
@@ -628,7 +638,7 @@
   });
   byId('resource-scope').addEventListener('change', draw);
   function canDragFromView() {
-    if (simulating()) return model && editor.tool === 'move';
+    if (simulating()) return editor.tool === 'move';
     return snapshots.get('current')?.complete && byId('survey').value !== 'previous';
   }
 
@@ -642,18 +652,25 @@
     return mapCell(p.x - held.grabX, p.y - held.grabY);
   }
 
+  function startsDrag(e, target) {
+    if (drag.moved) return true;
+    if (drag.flag && target) {
+      return target.x !== drag.flag.x || target.y !== drag.flag.y;
+    }
+    return Math.hypot(e.clientX - drag.x, e.clientY - drag.y) >= 4;
+  }
+
   async function finishMove(source, destination, serial) {
-    if (!simulating()) {
+    const entering = !simulating();
+    if (entering) {
       byId('survey').value = 'sim';
       showSurvey();
       updateLink();
-      await prepareSimulation();
-      if (!model || !simulating() || serial !== gesture) return;
-      const applied = editor.drop(source, destination);
-      focusPoint(applied ? destination : source);
-    } else if (model) {
-      editor.drop(source, destination);
     }
+    if (!model) await prepareSimulation();
+    if (!model || !simulating() || serial !== gesture) return;
+    const applied = editor.drop(source, destination);
+    if (entering) focusPoint(applied ? destination : source);
   }
 
   canvas.addEventListener('pointerdown', e => {
@@ -668,18 +685,24 @@
     const center = flag && screen(gamePoint(flag));
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, cx: camera.x, cy: camera.y, moved: false,
       flag, target: flag, grabX: flag ? location.x-center.x : 0, grabY: flag ? location.y-center.y : 0 };
-    if (flag && !simulating()) prepareSimulation();
+    if (flag && !model) prepareSimulation();
   });
   canvas.addEventListener('pointermove', e => {
     if (!drag || !e.isPrimary) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    if (Math.hypot(dx, dy) < 4 && !drag.moved) return;
+    const target = drag.flag ? dropCell(e, drag) : null;
+    if (!startsDrag(e, target)) return;
     drag.moved = true;
     autoFit = false;
     canvas.classList.add('drag');
     if (drag.flag) {
-      drag.target = dropCell(e, drag);
-      byId('selection').textContent = drag.target ? `${coord(drag.flag)} → ${coord(drag.target)}` : '지도 안에 놓으면 이동합니다.';
+      if (target && model && (drag.target?.x !== target.x || drag.target?.y !== target.y || drag.problem == null)) {
+        drag.problem = model.issue(editor.flags, { type: 'move', from: drag.flag, to: target });
+      }
+      if (!target) drag.problem = '';
+      drag.target = target;
+      byId('selection').classList.toggle('err', Boolean(drag.problem));
+      byId('selection').textContent = target ? [`${coord(drag.flag)} → ${coord(target)}`, drag.problem].filter(Boolean).join(' · ') : '지도 안에 놓으면 이동합니다.';
     } else {
       camera.x = drag.cx - dx / camera.scale;
       camera.y = drag.cy - dy / camera.scale;
@@ -689,10 +712,12 @@
   canvas.addEventListener('pointerup', e => {
     if (!drag || !e.isPrimary) return;
     const location = eventLocation(e);
-    if (drag.moved) {
+    const destination = drag.flag ? dropCell(e, drag) : null;
+    if (startsDrag(e, destination)) {
       if (drag.flag) {
-        const from = drag.flag, destination = dropCell(e, drag);
+        const from = drag.flag;
         drag = null;
+        byId('selection').classList.remove('err');
         byId('selection').textContent = '';
         if (destination && (destination.x !== from.x || destination.y !== from.y)) finishMove(from, destination, gesture);
         else draw();
@@ -715,7 +740,7 @@
     const wasMoving = Boolean(drag?.flag && drag.moved);
     drag = null;
     canvas.classList.remove('drag');
-    if (wasMoving) { byId('selection').textContent = ''; draw(); }
+    if (wasMoving) { byId('selection').classList.remove('err'); byId('selection').textContent = ''; draw(); }
   }
   canvas.addEventListener('lostpointercapture', clearDrag);
   canvas.addEventListener('pointercancel', clearDrag);

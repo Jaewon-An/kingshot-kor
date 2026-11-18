@@ -124,9 +124,10 @@
       const next = model.evaluate(proposed);
       const change = [...resourceChanges(stats, next), ...contactChanges(stats, next)];
       const note = op.to ? model.siteNote(op.to) : '';
-      preview.textContent = ['적용 시 깃발 ' + proposed.length + '기', change.join(' · ') || '자원지와 거점 접촉 유지', note].filter(Boolean).join(' · ');
+      const warning = op.type === 'move' ? model.moveWarning(flags, op.from) : '';
+      preview.textContent = ['적용 시 깃발 ' + proposed.length + '기', change.join(' · ') || '자원지와 거점 접촉 유지', warning, note].filter(Boolean).join(' · ');
       applyButton.disabled = false;
-      return { op, proposed, next };
+      return { op, proposed, next, warning };
     }
 
     function selectTool(next, clear) {
@@ -188,6 +189,7 @@
         button.dataset.step = String(i);
         button.title = '지도에서 위치 보기';
         li.append(button);
+        if (step.warning) li.append(makeEl('p', step.warning, 'hint'));
         return li;
       }).reverse());
       checkForm();
@@ -228,6 +230,7 @@
           storageStatus.textContent = '저장된 작업 중 유효한 앞 ' + steps.length + '단계까지 복원했습니다.';
           break;
         }
+        if (op.type === 'move') op.warning = model.moveWarning(flags, op.from);
         flags = applyTo(flags, op);
         steps.push(op);
       }
@@ -257,14 +260,15 @@
     function commit() {
       const candidate = checkForm();
       if (!candidate) return false;
-      const { op, proposed, next } = candidate;
+      const { op, proposed, next, warning } = candidate;
+      if (warning) op.warning = warning;
       steps.push(op);
       flags = proposed;
       stats = next;
       save();
       setPoint('from', null);
       setPoint('to', null);
-      say(describe(op) + ' 적용');
+      say([describe(op) + ' 적용', warning].filter(Boolean).join(' · '));
       render();
       return true;
     }
@@ -273,7 +277,7 @@
       if (!model) return;
       say('');
       if (tool === 'remove') setPoint('from', flag || point);
-      else if (tool === 'move' && flag) {
+      else if (tool === 'move' && flag && (!pointAt('from') || same(point, flag))) {
         setPoint('from', flag);
         setPoint('to', null);
       } else setPoint('to', point);
@@ -288,10 +292,7 @@
       setPoint('to', to);
       say('');
       if (commit()) return true;
-      const reason = preview.textContent;
-      setPoint('to', null);
-      checkForm();
-      say(reason || '이 위치로 옮길 수 없습니다.', true);
+      say(preview.textContent || '이 위치로 옮길 수 없습니다.', true);
       onChange();
       return false;
     }

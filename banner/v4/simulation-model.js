@@ -87,6 +87,18 @@
     const eligible = nodeTiles.map(cells => cells.reduce((n, i) => n + baseArea.territory[i], 0) >= 3
       || cells.reduce((n, i) => n + foreign[i], 0) < 3);
 
+    function territoryDetails(territory) {
+      let trapCellsLost = 0, trapCellsChanged = 0;
+      for (const i of defense) {
+        if (territory[i] !== baseArea.territory[i]) {
+          trapCellsChanged++;
+          if (baseArea.territory[i]) trapCellsLost++;
+        }
+      }
+      return { trapCellsLost, trapCellsChanged,
+        outposts: outposts.map(p => ({ ...p, contacts: outpostContacts(territory, p.x, p.y) })) };
+    }
+
     function evaluateArea(area, referenceCounts) {
       const { territory } = area;
       const counts = [0, 0, 0, 0];
@@ -102,17 +114,9 @@
           counts[nodes[n][0]]++;
         }
       }
-      let trapCellsLost = 0, trapCellsChanged = 0;
-      for (const i of defense) {
-        if (territory[i] !== baseArea.territory[i]) {
-          trapCellsChanged++;
-          if (baseArea.territory[i]) trapCellsLost++;
-        }
-      }
       return {
-        ...area, counts, owned, trapCellsLost, trapCellsChanged,
-        delta: counts.map((v, i) => referenceCounts ? v - referenceCounts[i] : 0),
-        outposts: outposts.map(p => ({ ...p, contacts: outpostContacts(territory, p.x, p.y) }))
+        ...area, ...territoryDetails(territory), counts, owned,
+        delta: counts.map((v, i) => referenceCounts ? v - referenceCounts[i] : 0)
       };
     }
     const baseline = evaluateArea(baseArea);
@@ -144,9 +148,10 @@
     }
 
     function checkConnection(flags, action) {
-      const state = evaluate(flags);
-      const lost = flags.length - state.connectedFlags.size;
+      const area = connectedTerritory(flags, hqs);
+      const lost = flags.length - area.connectedFlags.size;
       if (lost) return action + ' 본부와 끊기는 깃발이 ' + lost + '개 있습니다.';
+      const state = territoryDetails(area.territory);
       const detached = state.outposts.filter((p, i) => baseline.outposts[i].contacts && !p.contacts);
       if (detached.length) return action + ' ' + detached.map(p => p.name).join(', ') + ' 연결이 끊깁니다.';
       if (state.trapCellsChanged) return action + ' 곰덫 주변 방어 영토가 달라집니다.';
@@ -170,11 +175,16 @@
         const invalid = placementIssue(to);
         if (invalid) return invalid;
       }
-      if (type !== 'add') {
-        const invalid = checkConnection(remaining, '철거 직후');
-        if (invalid || type === 'remove') return invalid;
-      }
-      return checkConnection([...remaining, to], '건설 후');
+      if (type === 'remove') return checkConnection(remaining, '철거 직후');
+      return checkConnection([...remaining, to], type === 'move' ? '이동 후' : '건설 후');
+    }
+
+    // 시뮬레이터에서는 한 번에 옮긴다. 게임에서 철거를 먼저 할 때의 위험은 따로 안내한다.
+    function moveWarning(flags, from) {
+      if (!inWorld(from) || isProtected(from) || !flags.some(p => same(p, from))) return '';
+      const remaining = flags.filter(p => !same(p, from));
+      const risk = checkConnection(remaining, '철거 직후');
+      return risk ? '게임에서 ' + risk + ' 철거 전에 연결을 보강하세요.' : '';
     }
 
     function siteNote(p) {
@@ -182,7 +192,7 @@
       return '조사에서 공터를 확인하지 못한 위치입니다. 게임에서 건설 가능 여부를 확인하세요.';
     }
 
-    return { hqs, traps, baseline, evaluate, issue, isProtected, siteNote };
+    return { hqs, traps, baseline, evaluate, issue, isProtected, moveWarning, siteNote };
   }
 
   root.KSBannerSimulation = { create };
