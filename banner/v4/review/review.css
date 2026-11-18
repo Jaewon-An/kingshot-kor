@@ -1,0 +1,12 @@
+*{box-sizing:border-box}body{margin:0;background:#f3f3ed;color:#1e3439;font:16px/1.65 'Malgun Gothic',sans-serif}
+main{width:min(980px,100%);margin:auto;background:#fff;padding:clamp(20px,5vw,52px)}
+h1,h2,h3{line-height:1.28;word-break:keep-all}h1{font-size:clamp(28px,4vw,42px);margin:7px 0 14px}
+h2{margin:2em 0 .6em;border-top:2px solid #34595c;padding-top:.65em;font-size:24px}
+h3{font-size:18px;margin-top:1.8em}p{margin:.6em 0}a{color:#075d65}
+.date,.hint,figcaption,footer{color:#51646a;font-size:.9em}.lead{max-width:58em;font-size:1.06em}
+.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.92em;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:.48em .58em;border-bottom:1px solid #d6e0df;vertical-align:top}
+th{background:#e7eeeb;color:#27474d;word-break:keep-all}td{white-space:nowrap}
+figure{margin:1em 0}svg{display:block;width:min(430px,100%);height:auto;border:1px solid #dae3e1;background:#f7f8f5}
+details{margin:1.1em 0}summary{cursor:pointer;font-weight:bold}footer{margin-top:2.5em}
+@media print{body,main{background:white;width:100%}main{padding:0}thead{display:table-header-group}tr{break-inside:avoid}h2,h3{break-after:avoid}.scroll{overflow:visible}details{display:block}td{white-space:normal}}
